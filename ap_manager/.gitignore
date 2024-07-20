@@ -1,0 +1,5 @@
+tests
+__*
+.*
+!.gitignore
+*.log
