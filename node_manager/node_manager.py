@@ -8,8 +8,10 @@ import queue
 import time
 import socket
 import config
+import os
 
 PROGRAM_LOG_FILE_NAME = './logs/program.log'
+os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 
 NODE_UUID = config.NODE_UUID
 
