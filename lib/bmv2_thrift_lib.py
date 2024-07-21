@@ -2,7 +2,7 @@ import logging
 import subprocess
 import sys
 import re
-
+import os
 
 SWITCH_RESPONSE_ERROR = -1
 SWITCH_RESPONSE_INVALID = -2
@@ -11,9 +11,10 @@ P4_CONTROL_METHOD_THRIFT_CLI = 'THRIFT_CLI'
 P4_CONTROL_METHOD_P4RT_GRPC = 'P4RT_GRPC'
 BMV2_LOG_FILE_NAME = './logs/bmv2_log.log'
 
-BMV2_DOCKER_CONTAINER_NAME = 'bmv2_faris'
+BMV2_DOCKER_CONTAINER_NAME = 'bmv2smartedge'
 
 bmv2_logger = logging.getLogger('bmv2_logger')
+os.makedirs(os.path.dirname(BMV2_LOG_FILE_NAME), exist_ok=True)
 
 bmv2_lib_log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s]: %(message)s \n")
 
@@ -29,18 +30,15 @@ bmv2_logger.setLevel(logging.DEBUG)
 bmv2_logger.addHandler(bmv2_console_handler)
 bmv2_logger.addHandler(bmv2_file_handler)
 
+DEFAULT_THRIFT_PORT = 9090
 
-
-def send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port):
+def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     command_as_word_array = ['docker','exec',BMV2_DOCKER_CONTAINER_NAME,'sh', '-c', f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {thrift_ip} --thrift-port {thrift_port}"  ]
-    print('-'*25)
-    print(f'sending command to bmv2 on {thrift_ip}: {cli_command}')
+
     proc = subprocess.run(command_as_word_array, text=True, stdout=subprocess.PIPE) # , stderr=subprocess.PIPE)
     response = proc.stdout.strip()
-    print(response)
+
     bmv2_logger.debug(f'\nResponse from bmv2 for sending command:\n{cli_command}\nis:\n{response}')
-    print('\n'*3)
-    print('-'*25)
     return response
     
 

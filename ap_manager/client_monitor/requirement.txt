@@ -1,0 +1,4 @@
+python modules
+psutil
+aenum
+cassandra-driver

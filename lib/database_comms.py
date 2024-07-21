@@ -30,7 +30,21 @@ def init_database(database_type, host, port):
         # CREATE A TABLE TO MANAGE ACTIVE SWARM NODES
         session.execute(cassandra_db.QUERY_DATABASE_CREATE_TABLE)
         return session
+    
+def connect_to_database(database_type, host, port):
+    if database_type == STR_DATABASE_TYPE_REDIS:
+        return redis_db.redis.Redis(host=host, port=port, decode_responses=True)
 
+    elif database_type == STR_DATABASE_TYPE_CASSANDRA:        
+        # CONNECT TO THE DATABASE
+        cluster = cassandra_db.Cluster(
+            contact_points=[host], 
+                        port=port, 
+                        load_balancing_policy=cassandra_db.DCAwareRoundRobinPolicy(local_dc='datacenter1'),
+                        protocol_version=5
+        )
+        session = cluster.connect()
+        return session
 
 
 def get_node_swarm_mac_by_swarm_ip(database_type, session, node_swarm_ip):

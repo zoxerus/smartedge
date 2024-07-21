@@ -1,3 +1,9 @@
+import sys
+# setting path
+sys.path.append('..')
+sys.path.append('../..')
+
+
 import subprocess
 import logging
 import threading
@@ -6,17 +12,18 @@ import socket
 import atexit
 import time
 import ipaddress
-import lib.config as config
+import config
 import psutil
 import sys
-from lib.database_comms import *
-from lib.bmv2_thrift_lib import *
-
+import lib.database_comms as db
+import lib.bmv2_thrift_lib as bmv2
+import os
 
 
 
 # where to store program logs
-PROGRAM_LOG_FILE_NAME = './logs/client_monitor.log'
+PROGRAM_LOG_FILE_NAME = '../logs/client_monitor.log'
+os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 
 # CONSTANTS TO POINT TO THE INDEX OF MAC ADDRESS AND EVENT TYPES IN "iw event" COMMAND
 # example output "wlan0: new station 48:22:54:c7:27:04"
@@ -42,9 +49,9 @@ SWARM_P4_MC_NODE = 1100
 SWARM_P4_MC_GROUP = 1000
 
 # a global variable to set the communication protocol with the switch
-p4_control_method = P4_CONTROL_METHOD_THRIFT_CLI
+p4_control_method = bmv2.P4_CONTROL_METHOD_THRIFT_CLI
 
-db_in_use = STR_DATABASE_TYPE_CASSANDRA
+db_in_use = db.STR_DATABASE_TYPE_CASSANDRA
 
 STR_NODE_VIP = 'Node_vIP'
 STR_AP_ID = 'AP_ID'
@@ -72,15 +79,8 @@ available_host_ids = set([])
 
 logger = logging.getLogger('client_monitor_logger')
 
-database_session = init_database(db_in_use, '192.168.100.1', config.database_port)
-
-
-# def commmunication_with_coordinator():
-#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as clientsocket:
-#         clientsocket.connect(COORDINATOR_ADDRESS)
-#         while True:
-#             msg = clientsocket.recv(1024)
-            
+database_session = db.connect_to_database(db_in_use, '192.168.100.1', config.database_port)
+           
                          
 def initialize_program():
     # this part handles logging to console and to a file for debugging purposes
@@ -99,42 +99,19 @@ def initialize_program():
     logger.addHandler(client_monitor_log_file_handler)
     logger.addHandler(client_monitor_log_console_handler)
     
-    # list all interfaces, for debugging purposes
-    addresses = psutil.net_if_addrs()
-
     # remvoe all configureation from bmv2, start clean
-    send_cli_command_to_bmv2("reset_state")
+    bmv2.send_cli_command_to_bmv2(cli_command="reset_state")
     
-    # {DEFAULT_COORDINATOR_INTERFACE_PEER} is used to communicate with the coordinator
-    # program checks if DEFAULT_COORDINATOR_INTERFACE_PEER is configured, otherwise it configures it.
-    # if ( DEFAULT_COORDINATOR_INTERFACE_PEER not in addresses.keys()):
-    #     coordinator_interface_commands = [ 
-    #                 # f"ip link add {DEFAULT_COORDINATOR_INTERFACE} type dummy",
-    #                 f"ip link add {DEFAULT_COORDINATOR_INTERFACE} type veth peer name {DEFAULT_COORDINATOR_INTERFACE_PEER}",
-    #                 f"ip link set dev {DEFAULT_COORDINATOR_INTERFACE_PEER} up",
-    #                 f"ip netns add {DEFAULT_COORDINATOR_NAMESPACE}",
-    #                 f"ip link set {DEFAULT_COORDINATOR_INTERFACE} netns {DEFAULT_COORDINATOR_NAMESPACE}",
-    #                 f"ip netns exec {DEFAULT_COORDINATOR_NAMESPACE} ifconfig {DEFAULT_COORDINATOR_INTERFACE} hw ether {config.coordinator_mac}",
-    #                 f"ip netns exec {DEFAULT_COORDINATOR_NAMESPACE} ifconfig {DEFAULT_COORDINATOR_INTERFACE} {config.coordinator_vip} netmask 255.255.255.0 up",
-    #                 f"ethtool --offload {DEFAULT_COORDINATOR_INTERFACE} tx off rx off" ]
-    #     for command in coordinator_interface_commands:
-    #             subprocess.run( command.split() )
-
     # attach the DEFAULT_COORDINATOR_INTERFACE_PEER interface to the bmv2
-    send_cli_command_to_bmv2(f"port_remove {config.swarm_coordinator_switch_port}")
-    send_cli_command_to_bmv2(f"port_add {DEFAULT_COORDINATOR_INTERFACE_PEER} {config.swarm_coordinator_switch_port}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.swarm_coordinator_switch_port}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {DEFAULT_COORDINATOR_INTERFACE_PEER} {config.swarm_coordinator_switch_port}")
     
-
-            
-        # entry_handle = add_entry_to_bmv2(P4_CONTROL_METHOD_THRIFT_CLI, 'MyIngress.tb_l2_forward',
-        #     'ac_l2_forward', '%s' % config.coordinator_mac, 2 )
-        
-    
+   
     # handle broadcast
-    send_cli_command_to_bmv2(f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
-    send_cli_command_to_bmv2(f"mc_node_create {SWARM_P4_MC_NODE} {config.ap_communication_switch_port}")
-    send_cli_command_to_bmv2(f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
-    send_cli_command_to_bmv2(f"table_add MyIngress.tb_l2_forward ac_l2_broadcast FF:FF:FF:FF:FF:FF => {SWARM_P4_MC_GROUP}")
+    bmv2.send_cli_command_to_bmv2(f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
+    bmv2.send_cli_command_to_bmv2(f"mc_node_create {SWARM_P4_MC_NODE} {config.ap_communication_switch_port}")
+    bmv2.send_cli_command_to_bmv2(f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
+    bmv2.send_cli_command_to_bmv2(f"table_add MyIngress.tb_l2_forward ac_l2_broadcast FF:FF:FF:FF:FF:FF => {SWARM_P4_MC_GROUP}")
     
     
     # broadcast domain to other Access Points
@@ -150,13 +127,13 @@ def initialize_program():
             subprocess.run(activate_interface_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             created_host_ids.add(config.ap_communication_switch_port)
             
-            send_cli_command_to_bmv2(f"port_remove {config.ap_communication_switch_port}")
-            send_cli_command_to_bmv2(f"port_add vxlan{config.ap_communication_switch_port} {config.ap_communication_switch_port}")
+            bmv2.send_cli_command_to_bmv2(f"port_remove {config.ap_communication_switch_port}")
+            bmv2.send_cli_command_to_bmv2(f"port_add vxlan{config.ap_communication_switch_port} {config.ap_communication_switch_port}")
     
         except Exception as e:
             logger.error(f'initialization error: {e}')
             exit() 
-        logger.info('Program Initialized Successfully')
+    logger.info('Program Initialized Successfully')
 
 def exit_handler():
     logger.info('Handling exit')
@@ -168,7 +145,7 @@ def exit_handler():
             result = subprocess.run(delete_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
             
             
-            delete_node_from_swarm_database(database_type=STR_DATABASE_TYPE_CASSANDRA, session=database_session,
+            db.delete_node_from_swarm_database(database_type=db.STR_DATABASE_TYPE_CASSANDRA, session=database_session,
                                     node_swarm_id= vxlan_id)
             logger.debug(f'deleted vxlan{vxlan_id}, feedback {result.stdout.strip() }, errors: {result.stderr.strip() }')
         except Exception as e:
@@ -275,7 +252,7 @@ def handle_new_connected_station(station_physical_mac_address, control_queue):
     logger.info( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
     
     # host_id = get_next_available_host_id()
-    host_id = get_next_available_host_id_from_swarm_table(database_typ=db_in_use,
+    host_id = db.get_next_available_host_id_from_swarm_table(database_typ=db_in_use,
                 session=database_session, first_host_id=config.this_swarm_dhcp_start,
                 max_host_id=config.this_swarm_dhcp_end)
     
@@ -291,20 +268,20 @@ def handle_new_connected_station(station_physical_mac_address, control_queue):
     vxlan_id = create_vxlan_by_host_id( vxlan_id= host_id, remote= station_physical_ip_address )
        
     dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
-    send_cli_command_to_bmv2(dettach_vxlan_from_bmv2_command)
+    bmv2.send_cli_command_to_bmv2(dettach_vxlan_from_bmv2_command)
     
     attach_vxlan_to_bmv2_command = "port_add vxlan%s %s" % (vxlan_id, vxlan_id)
-    send_cli_command_to_bmv2(attach_vxlan_to_bmv2_command)
+    bmv2.send_cli_command_to_bmv2(attach_vxlan_to_bmv2_command)
     
     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
-    entry_handle = add_entry_to_bmv2(communication_protocol= P4_CONTROL_METHOD_THRIFT_CLI, 
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                     table_name = 'MyIngress.tb_swarm_control',
                                     action_name = 'MyIngress.ac_send_to_coordinator', 
                                     match_keys = f'{vxlan_id} {config.coordinator_vip}',
                                     action_params = f'{config.swarm_coordinator_switch_port}' )
     
     # THIS ENTRY FORWARDS ONLY TCP TRAFFIC TO THE NEW JOINED NODE, ON COORDINATOR PORT NUMBER.
-    entry_handle = add_entry_to_bmv2(communication_protocol= P4_CONTROL_METHOD_THRIFT_CLI, 
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                     table_name = 'MyIngress.tb_swarm_control',
                                     action_name = 'MyIngress.ac_send_to_coordinator', 
                                     match_keys = f'{config.swarm_coordinator_switch_port} {station_vip}',
@@ -312,7 +289,7 @@ def handle_new_connected_station(station_physical_mac_address, control_queue):
        
     connected_stations[station_physical_mac_address] = [ station_vmac ,station_vip, vxlan_id]
     
-    insert_node_into_swarm_database(database_type=db_in_use, session= database_session, this_ap_id= config.this_ap_id,
+    db.insert_node_into_swarm_database(database_type=db_in_use, session= database_session, this_ap_id= config.this_ap_id,
                                     host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, node_phy_mac=station_physical_mac_address)
     
     logger.info(f'station: {station_vmac} {station_vip} joined AP {config.this_ap_id} at {time.time()}')
@@ -345,20 +322,20 @@ def handle_disconnected_station(station_physical_mac_address, control_queue):
         ap_ip = config.ap_list[key]
         
         print('deleting entries from: ' + ap_ip)
-        delete_forwarding_entry_from_bmv2(communication_protocol=P4_CONTROL_METHOD_THRIFT_CLI, 
+        bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                           table_name='MyIngress.tb_ipv4_lpm', key=f'{station_virtual_ip_address}/32',
-                                          thrift_ip=ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
+                                          thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
         
-        delete_forwarding_entry_from_bmv2(communication_protocol=P4_CONTROL_METHOD_THRIFT_CLI, 
+        bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                           table_name='MyIngress.tb_l2_forward', key=station_virtual_mac_address,
-                                          thrift_ip=ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
+                                          thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
 
     
     delete_vxlan_from_bmv2_command = "port_remove %s" % station_vxlan_id
-    send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command)
+    bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command)
     
     
-    delete_node_from_swarm_database(database_type=STR_DATABASE_TYPE_CASSANDRA, session=database_session,
+    db.delete_node_from_swarm_database(database_type=db.STR_DATABASE_TYPE_CASSANDRA, session=database_session,
                                     node_swarm_id= station_vxlan_id)
 
     
