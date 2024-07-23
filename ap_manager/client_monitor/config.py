@@ -2,7 +2,7 @@ import psutil
 loopback_if = 'lo:0'
 loopback_id = psutil.net_if_addrs()[loopback_if][0][1].split('.')
 
-this_ap_id = f'AP:{loopback_id[3]:03}'
+this_ap_id = f'AP:{int(loopback_id[3]):03}'
 
 ap_communication_switch_port = 501
 
@@ -28,7 +28,7 @@ coordinator_tcp_port = 29997
 node_manager_tcp_port = 29997
 
 ap_list = {
-    '1104': '192.168.100.4',
-    '1105': '192.168.100.5', 
-    '1106': '192.168.100.6'
+    'AP:004': '192.168.100.4',
+    'AP:005': '192.168.100.5', 
+    'AP:006': '192.168.100.6'
     }
