@@ -67,3 +67,38 @@ def update_db_with_joined_node(database_type, session, node_uuid, node_swarm_id)
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
         """
         return session.execute(query)
+    
+def insert_node_into_swarm_database(database_type, session, host_id, this_ap_id, node_vip, node_vmac, node_phy_mac):
+    query = f"""
+    INSERT INTO {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES} (
+    {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID}, {db_defines.NAMEOF_DATABASE_FIELD_NODE_CURRENT_AP},
+    {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS}, {db_defines.NAMEOF_DATABASE_FIELD_LAST_UPDATE_TIMESTAMP}, 
+    {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_IP}, {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_MAC},
+    {db_defines.NAMEOF_DATABASE_FIELD_NODE_PHYSICAL_MAC})
+    VALUES ({host_id}, '{this_ap_id}', '{db_defines.SWARM_STATUS.PENDING.value}', toTimeStamp(now() ),
+    '{node_vip}', '{node_vmac}', '{node_phy_mac}') IF NOT EXISTS;
+    """
+    session.execute(query)
+
+
+def get_next_available_host_id_from_swarm_table(database_typ, session, first_host_id, max_host_id):
+    if database_typ == STR_DATABASE_TYPE_CASSANDRA:    
+        query = f""" SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} FROM 
+            {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}"""
+        result = session.execute(query)
+        id_list = []
+        for row in result:
+
+            id_list.append(row[0])
+        print(id_list)
+        if (id_list == []):
+            return first_host_id
+        return min(set(range(first_host_id, max_host_id + 1 )) - set(id_list))
+    
+def delete_node_from_swarm_database(database_type, session, node_swarm_id):
+    if database_type == STR_DATABASE_TYPE_CASSANDRA:
+        query = f"""
+            DELETE FROM {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES} 
+            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
+            """
+        session.execute(query)
