@@ -1,9 +1,8 @@
-import psutil
+import psutil 
+loopback_if = 'lo:0'
+loopback_id = psutil.net_if_addrs()[loopback_if][0][1]
 
-# This is a way to set the config of the current AP on my machine
-
-this_ap_id = psutil.net_if_addrs()['lo'][0][1]
-this_swarm_id = '1000'
+this_ap_id = f'AP:{loopback_id[3]:03}'
 
 ap_communication_switch_port = 501
 
