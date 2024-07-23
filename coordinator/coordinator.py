@@ -1,20 +1,20 @@
+# This tells python to look for files in parent directory
 import sys
 # setting path
 sys.path.append('..')
 
 import lib.config as config
-import json
-import subprocess
-import time
+
 import socket
 import re
 import threading
 import lib.bmv2_thrift_lib as bmv2_thrift
 import lib.database_comms as db_comms
 
+# TCP related
 COORDINATOR_MAX_TCP_CONNNECTIONS = 5
 
-
+# TODO: delete this
 SWARM_NODE_TCP_SERVER = ('', 29997) 
 
 
@@ -24,10 +24,15 @@ db_in_use = db_comms.STR_DATABASE_TYPE_CASSANDRA
 
 database_session = db_comms.init_database(db_in_use, '0.0.0.0', config.database_port)
 
+
 lock = threading.Lock()
 
+# TODO: delete this
 swarm_access_points = set()
 
+
+# a function to parse a string and extract integers
+# needed for interactiosn with bmv2
 
 def extract_numbers(lst):
     """
@@ -42,6 +47,9 @@ def extract_numbers(lst):
     # Convert the extracted numbers from strings to integers
     return [int(x) for sublist in extracted_numbers for x in sublist]
 
+
+
+# this updates the list of broadcast ports in bmv2
 def add_bmv2_swarm_broadcast_port_to_ap(ap_ip,thrift_port, switch_port ):
         res = bmv2_thrift.send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port)
         res_lines = res.splitlines()
@@ -61,7 +69,9 @@ def get_ap_ip_from_ap_id(ap_id):
         return config.ap_list[ap_id][1]
     except:
         return None
-        
+    
+    
+
 class Swarm_Node_Handler:
     def __init__(self, message, node_socket: socket.socket):
         self.message_as_word_array = message.split()
@@ -115,6 +125,8 @@ class Swarm_Node_Handler:
                 communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, table_name= 'MyIngress.tb_swarm_control', 
                 key= f'{config.swarm_backbone_switch_port} {node_swarm_ip }', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
             
+            
+            # insert table entries in the rest of the APs
             for key in config.ap_list.keys():
                 if key != node_swarm_ap:
                     entry_handle = bmv2_thrift.add_entry_to_bmv2(communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI,
@@ -130,7 +142,7 @@ class Swarm_Node_Handler:
                                 
         self.node_socket.send( bytes( f'{req_id} accepted'.encode() ) )
 
-
+# a function to configure the keep alive of the tcp connection
 def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     """Set TCP keepalive on an open socket.
 
@@ -142,6 +154,8 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, after_idle_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
+
+
 
 def handle_swarm_node(node_socket, address):
     try:
