@@ -42,7 +42,7 @@ def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = D
     return response
     
 
-def add_entry_to_bmv2(communication_protocol, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT, table_name, action_name, match_keys, action_params):
+def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_keys, action_params, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT,):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
         cli_command = f'table_dump_entry_from_key {table_name} {match_keys}'
         response = send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port)
