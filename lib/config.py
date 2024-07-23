@@ -1,7 +1,5 @@
 # the ID of the current Access Point
-
-
-
+# TODO: remove unused variables and rename this file to be global config
 this_ap_id = '1101'
 this_swarm_id = '1000'
 # ap_communication_switch_port = 500

@@ -3,8 +3,6 @@ import lib.db.redis_db as redis_db
 import lib.db.defines as db_defines
 
 
-# SET PARAMETERS FOR CONNECTING TO THE DATABASE
-# CASSANDRA_HOST = '172.18.0.2'
 
 STR_DATABASE_TYPE_REDIS = 'redis'
 STR_DATABASE_TYPE_CASSANDRA = 'cassandra'
