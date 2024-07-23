@@ -64,7 +64,7 @@ def update_db_with_joined_node(database_type, session, node_uuid, node_swarm_id)
         query = f"""UPDATE {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}
         SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{node_uuid}', 
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.JOINED.value}'
-        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = '{node_swarm_id}';
+        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
         """
         return session.execute(query)
     
@@ -98,6 +98,6 @@ def delete_node_from_swarm_database(database_type, session, node_swarm_id):
     if database_type == STR_DATABASE_TYPE_CASSANDRA:
         query = f"""
             DELETE FROM {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES} 
-            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = '{node_swarm_id}';
+            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
             """
         session.execute(query)
