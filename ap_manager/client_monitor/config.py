@@ -1,5 +1,8 @@
-# the ID of the current Access Point
-this_ap_id = '1104'
+import psutil
+
+# This is a way to set the config of the current AP on my machine
+
+this_ap_id = psutil.net_if_addrs()['lo'][0][1]
 this_swarm_id = '1000'
 
 ap_communication_switch_port = 501
@@ -13,6 +16,7 @@ default_wlan_interface = 'wlan0'
 this_swarm_subnet='192.168.10.0'
 this_swarm_dhcp_start = 2
 this_swarm_dhcp_end = 200
+
 
 
 database_hostname = '192.168.100.1'

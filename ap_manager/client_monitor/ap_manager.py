@@ -79,7 +79,7 @@ available_host_ids = set([])
 
 logger = logging.getLogger('client_monitor_logger')
 
-database_session = db.connect_to_database(db_in_use, '192.168.100.1', config.database_port)
+database_session = db.connect_to_database(db_in_use, config.database_hostname, config.database_port)
            
                          
 def initialize_program():
@@ -108,10 +108,10 @@ def initialize_program():
     
    
     # handle broadcast
-    bmv2.send_cli_command_to_bmv2(f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
-    bmv2.send_cli_command_to_bmv2(f"mc_node_create {SWARM_P4_MC_NODE} {config.ap_communication_switch_port}")
-    bmv2.send_cli_command_to_bmv2(f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
-    bmv2.send_cli_command_to_bmv2(f"table_add MyIngress.tb_l2_forward ac_l2_broadcast FF:FF:FF:FF:FF:FF => {SWARM_P4_MC_GROUP}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_create {SWARM_P4_MC_NODE} {config.ap_communication_switch_port}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast FF:FF:FF:FF:FF:FF => {SWARM_P4_MC_GROUP}")
     
     
     # broadcast domain to other Access Points
@@ -127,8 +127,8 @@ def initialize_program():
             subprocess.run(activate_interface_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             created_host_ids.add(config.ap_communication_switch_port)
             
-            bmv2.send_cli_command_to_bmv2(f"port_remove {config.ap_communication_switch_port}")
-            bmv2.send_cli_command_to_bmv2(f"port_add vxlan{config.ap_communication_switch_port} {config.ap_communication_switch_port}")
+            bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.ap_communication_switch_port}")
+            bmv2.send_cli_command_to_bmv2(cli_command=f"port_add vxlan{config.ap_communication_switch_port} {config.ap_communication_switch_port}")
     
         except Exception as e:
             logger.error(f'initialization error: {e}')
@@ -268,10 +268,10 @@ def handle_new_connected_station(station_physical_mac_address, control_queue):
     vxlan_id = create_vxlan_by_host_id( vxlan_id= host_id, remote= station_physical_ip_address )
        
     dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
-    bmv2.send_cli_command_to_bmv2(dettach_vxlan_from_bmv2_command)
+    bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
     
     attach_vxlan_to_bmv2_command = "port_add vxlan%s %s" % (vxlan_id, vxlan_id)
-    bmv2.send_cli_command_to_bmv2(attach_vxlan_to_bmv2_command)
+    bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command)
     
     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
