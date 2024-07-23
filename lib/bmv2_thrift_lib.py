@@ -42,7 +42,7 @@ def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = D
     return response
     
 
-def add_entry_to_bmv2(communication_protocol, thrift_ip, thrift_port, table_name, action_name, match_keys, action_params):
+def add_entry_to_bmv2(communication_protocol, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT, table_name, action_name, match_keys, action_params):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
         cli_command = f'table_dump_entry_from_key {table_name} {match_keys}'
         response = send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port)
@@ -73,7 +73,7 @@ def add_entry_to_bmv2(communication_protocol, thrift_ip, thrift_port, table_name
              
 
 
-def get_entry_handle(table_name, key, thrift_ip, thrift_port):
+def get_entry_handle(table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     command = f'table_dump_entry_from_key {table_name} {key}'
     response = send_cli_command_to_bmv2(command, thrift_ip, thrift_port)
     bmv2_logger.debug(f'getting entry handle from bmv2 for: {key}\n {response}')
@@ -87,7 +87,7 @@ def get_entry_handle(table_name, key, thrift_ip, thrift_port):
 
 
 def delete_forwarding_entry_from_bmv2(
-    communication_protocol, table_name, key, thrift_ip, thrift_port ):
+    communication_protocol, table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT ):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
         handle = get_entry_handle(table_name, key, thrift_ip, thrift_port)
         if handle != None:
