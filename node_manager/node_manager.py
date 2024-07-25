@@ -160,12 +160,12 @@ def install_swarmNode_config():
         f'nikss-ctl add-port pipe 0 dev vxlan{vxlan_id}',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}',
-        f"arp -s {swarmNode_config[STR_COORDINATOR_VIP]} {swarmNode_config[STR_COORDINATOR_VMAC]}" # THIS IS THE MAC OF THE COORDINATOR
+        f"arp -s {swarmNode_config[STR_COORDINATOR_VIP]} {swarmNode_config[STR_COORDINATOR_VMAC]} dev veth1" # THIS IS THE MAC OF THE COORDINATOR
     ]
     
     for command in commands:
         # print('executing: ' + command)
-        subprocess.run(command.split(), text=True   , stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        subprocess.run(command.split(), text=True) #   , stdout=subprocess.PIPE, stderr=subprocess.PIPE )
     
     join_request_data = f"Join_Request {last_request_id} {NODE_UUID} {swarmNode_config[STR_VXLAN_ID]} {swarmNode_config[STR_VETH1_VIP]} {swarmNode_config[STR_VETH1_VMAC]} {swarmNode_config[STR_AP_ID]}"
     last_request_id = last_request_id + 1
