@@ -4,7 +4,7 @@ import sys
 sys.path.append('..')
 
 import lib.global_config as global_config
-
+import ipaddress
 import socket
 import re
 import threading
@@ -173,9 +173,14 @@ def swarm_coordinator():
             print(f'received connection request from {address}')
             threading.Thread(target=handle_swarm_node, args=(node_socket, address, ), daemon= True ).start()
 
-
+def set_arps():
+    for host_id in range(global_config.this_swarm_dhcp_start, global_config.this_swarm_dhcp_end + 1):
+        host_id_hex = f'{host_id:04x}'
+        station_virtual_ip_address = str( ipaddress.ip_address( global_config.this_swarm_subnet + host_id ) )
+        station_virtual_mac_address = f'00:00:00:00:{host_id_hex[:2]}:{host_id_hex[2:]}'
 
 def main():
+    set_arps()
     swarm_coordinator()
     # threading.Thread(target=ap_server).start()
     threading.Thread(target=swarm_coordinator, daemon= True).start()
