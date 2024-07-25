@@ -176,7 +176,7 @@ def swarm_coordinator():
 def set_arps():
     for host_id in range(global_config.this_swarm_dhcp_start, global_config.this_swarm_dhcp_end + 1):
         host_id_hex = f'{host_id:04x}'
-        station_virtual_ip_address = str( ipaddress.ip_address( global_config.this_swarm_subnet + host_id ) )
+        station_virtual_ip_address = str( ipaddress.ip_address( global_config.this_swarm_subnet) + host_id )
         station_virtual_mac_address = f'00:00:00:00:{host_id_hex[:2]}:{host_id_hex[2:]}'
 
 def main():
