@@ -164,8 +164,9 @@ def install_swarmNode_config():
     ]
     
     for command in commands:
-        # print('executing: ' + command)
-        subprocess.run(command.split(), text=True) #   , stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        print('executing: ' + command)
+        res = subprocess.run(command.split(), text=True  , stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        print(res.stdout.strip(), '\n\n', res.stderr.strip()  )
     
     join_request_data = f"Join_Request {last_request_id} {NODE_UUID} {swarmNode_config[STR_VXLAN_ID]} {swarmNode_config[STR_VETH1_VIP]} {swarmNode_config[STR_VETH1_VMAC]} {swarmNode_config[STR_AP_ID]}"
     last_request_id = last_request_id + 1
