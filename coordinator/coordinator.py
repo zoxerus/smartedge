@@ -7,6 +7,7 @@ import lib.global_config as global_config
 import ipaddress
 import socket
 import re
+import subprocess
 import threading
 import lib.bmv2_thrift_lib as bmv2_thrift
 import lib.database_comms as db_comms
@@ -178,6 +179,8 @@ def set_arps():
         host_id_hex = f'{host_id:04x}'
         station_virtual_ip_address = str( ipaddress.ip_address( global_config.this_swarm_subnet) + host_id )
         station_virtual_mac_address = f'00:00:00:00:{host_id_hex[:2]}:{host_id_hex[2:]}'
+        cli_command = f'arp -s {station_virtual_ip_address} {station_virtual_mac_address}'
+        subprocess.run(cli_command.split(), text=True)
 
 def main():
     set_arps()
