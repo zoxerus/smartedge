@@ -337,7 +337,7 @@ def handle_disconnected_station(station_physical_mac_address, control_queue):
     # delete the forwarding entries that point to this station from the rest of the Access Points.
     # TODO: move this functionality to the coordinator.
     for key in config.ap_list.keys():
-        ap_ip = config.ap_list[key]
+        ap_ip = config.ap_list[key][1]
         print('deleting entries from: ' + ap_ip)
         bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                           table_name='MyIngress.tb_ipv4_lpm', key=f'{station_virtual_ip_address}/32',
