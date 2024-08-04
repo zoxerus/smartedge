@@ -7,7 +7,8 @@
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 
 const bit<8>  UDP_PROTOCOL = 0x11;
-const bit<16> TYPE_IPV4 = 0X800;
+const bit<16> TYPE_IPV4 = 0x800;
+const bit<16> TYPE_ARP =  0x0806;
 // const bit<6> TYPE_INT = 6w31;
 // const bit<16> TYPE_INT1 = 0x10E2;
 const bit<32> REPORT_MIRROR_SESSION_ID = 500;
@@ -61,6 +62,19 @@ header ipv4_t {
     ip4Addr_t dstIP;
 }
 
+header arp_t {
+    bit<16>  htype;      // HW type
+    bit<16>  ptype;      // Protocol type
+    bit<8>  hlen;       // HW addr len
+    bit<8>  plen;       // Protocol addr len
+    bit<16>  oper;       // Proto addr len
+    bit<48> srcMacAddr; // source mac addr
+    bit<32> srcIPAddr;  // source IP addr
+    bit<48> dstMacAddr; // destination mac addr
+    bit<32> dstIPAddr;  // destination IP addr
+}
+
+
 header udp_t {
     bit<16> src_port;
     bit<16> dst_port;
@@ -80,8 +94,9 @@ header switch_int_t {
 }
 
 struct metadata {
-    //empty
-}
+    bit<8> id_src;
+    bit<8> id_dst;
+    }
 
 struct headers {
     ethernet_t         ethernet;
@@ -107,9 +122,16 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             TYPE_IPV4: parse_ipv4;
+            // TYPE_ARP: parse_arp;
+
             default: accept;
         }
     }
+    
+	// state parse_arp {
+	// 	packet.extract(hdr.arp);
+	// 	transition accept;
+	// }
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
@@ -139,9 +161,15 @@ control MyIngress(inout headers hdr,
     // counter(32w1, CounterType.packets) total_counter;
     // counter(32w1, CounterType.packets) fwd_counter;
 
+    action drop() {
+        mark_to_drop(standard_metadata);
+        exit;
+    }
+
     action ac_send_to_coordinator(egressSpec_t eif){
         standard_metadata.egress_spec = eif;
     }
+
 
     table tb_swarm_control {
         key = {
@@ -149,13 +177,10 @@ control MyIngress(inout headers hdr,
             hdr.ipv4.dstIP: exact;
             // hdr.tcp.dst_port: ternary;
         }
-        actions = {NoAction; ac_send_to_coordinator;}
+        actions = {NoAction; ac_send_to_coordinator; drop;}
     }
 
-    action drop() {
-        mark_to_drop(standard_metadata);
-        exit;
-    }
+
 
 
     //-------------------------------------------------------------//
@@ -243,21 +268,64 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }   
     
+
+
+
+
+    action get_swarm_id_src(bit<8> id){
+        meta.id_src = id; 
+    }
+    action get_swarm_id_dst(bit<8> id){
+        meta.id_dst= id; 
+    }
+
+// Check the swarm id of src host
+    table tb_check_swarm_id_src{
+        key = {
+            hdr.ipv4.srcIP: lpm;
+        }
+        actions = {
+            get_swarm_id_src;
+            drop;
+        }
+        default_action = drop();
+        
+    }
+
+
+// Check the swarm id of dst host
+    table tb_check_swarm_id_dst{
+        key = {
+            hdr.ipv4.dstIP: lpm;
+        }
+        actions = {
+            get_swarm_id_dst;
+            drop;
+        }
+        default_action = drop();
+        
+    }
+
     //------------------------------------------------------//
     //------ I N G R E S S  P R O C E S S I N G ------------//
-
     apply {
-        if(tb_swarm_control.apply().hit){
+        if (hdr.ipv4.isValid()) {
+            if(tb_swarm_control.apply().hit){
                 exit;
-        } 
+            }
+            tb_check_swarm_id_src.apply();
+            tb_check_swarm_id_dst.apply();
+            if (meta.id_dst != meta.id_src){
+                drop();
+            }
+            else if( !tb_ipv4_lpm.apply().hit){
+                tb_ipv4_mc_route_lookup.apply();
+            }
+        }
         else if (hdr.ethernet.isValid()){
             tb_l2_forward.apply();
         }
-        else if (hdr.ipv4.isValid()) {
-            if( !tb_ipv4_lpm.apply().hit){
-                tb_ipv4_mc_route_lookup.apply();
-            }
-        } 
+ 
 
     } // END OF APPLY BLOCK
     
@@ -272,11 +340,11 @@ control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
         apply{
-            log_msg("ingress_port: {}, egress_port: {}", {standard_metadata.ingress_port, standard_metadata.egress_port });
+            // log_msg("ingress_port: {}, egress_port: {}", {standard_metadata.ingress_port, standard_metadata.egress_port });
 
-            if (standard_metadata.ingress_port == standard_metadata.egress_port) {
-                mark_to_drop(standard_metadata);
-            }
+            // if (standard_metadata.ingress_port == standard_metadata.egress_port) {
+            //     mark_to_drop(standard_metadata);
+            // }
 
         }
 }
