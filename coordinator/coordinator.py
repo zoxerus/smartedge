@@ -112,7 +112,7 @@ class Swarm_Node_Handler:
                                                     thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
         
         bmv2_thrift.delete_forwarding_entry_from_bmv2(
-            communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {global_config.this_ap_vip}',
+            communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {global_config.coordinator_vip}',
             thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
 
         bmv2_thrift.delete_forwarding_entry_from_bmv2(
@@ -179,7 +179,7 @@ def set_arps():
         host_id_hex = f'{host_id:04x}'
         station_virtual_ip_address = str( ipaddress.ip_address( global_config.this_swarm_subnet) + host_id )
         station_virtual_mac_address = f'00:00:00:00:{host_id_hex[:2]}:{host_id_hex[2:]}'
-        cli_command = f'arp -s {station_virtual_ip_address} {station_virtual_mac_address}'
+        cli_command = f'arp -s {station_virtual_ip_address} {station_virtual_mac_address} dev vxlan1000 '
         subprocess.run(cli_command.split(), text=True)
 
 def main():
