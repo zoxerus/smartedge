@@ -18,7 +18,7 @@ database_port = 9042
 
 coordinator_physical_ip = '192.168.100.6'
 coordinator_vip='192.168.10.1'
-coordinator_mac = '5a:62:5c:4a:87:59 '
+coordinator_mac = '3e:a9:ef:fd:15:9e'
 coordinator_tcp_port = 29997
 node_manager_tcp_port = 29997
 
@@ -26,6 +26,6 @@ default_thrift_port = 9090
 
 
 ap_list = {
-    'AP:004': ['4e:fb:2e:69:a7:53', '192.168.100.4'],
-    'AP:005': ['52:3c:a9:f6:e2:29', '192.168.100.5']
+    'AP:004': ['ae:41:1c:2d:6d:5c', '192.168.100.4'],
+    'AP:003': ['72:33:e0:66:b3:8e', '192.168.100.5']
     }
