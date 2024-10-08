@@ -22,6 +22,8 @@ This code has been tested or Raspberry Pi 5 devices and is comprised of three pa
 3. In the device that is meant to work as a coordinator:
    - install the bmv2 docker container `docker pull p4lang/pi`
    - install the cassandra docker container `docker pull cassandra`
+   - create a virtual python environment inside the folder ./ap_manager/client_monitor `python3 -m venv .venv`
+   - source the new environment `source ./.venv/bin/activate`
    - install python modules `pip install aenum cassandra-driver`
   
 # Configuring the Network
