@@ -131,7 +131,7 @@ def install_swarmNode_config():
     swarm_veth1_vmac = swarmNode_config[STR_VETH1_VMAC]
     
     commands = [ # add the vxlan interface to the AP
-                f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev wlan0 remote {swarmNode_config[STR_AP_IP]} dstport 4789',
+                f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {swarmNode_config[STR_AP_IP]} dstport 4789',
                 # bring the vxlan up
                     f'ip link set dev vxlan{vxlan_id} up',    
                 # add the veth interface pair, will be ignored if name is duplicate

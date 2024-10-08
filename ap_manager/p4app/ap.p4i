@@ -1053,7 +1053,10 @@ control MyIngress(inout headers hdr,
         standard_metadata.egress_spec = eif;
     }
 
-
+    /*
+    Merge with swarm ACL: 
+        this table plays the role of checking of blacklisted nodes.
+    */
     table tb_swarm_control {
         key = {
             standard_metadata.ingress_port: exact;
@@ -1153,7 +1156,9 @@ control MyIngress(inout headers hdr,
 
 
 
-
+    /* Merged with Swarm ACL:
+        Added tables to check IDs of source and destination nodes
+     */
 
     action get_swarm_id_src(bit<8> id){
         meta.id_src = id;

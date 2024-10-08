@@ -33,13 +33,13 @@ INDEX_IW_EVENT_ACTION = 1
 
 # the physical interface that connects to the backbone network
 # TODO: safely delete this
-DEFAULT_EHTERNET_DEVICE_NAME = 'eth0'
+DEFAULT_EHTERNET_DEVICE_NAME = config.default_ethernet_device
 
 # get primary wlan interface from the config file
 DEFAULT_WLAN_DEVICE_NAME = config.default_wlan_interface
  
 # This is the interface that connects to the coordinator
-DEFAULT_COORDINATOR_INTERFACE_PEER = 'vxlan1000'
+DEFAULT_COORDINATOR_INTERFACE_PEER = config.default_coordinator_device
 
 # String constants to be used with the output of the iw tool
 IW_TOOL_JOINED_STATION_EVENT = 'new'

@@ -20,6 +20,8 @@ swarm_coordinator_switch_port = global_config.swarm_backbone_switch_port
 
 # name of the default wlan interface to use
 default_wlan_interface = 'wlan0'
+default_ethernet_device = 'eth0'
+default_coordinator_device =  'smartedge-bb'
 
 
 # currently assuming a /24 mask
