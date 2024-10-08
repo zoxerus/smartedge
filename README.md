@@ -14,6 +14,8 @@ This code has been tested or Raspberry Pi 5 devices and is comprised of three pa
        nmcli con up Hotspot
      ```
    - Install the bmv2 docker image `docker pull p4lang/pi`
+   - create a virtual python environment inside the folder ./ap_manager/client_monitor `python3 -m venv .venv`
+   - source the new environment `source ./.venv/bin/activate`
    - Install the required python modules: `pip install psutil aenum cassandra-driver`
 2. In the RPi5 devices that are meant to work as swarm nodes:
    -  download and install the NIKSS switch, follow instructions on the link: https://github.com/NIKSS-vSwitch/nikss
