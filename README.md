@@ -34,12 +34,16 @@ This code has been tested or Raspberry Pi 5 devices and is comprised of three pa
       sudo ip address add 192.168.100.x/24 dev smartedge-bb
       sudo ip link set dev smartedge-bb up
    ```
-2. Configure loopback addresses on APs and Nodes, consult the files /ap_manager/client_monitor/config.py and /node_manager/config.py for instructions on how to do so
-3. in the respective config.py files mentioned in step 1, configure the default_wlan_interface to point to the wifi device name.
-4. In the global config file /lib/config.py configure the list ap_list with names, mac, and ip addresses of the access points in the network for example.
-5. In the global config file set the ip where the database is hosted by setting the variabla database_hostname and database_port
-6. In the global config file set the IP where the coordinator is located by setting the variables coordinator_physical_ip and coordinator_mac
-7. In the global config file set the variables this_swarm_subnet and coordinator_vip (you can also keep the default values )
+   for the coordinator, add as well a swarm virtual ip to the smartedge-bb interface:
+   ```
+   sudo ip address add 192.168.10.1/24 dev smartedge-bb
+   ```
+3. Configure loopback addresses on APs and Nodes, consult the files /ap_manager/client_monitor/config.py and /node_manager/config.py for instructions on how to do so
+4. in the respective config.py files mentioned in step 1, configure the default_wlan_interface to point to the wifi device name.
+5. In the global config file /lib/config.py configure the list ap_list with names, mac, and ip addresses of the access points in the network for example.
+6. In the global config file set the ip where the database is hosted by setting the variabla database_hostname and database_port
+7. In the global config file set the IP where the coordinator is located by setting the variables coordinator_physical_ip and coordinator_mac
+8. In the global config file set the variables this_swarm_subnet and coordinator_vip (you can also keep the default values )
 
 # Starting the Network
 1. Clone the Repo to the devices meant to work as Access Points and set the config as in the section Congifuring the Network
