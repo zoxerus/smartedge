@@ -1160,39 +1160,39 @@ control MyIngress(inout headers hdr,
         Added tables to check IDs of source and destination nodes
      */
 
-    action get_swarm_id_src(bit<8> id){
-        meta.id_src = id;
-    }
-    action get_swarm_id_dst(bit<8> id){
-        meta.id_dst= id;
-    }
+//     action get_swarm_id_src(bit<8> id){
+//         meta.id_src = id; 
+//     }
+//     action get_swarm_id_dst(bit<8> id){
+//         meta.id_dst= id; 
+//     }
 
-// Check the swarm id of src host
-    table tb_check_swarm_id_src{
-        key = {
-            hdr.ipv4.srcIP: lpm;
-        }
-        actions = {
-            get_swarm_id_src;
-            drop;
-        }
-        default_action = drop();
+// // Check the swarm id of src host
+//     table tb_check_swarm_id_src{
+//         key = {
+//             hdr.ipv4.srcIP: lpm;
+//         }
+//         actions = {
+//             get_swarm_id_src;
+//             drop;
+//         }
+//         default_action = drop();
 
-    }
+//     }
 
 
-// Check the swarm id of dst host
-    table tb_check_swarm_id_dst{
-        key = {
-            hdr.ipv4.dstIP: lpm;
-        }
-        actions = {
-            get_swarm_id_dst;
-            drop;
-        }
-        default_action = drop();
+// // Check the swarm id of dst host
+//     table tb_check_swarm_id_dst{
+//         key = {
+//             hdr.ipv4.dstIP: lpm;
+//         }
+//         actions = {
+//             get_swarm_id_dst;
+//             drop;
+//         }
+//         default_action = drop();
 
-    }
+//     }
 
     //------------------------------------------------------//
     //------ I N G R E S S  P R O C E S S I N G ------------//
@@ -1201,11 +1201,11 @@ control MyIngress(inout headers hdr,
             if(tb_swarm_control.apply().hit){
                 exit;
             }
-            tb_check_swarm_id_src.apply();
-            tb_check_swarm_id_dst.apply();
-            if (meta.id_dst != meta.id_src){
-                drop();
-            }
+            // tb_check_swarm_id_src.apply();
+            // tb_check_swarm_id_dst.apply();
+            // if (meta.id_dst != meta.id_src){
+            //     drop();
+            // }
             else if( !tb_ipv4_lpm.apply().hit){
                 tb_ipv4_mc_route_lookup.apply();
             }
