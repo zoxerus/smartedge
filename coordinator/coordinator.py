@@ -112,12 +112,12 @@ class Swarm_Node_Handler:
                                                     thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
         
         bmv2_thrift.delete_forwarding_entry_from_bmv2(
-            communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {global_config.coordinator_vip}',
+            communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {node_swarm_ip}',
             thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
 
         bmv2_thrift.delete_forwarding_entry_from_bmv2(
             communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, table_name= 'MyIngress.tb_swarm_control', 
-            key= f'{global_config.swarm_backbone_switch_port} {node_swarm_ip }', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
+            key= f'{global_config.swarm_backbone_switch_port} {global_config.coordinator_vip}', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
         
         
         # insert table entries in the rest of the APs
