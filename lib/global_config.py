@@ -36,14 +36,14 @@ database_port = 9042
 
 # This IP is used by the access points to reach the coordinator,
 # this IP is the one configured on the smartedge-bb vxlan interface of the coordinator
-coordinator_physical_ip = '192.168.100.6'
+coordinator_physical_ip = '192.168.100.1'
 
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
 coordinator_vip='192.168.10.1'
 
 # this is the mac that is of the  smartedge-bb of the coordinator
-coordinator_mac = '3e:a9:ef:fd:15:9e'  
+coordinator_mac = '00:00:00:00:00:01'  
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
 coordinator_tcp_port = 29997
@@ -59,6 +59,6 @@ default_thrift_port = 9090
 # this list of IPs and MACs are the ones configured on the smartedge-bb on each access point
 ap_list = {
     # ID of AP       MAC of smartedge-bb    IP of smartedge-bb
-    'AP:004': [     'ae:41:1c:2d:6d:5c',    '192.168.100.4'],
-    'AP:003': [     '72:33:e0:66:b3:8e',    '192.168.100.3']
+    'AP:004': [     '00:00:00:00:00:04',    '192.168.100.4'],
+    'AP:005': [     '00:00:00:00:00:05',    '192.168.100.5']
     }
