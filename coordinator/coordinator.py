@@ -2,6 +2,7 @@
 import sys
 # setting path
 sys.path.append('..')
+sys.path.append('.')
 
 import lib.global_config as global_config
 import ipaddress
@@ -169,6 +170,7 @@ def swarm_coordinator():
         serversocket.bind(SWARM_NODE_TCP_SERVER)
         set_keepalive_linux(sock= serversocket, after_idle_sec=1, interval_sec=3, max_fails= 5)
         serversocket.listen(COORDINATOR_MAX_TCP_CONNNECTIONS)
+        print('Coordinator Script is Running')
         while True:
             (node_socket, address) = serversocket.accept()
             print(f'received connection request from {address}')
@@ -183,10 +185,11 @@ def set_arps():
         subprocess.run(cli_command.split(), text=True)
 
 def main():
-    set_arps()
+    # set_arps()
+    print('Starting Coordinator')
     swarm_coordinator()
     # threading.Thread(target=ap_server).start()
-    threading.Thread(target=swarm_coordinator, daemon= True).start()
+    # threading.Thread(target=swarm_coordinator, daemon= True).start()
     return 0 
 
 if __name__ == "__main__":
