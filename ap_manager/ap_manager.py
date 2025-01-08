@@ -112,7 +112,7 @@ print("AP ID:", THIS_AP_UUID)
 THIS_AP_ETH_MAC = None
 for snic in psutil.net_if_addrs()[config.default_ethernet_device]:
     if snic.family == psutil.AF_LINK:        
-        THIS_AP_ETH_MAC = ipaddress.ip_address(snic.address)
+        THIS_AP_ETH_MAC = snic.address
 if THIS_AP_ETH_MAC == None:
     logger.error("Could not Connect to backbone, check eth device name in the config file")
     exit()
@@ -120,7 +120,7 @@ if THIS_AP_ETH_MAC == None:
 THIS_AP_WLAN_MAC = None
 for snic in psutil.net_if_addrs()[config.default_wlan_interface]:
     if snic.family == psutil.AF_LINK:        
-        THIS_AP_WLAN_MAC = ipaddress.ip_address(snic.address)
+        THIS_AP_WLAN_MAC = snic.address
 if THIS_AP_WLAN_MAC == None:
     logger.error("Could not Connect to backbone, check eth device name in the config file")
     exit()
