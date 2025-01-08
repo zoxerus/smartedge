@@ -117,7 +117,12 @@ case $ROLE in
     # sudo ip address add $BACKBONE_IP dev smartedge-bb
     # sudo ip link set dev smartedge-bb up
     sudo ip link set dev eth0 address $final_mac
-    sudo ip link set dev wlan0 address 16:00:00:00:00:01
+
+    oldMAC=16:00:00:00:00:00
+    rawOldMac=$(echo $oldMAC | tr -d ':')
+    rawNewMac=$(( 0x$rawOldMac + $NUMID ))
+    final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
+    sudo ip link set dev wlan0 address $final_mac
     sudo python ./ap_manager/ap_manager.py
     ;;
 # Smart Node
