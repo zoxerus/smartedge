@@ -30,7 +30,7 @@ database_port = global_config.database_port
 coordinator_physical_ip = global_config.coordinator_physical_ip
 coordinator_physical_mac = global_config.coordinator_physical_mac
 coordinator_vip= global_config.coordinator_vip
-coordinator_mac= global_config.coordinator_mac
+
 
 # Coordinator TCP port for the node manager to communicate with the coordinator
 # this info is sent by the AP to the swarm node.
