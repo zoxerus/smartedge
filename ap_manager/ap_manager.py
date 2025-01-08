@@ -297,7 +297,7 @@ def handle_new_connected_station(station_physical_mac_address):
         db.insert_into_thing_directory_with_node_info(database_typ=db_in_use, session=database_session,
                                                       node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0)
     
-    elif (result.swarm_id == 0):
+    elif (result.node_current_swarm == 0):
         db.update_tdd_with_new_node_status(database_type=db_in_use, session=database_session, 
                                            node_uuid=SN_UUID, node_current_ap=THIS_AP_UUID, node_current_swarm=0)
     
@@ -387,7 +387,7 @@ def handle_new_connected_station(station_physical_mac_address):
 
 
                     
-def handle_disconnected_station(station_physical_mac_address, control_queue):
+def handle_disconnected_station(station_physical_mac_address):
     # sometimes when the program is started there are already connected nodes to the AP.
     # so if one of these nodes disconnectes for the AP whre a disconnection is detected but the 
     # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
