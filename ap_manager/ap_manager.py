@@ -280,7 +280,7 @@ def assign_virtual_mac_and_ip_by_host_id(host_id):
     return station_virtual_mac_address, station_virtual_ip_address
 
 
-def handle_new_connected_station(station_physical_mac_address, control_queue):
+def handle_new_connected_station(station_physical_mac_address):
     # First Step check if node is already in the Connected Nodes 
     # sometimes an already connected station is randomly detected as connecting again, 
     # this check skips the execution of the rest of the code, as the station is already connected and set up.
