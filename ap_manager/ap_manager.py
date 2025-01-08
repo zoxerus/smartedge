@@ -1,6 +1,7 @@
 # This tells python to look for files in parent folders
 import sys
 # setting path
+sys.path.append('.')
 sys.path.append('..')
 sys.path.append('../..')
 
