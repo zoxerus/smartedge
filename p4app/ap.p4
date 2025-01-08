@@ -166,7 +166,9 @@ control MyIngress(inout headers hdr,
         exit;
     }
 
-    action ac_send_to_coordinator(egressSpec_t eif){
+    action ac_send_to_coordinator(egressSpec_t eif,macAddr_t srcMac, macAddr_t dstMac){
+        hdr.ethernet.srcMac = srcMac;
+        hdr.ethernet.dstMac = dstMac;
         standard_metadata.egress_spec = eif;
     }
 

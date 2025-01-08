@@ -1,22 +1,29 @@
 import subprocess
 import sys
-import json
+import psutil
 import logging
 import threading
 import atexit
 import queue
 import time
 import socket
-import config
 import os
+
+DEFAULT_IFNAME = 'wlan0'
+
+for snic in psutil.net_if_addrs()[DEFAULT_IFNAME]:
+    if snic.family == socket.AF_INET:
+        NODE_UUID = f'SN:{snic.address[9:]}'
+
+print('Assign Node UUID:', NODE_UUID)
+
+exit()
 
 PROGRAM_LOG_FILE_NAME = './logs/program.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 
-NODE_UUID = config.NODE_UUID
-
 ACCESS_POINT_IP = ''
-DEFAULT_IFNAME = config.default_ifname
+
 
 logger = logging.getLogger(__name__)
 

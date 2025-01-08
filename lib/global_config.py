@@ -8,17 +8,6 @@ swarm_backbone_switch_port = 501
 REDIS_PORT = 6379
 CASSANDRA_PORT = 9402
 
-'''
-In the new documentation, I have replaced the name vxlan1000 with the name smartedge-bb, but the functionality remains the same.
-In this file I am using two networks:
-the 192.168.10.0/24 is the swarm subnet
-the 192.168.100.0/24 is the smartedge backbone and it is a vxlan overlay network used to connect the coordinator with the APs
-The IP of the coordinator is on the backbone network is 192.168.100.6 and on the swarm subnet it takes the IP 192.168.10.1
-and the access points have the IPs 192.168.100.3, 192.168.100.4, and 192.168.10.5.
-currently the Access Points don't take swarm IP (e.g on the subnet 192.168.10.0/24) as it is not needed. 
-'''
-
-
 # here configure the subnet range that need to be allocated to the swarm
 # here we assume a /24 subnet mask
 this_swarm_subnet='192.168.10.0'  ## this is the subnet to use for the swarm
@@ -36,14 +25,14 @@ database_port = 9042
 
 # This IP is used by the access points to reach the coordinator,
 # this IP is the one configured on the smartedge-bb vxlan interface of the coordinator
-coordinator_physical_ip = '192.168.100.1'
+coordinator_physical_ip = '10.1.1.5'
 
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
 coordinator_vip='192.168.10.1'
 
 # this is the mac that is of the  smartedge-bb of the coordinator
-coordinator_mac = '00:00:00:00:00:01'  
+coordinator_physical_mac = '02:00:00:00:00:01'  
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
 coordinator_tcp_port = 29997

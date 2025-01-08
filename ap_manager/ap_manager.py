@@ -4,11 +4,9 @@ import sys
 sys.path.append('..')
 sys.path.append('../..')
 
-
 import subprocess
 import logging
 import threading
-import queue
 import socket
 import atexit
 import time
@@ -70,6 +68,7 @@ STR_CONTROL_UPDATE_ACTION_LEAVE = 'LEAVE'
 # TODO: make this configurable by coordinator
 THIS_SWARM_SUBNET=ipaddress.ip_address( config.this_swarm_subnet )
 
+
 # a variable to track created host ids
 # TODO: have a database table for this
 current_host_id = config.this_swarm_dhcp_start
@@ -84,12 +83,46 @@ CONNECTED_STATIONS_VMAC_INDEX = 0
 CONNECTED_STATIONS_VIP_INDEX = 1
 CONNECTED_STATION_VXLAN_INDEX = 2
 
+loopback_if = 'lo:0'
 
 
 logger = logging.getLogger('client_monitor_logger')
 
 database_session = db.connect_to_database(db_in_use, config.database_hostname, config.database_port)
-           
+
+def int_to_mac(macint):
+    if type(macint) != int:
+        raise ValueError('invalid integer')
+    return ':'.join(['{}{}'.format(a, b)
+                     for a, b
+                     in zip(*[iter('{:012x}'.format(macint + 2199023255552))]*2)])  
+
+THIS_AP_UUID = None
+
+for snic in psutil.net_if_addrs()[loopback_if]:
+    if snic.family == socket.AF_INET:        
+        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address)))
+        THIS_AP_UUID = f'AP:{temp_mac[9:]}'
+if THIS_AP_UUID == None:
+    logger.error("Could not Assign UUID to Node")
+    exit()
+print("AP ID:", THIS_AP_UUID)
+
+THIS_AP_ETH_MAC = None
+for snic in psutil.net_if_addrs()[config.default_ethernet_device]:
+    if snic.family == socket.AF_LINK:        
+        THIS_AP_ETH_MAC = ipaddress.ip_address(snic.address)
+if THIS_AP_ETH_MAC == None:
+    logger.error("Could not Connect to backbone, check eth device name in the config file")
+    exit()
+
+THIS_AP_WLAN_MAC = None
+for snic in psutil.net_if_addrs()[config.default_wlan_interface]:
+    if snic.family == socket.AF_LINK:        
+        THIS_AP_WLAN_MAC = ipaddress.ip_address(snic.address)
+if THIS_AP_WLAN_MAC == None:
+    logger.error("Could not Connect to backbone, check eth device name in the config file")
+    exit()
                          
 def initialize_program():
     # this part handles logging to console and to a file for debugging purposes
@@ -238,8 +271,7 @@ def get_ip_from_arp_by_physical_mac(physical_mac):
 
 def assign_virtual_mac_and_ip_by_host_id(host_id):
     station_virtual_ip_address = str( THIS_SWARM_SUBNET + host_id )
-    host_id_hex = f'{host_id:04x}'
-    station_virtual_mac_address = f'00:00:00:00:{host_id_hex[:2]}:{host_id_hex[2:]}'
+    station_virtual_mac_address = int_to_mac(int( THIS_SWARM_SUBNET + host_id ))
     
     logger.debug( f'\nStation\'s Virtual IP: {station_virtual_ip_address}' )
     logger.debug( f'\nStation\'s Virtual MAC: {station_virtual_mac_address}')
@@ -247,21 +279,61 @@ def assign_virtual_mac_and_ip_by_host_id(host_id):
     return station_virtual_mac_address, station_virtual_ip_address
 
 
-
 def handle_new_connected_station(station_physical_mac_address, control_queue):
+    # First Step check if node is already in the Connected Nodes 
     # sometimes an already connected station is randomly detected as connecting again, 
     # this check skips the execution of the rest of the code, as the station is already connected and set up.
     if (station_physical_mac_address in connected_stations.keys() ):
         return
-
-    station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
-    if station_physical_ip_address == None:
-        logger.error(f'Error: Could not get Node Physical IP from ARP table for MAC: {station_physical_mac_address}')
-        return
     
+    # get the IP of the node from its mac address from the ARP table
+    station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
+     
+    # 2nd Step: Check if Node belong to a Swarm or Not
+    SN_UUID = 'SN:' + station_physical_mac_address[9:]
+    result = db.get_node_info_from_tdd(session=database_session, node_uuid=SN_UUID)
+    if (result == None):
+        db.insert_into_thing_directory_with_node_info(database_typ=db_in_use, session=database_session,
+                                                      node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0)
+    
+    elif (result.swarm_id == 0):
+        db.update_tdd_with_new_node_status(database_type=db_in_use, session=database_session, 
+                                           node_uuid=SN_UUID, node_current_ap=THIS_AP_UUID, node_current_swarm=0)
+    
+    # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
+                                table_name = 'MyIngress.tb_swarm_control',
+                                action_name = 'MyIngress.ac_send_to_coordinator', 
+                                match_keys = f'{config.default_wlan_interface} {config.coordinator_physical_ip}',
+                                action_params = f'{config.swarm_coordinator_switch_port} {THIS_AP_ETH_MAC} {config.coordinator_physical_mac}' )
+    
+    # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
+                                table_name = 'MyIngress.tb_swarm_control',
+                                action_name = 'MyIngress.ac_send_to_coordinator', 
+                                match_keys = f'{config.default_wlan_interface} {station_physical_ip_address}',
+                                action_params = f'{config.swarm_coordinator_switch_port} {THIS_AP_WLAN_MAC} {station_physical_mac_address}' )
+    
+    
+    return 
+    # 3d Step: Node Belongs to a swarm, continue from here    
+
+    if station_physical_ip_address == None:
+        tries = 2
+        while (tries > 0):
+            station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
+            if station_physical_ip_address != None:
+                break
+            time.sleep(0.05)
+            tries = tries - 1
+        if station_physical_ip_address == None:
+            logger.error(f'Error: Could not get Node Physical IP from ARP table for MAC: {station_physical_mac_address}')
+            return
+        
     logger.info( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
     
-
+    
+    
     host_id = db.get_next_available_host_id_from_swarm_table(database_typ=db_in_use,
                 session=database_session, first_host_id=config.this_swarm_dhcp_start,
                 max_host_id=config.this_swarm_dhcp_end)
@@ -301,13 +373,13 @@ def handle_new_connected_station(station_physical_mac_address, control_queue):
     connected_stations[station_physical_mac_address] = [ station_vmac ,station_vip, vxlan_id]
     
     # Now we should insert the new connected station in the swarm database
-    db.insert_node_into_swarm_database(database_type=db_in_use, session= database_session, this_ap_id= config.this_ap_id,
+    db.insert_node_into_swarm_database(database_type=db_in_use, session= database_session, this_ap_id= THIS_AP_UUID,
                                     host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, node_phy_mac=station_physical_mac_address)
     
-    logger.info(f'station: {station_vmac} {station_vip} joined AP {config.this_ap_id} at {time.time()}')
+    logger.info(f'station: {station_vmac} {station_vip} joined AP {THIS_AP_UUID} at {time.time()}')
     
     # connect to the swarm node manager and send the  required configuration for the communication with the coordinator
-    swarmNode_config_message = f'setConfig {vxlan_id} {station_vip} {station_vmac} {config.coordinator_vip} {config.coordinator_mac} {config.coordinator_tcp_port} {config.this_ap_id}'
+    swarmNode_config_message = f'setConfig {vxlan_id} {station_vip} {station_vmac} {config.coordinator_vip} {config.coordinator_mac} {config.coordinator_tcp_port} {THIS_AP_UUID}'
     threading.Thread(target= send_swarmNode_config, args= (swarmNode_config_message,
                                                            (station_physical_ip_address, config.node_manager_tcp_port ), ) 
     ).start()
@@ -357,14 +429,12 @@ def handle_disconnected_station(station_physical_mac_address, control_queue):
                                     node_swarm_id= station_vxlan_id)
 
     
-    logger.info(f'station: {station_virtual_ip_address} left AP {config.this_ap_id}')
+    logger.info(f'station: {station_virtual_ip_address} left AP {THIS_AP_UUID}')
        
     delete_vxlan_by_host_id(station_vxlan_id)
     
 
-
-
-def monitor_stations(control_queue):
+def monitor_stations():
     # this command is run in the shell to monitor wireless events using the iw tool
     monitoring_command = 'iw event'
 
@@ -383,16 +453,13 @@ def monitor_stations(control_queue):
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
             logger.info( '\nNew Station MAC: ' + station_physical_mac_address )
             
-            handle_new_connected_station(
-                station_physical_mac_address=station_physical_mac_address,
-                control_queue=control_queue)
+            handle_new_connected_station(station_physical_mac_address=station_physical_mac_address)
 
         elif output_line_as_word_array[INDEX_IW_EVENT_ACTION] ==   IW_TOOL_LEFT_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
             logger.info( '\nDisconnected Station MAC: ' + station_physical_mac_address )
             try:
-                handle_disconnected_station(
-                    station_physical_mac_address=station_physical_mac_address, control_queue=control_queue)
+                handle_disconnected_station(station_physical_mac_address=station_physical_mac_address)
             except Exception as e:
                 logger.error(f'Error handling disconnected station: {station_physical_mac_address}')
                 logger.error(e)
@@ -409,12 +476,9 @@ def main():
     logger.debug("Program Started")
     initialize_program()
     
-    # a queue from communicating to the control thread, for sending updates
-    # TODO: delete this
-    control_queue = queue.Queue()
     
     # thread for monitoring connected devices to the AP WiFi network
-    monitor_stations_on_thread = threading.Thread(target=monitor_stations, args=(control_queue,)).start()
+    monitor_stations_on_thread = threading.Thread(target=monitor_stations, args=()).start()
     
 
             
