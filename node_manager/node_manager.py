@@ -182,7 +182,6 @@ def install_swarmNode_config():
         f'nikss-ctl add-port pipe 0 dev vxlan{vxlan_id}',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}',
-        f"arp -s {swarmNode_config[STR_COORDINATOR_VIP]} {swarmNode_config[STR_COORDINATOR_VMAC]} dev veth1" # THIS IS THE MAC OF THE COORDINATOR
     ]
     
     for command in commands:
