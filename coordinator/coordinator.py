@@ -111,7 +111,7 @@ class Swarm_Node_Handler:
     
         db_comms.update_db_with_joined_node(db_in_use, database_session, node_uuid, node_swarm_id)
                     
-        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= node_swarm_id)
+        # add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= node_swarm_id)
 
         entry_handle = bmv2_thrift.add_entry_to_bmv2(communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',

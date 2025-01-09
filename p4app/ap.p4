@@ -6,23 +6,25 @@
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 
-const bit<8>  UDP_PROTOCOL = 0x11;
-const bit<16> TYPE_IPV4 = 0x800;
-const bit<16> TYPE_ARP =  0x0806;
-// const bit<6> TYPE_INT = 6w31;
-// const bit<16> TYPE_INT1 = 0x10E2;
-const bit<32> REPORT_MIRROR_SESSION_ID = 500;
-const bit<6> IPv4_DSCP_INT = 6w31;   // indicates an INT header in the packet
-const bit<16> INT_SHIM_HEADER_LEN_BYTES = 4;
-const bit<8> INT_TYPE_HOP_BY_HOP = 1;
-//const bit<16> HOP_MD_LEN_BYTES = 36;
-const bit<16> HOP_MD_LEN_BYTES = 40;
-//const bit<5> HOP_MD_WORDS = 9;
-const bit<5> HOP_MD_WORDS = 10;
+// const bit<8>  UDP_PROTOCOL = 0x11;
+// const bit<16> TYPE_IPV4 = 0x800;
+// const bit<16> TYPE_ARP =  0x0806;
+// // const bit<6> TYPE_INT = 6w31;
+// // const bit<16> TYPE_INT1 = 0x10E2;
+// const bit<32> REPORT_MIRROR_SESSION_ID = 500;
+// const bit<6> IPv4_DSCP_INT = 6w31;   // indicates an INT header in the packet
+// const bit<16> INT_SHIM_HEADER_LEN_BYTES = 4;
+// const bit<8> INT_TYPE_HOP_BY_HOP = 1;
+// //const bit<16> HOP_MD_LEN_BYTES = 36;
+// const bit<16> HOP_MD_LEN_BYTES = 40;
+// //const bit<5> HOP_MD_WORDS = 9;
+// const bit<5> HOP_MD_WORDS = 10;
 
-/*************************************************************************
-*********************** H E A D E R S  ***********************************
-*************************************************************************/
+
+
+const bit<16> TYPE_IPV4 = 0x0800;
+const bit<16> TYPE_ARP  = 0x0806;
+
 
 // ARP RELATED CONST VARS
 const bit<16> ARP_HTYPE = 0x0001; //Ethernet Hardware type is 1
@@ -31,6 +33,11 @@ const bit<8>  ARP_HLEN  = 6; //Ethernet address size is 6 bytes
 const bit<8>  ARP_PLEN  = 4; //IP address size is 4 bytes
 const bit<16> ARP_REQ = 1; //Operation 1 is request
 const bit<16> ARP_REPLY = 2; //Operation 2 is reply
+
+
+/*************************************************************************
+*********************** H E A D E R S  ***********************************
+*************************************************************************/
 
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
@@ -102,8 +109,8 @@ header switch_int_t {
 }
 
 struct metadata {
-    bit<8> id_src;
-    bit<8> id_dst;
+    // bit<8> id_src;
+    // bit<8> id_dst;
     }
 
 struct headers {
@@ -202,29 +209,29 @@ control MyIngress(inout headers hdr,
     //-------------------------------------------------------------//
     //--------- M U L T I C A S T  H A N D L I N G ----------------//
 
-    action ac_set_mcast_grp (bit<16> mcast_grp) {
+    // action ac_set_mcast_grp (bit<16> mcast_grp) {
 
-        standard_metadata.mcast_grp = mcast_grp;
-        // See Section 6.4 of RFC 1112
-        hdr.ethernet.dstMac = 0xffffffffffff;
+    //     standard_metadata.mcast_grp = mcast_grp;
+    //     // See Section 6.4 of RFC 1112
+    //     hdr.ethernet.dstMac = 0xffffffffffff;
 
-        // The P4_16 |-| operator is a saturating operation, meaning
-        // that since the operands are unsigned integers, the result
-        // cannot wrap around below 0 back to the maximum possible
-        // value, the way the result of the - operator can.
-        hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
-    } 
+    //     // The P4_16 |-| operator is a saturating operation, meaning
+    //     // that since the operands are unsigned integers, the result
+    //     // cannot wrap around below 0 back to the maximum possible
+    //     // value, the way the result of the - operator can.
+    //     hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
+    // } 
 
-    table tb_ipv4_mc_route_lookup {
-        key = {
-            hdr.ipv4.dstIP: lpm;
-        }
-        actions = {
-            ac_set_mcast_grp;
-            drop;
-        }
-        const default_action = drop;
-    }
+    // table tb_ipv4_mc_route_lookup {
+    //     key = {
+    //         hdr.ipv4.dstIP: lpm;
+    //     }
+    //     actions = {
+    //         ac_set_mcast_grp;
+    //         drop;
+    //     }
+    //     const default_action = drop;
+    // }
 
 
     //------------------------------------------------------//
@@ -266,9 +273,9 @@ control MyIngress(inout headers hdr,
         standard_metadata.egress_spec = eif;
     }
 
-    action ac_l2_broadcast(bit<16> mcast_grp ){
-        standard_metadata.mcast_grp = mcast_grp;
-    }
+    // action ac_l2_broadcast(bit<16> mcast_grp ){
+    //     standard_metadata.mcast_grp = mcast_grp;
+    // }
 
     table tb_l2_forward {
         key = {
@@ -276,7 +283,7 @@ control MyIngress(inout headers hdr,
         } 
         actions = {
             ac_l2_forward;
-            ac_l2_broadcast;
+            // ac_l2_broadcast;
             drop;
             NoAction;
         }
