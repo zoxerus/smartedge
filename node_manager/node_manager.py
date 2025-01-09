@@ -147,7 +147,6 @@ def handle_connection():
 def install_swarmNode_config():
     global swarmNode_config, join_queue, last_request_id
     
-    
     vxlan_id = swarmNode_config[STR_VXLAN_ID]
     swarm_veth1_vip = swarmNode_config[STR_VETH1_VIP]
     swarm_veth1_vmac = swarmNode_config[STR_VETH1_VMAC]
@@ -169,6 +168,7 @@ def install_swarmNode_config():
     for command in commands:
         print('executing: ' + command)
         subprocess.run(command.split(), text=True)
+        time.sleep(5)
         
     get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
     get_if2_index_command = f'cat /sys/class/net/vxlan{vxlan_id}/ifindex'
@@ -192,7 +192,7 @@ def install_swarmNode_config():
     last_request_id = last_request_id + 1
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
         print(f'connecting to {swarmNode_config[STR_COORDINATOR_VIP]}:{swarmNode_config[STR_COORDINATOR_TCP_PORT]}')
-        coordinator_socket.settimeout(5)
+        coordinator_socket.settimeout(10)
         coordinator_socket.connect((swarmNode_config[STR_COORDINATOR_VIP], swarmNode_config[STR_COORDINATOR_TCP_PORT] ))
         coordinator_socket.sendall(bytes( join_request_data.encode() ))
         print(f'sent {join_request_data} to coordinator')
