@@ -143,8 +143,13 @@ def initialize_program():
     bmv2.send_cli_command_to_bmv2(cli_command="reset_state")
     
     # attach the DEFAULT_COORDINATOR_INTERFACE_PEER interface to the bmv2
-    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.swarm_coordinator_switch_port}")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {DEFAULT_COORDINATOR_INTERFACE_PEER} {config.swarm_coordinator_switch_port}")
+    # bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.swarm_coordinator_switch_port}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.wlan_switch_port}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.ethernet_switch_port}")
+    
+    # bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {DEFAULT_COORDINATOR_INTERFACE_PEER} {config.swarm_coordinator_switch_port}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_wlan_interface} {config.wlan_switch_port}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_ethernet_device} {config.ethernet_switch_port}")
     
    
     # handle broadcast
@@ -153,24 +158,7 @@ def initialize_program():
     bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
     bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast FF:FF:FF:FF:FF:FF => {SWARM_P4_MC_GROUP}")
     
-    
-    # this creates required vxlans for the communication to coordinator and other AP if they don't exits    
-    if config.ap_communication_switch_port != config.swarm_coordinator_switch_port:
-        try:
-            add_vxlan_shell_command = ( f"ip link add vxlan{config.ap_communication_switch_port} "
-                f"type vxlan id {config.ap_communication_switch_port} group 239.1.1.1 dstport 4789 dev {DEFAULT_EHTERNET_DEVICE_NAME} " )
-            subprocess.run(add_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            activate_interface_shell_command = f"ip link set vxlan{config.ap_communication_switch_port} up" 
-            subprocess.run(activate_interface_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            created_host_ids.add(config.ap_communication_switch_port)
-            
-            # attach the created vxlans to the bmv2 switch.
-            bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.ap_communication_switch_port}")
-            bmv2.send_cli_command_to_bmv2(cli_command=f"port_add vxlan{config.ap_communication_switch_port} {config.ap_communication_switch_port}")
-    
-        except Exception as e:
-            logger.error(f'initialization error: {e}')
-            exit() 
+
     logger.info('Program Initialized Successfully')
 
 # a handler to clean exit the programs
@@ -291,34 +279,23 @@ def handle_new_connected_station(station_physical_mac_address):
     station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
      
     # 2nd Step: Check if Node belong to a Swarm or Not
+    # to do so we first read the UUID (bottom three bytes of MAC address)
     SN_UUID = 'SN:' + station_physical_mac_address[9:]
+    
+    # Then we search the TDD to see if the node is present in there
     result = db.get_node_info_from_tdd(session=database_session, node_uuid=SN_UUID)
+    # in case the node is not present in the TDD we add it to the TDD
     if (result == None):
         db.insert_into_thing_directory_with_node_info(database_typ=db_in_use, session=database_session,
                                                       node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0)
-    
+    # if node is present in the TDD byt current swarm of the node is 0 meaning it is in the guest network (default swarm or also called swarm zero)
     elif (result.node_current_swarm == 0):
+        # then we just updated the TDD to indicate that the node has connected to the current AP
         db.update_tdd_with_new_node_status(database_type=db_in_use, session=database_session, 
                                            node_uuid=SN_UUID, node_current_ap=THIS_AP_UUID, node_current_swarm=0)
     
-    # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
-    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                table_name = 'MyIngress.tb_swarm_control',
-                                action_name = 'MyIngress.ac_send_to_coordinator', 
-                                match_keys = f'{config.default_wlan_interface} {config.coordinator_physical_ip}',
-                                action_params = f'{config.swarm_coordinator_switch_port} {THIS_AP_ETH_MAC} {config.coordinator_physical_mac}' )
-    
-    # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
-    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                table_name = 'MyIngress.tb_swarm_control',
-                                action_name = 'MyIngress.ac_send_to_coordinator', 
-                                match_keys = f'{config.default_wlan_interface} {station_physical_ip_address}',
-                                action_params = f'{config.swarm_coordinator_switch_port} {THIS_AP_WLAN_MAC} {station_physical_mac_address}' )
-    
-    
-    return 
-    # 3d Step: Node Belongs to a swarm, continue from here    
 
+    # 3d Step: Node Belongs to a swarm, continue from here    
     if station_physical_ip_address == None:
         tries = 2
         while (tries > 0):
@@ -333,12 +310,9 @@ def handle_new_connected_station(station_physical_mac_address):
         
     logger.info( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
     
-    
-    
     host_id = db.get_next_available_host_id_from_swarm_table(database_typ=db_in_use,
                 session=database_session, first_host_id=config.this_swarm_dhcp_start,
                 max_host_id=config.this_swarm_dhcp_end)
-    
     
     
     result = assign_virtual_mac_and_ip_by_host_id(host_id)
@@ -356,19 +330,20 @@ def handle_new_connected_station(station_physical_mac_address):
     attach_vxlan_to_bmv2_command = "port_add vxlan%s %s" % (vxlan_id, vxlan_id)
     bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command)
     
+    # We then add two table entries to route traffic from the node to the coordinator and vice versa.
     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                    table_name = 'MyIngress.tb_swarm_control',
-                                    action_name = 'MyIngress.ac_send_to_coordinator', 
-                                    match_keys = f'{vxlan_id} {config.coordinator_vip}',
-                                    action_params = f'{config.swarm_coordinator_switch_port}' )
+                                table_name = 'MyIngress.tb_swarm_control',
+                                action_name = 'MyIngress.ac_send_to_coordinator', 
+                                match_keys = f'{config.wlan_switch_port} {config.coordinator_physical_ip}',
+                                action_params = f'{config.swarm_coordinator_switch_port} {THIS_AP_ETH_MAC} {config.coordinator_physical_mac}' )
     
-    # THIS ENTRY FORWARDS ONLY TCP TRAFFIC TO THE NEW JOINED NODE, ON COORDINATOR PORT NUMBER.
+    # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                    table_name = 'MyIngress.tb_swarm_control',
-                                    action_name = 'MyIngress.ac_send_to_coordinator', 
-                                    match_keys = f'{config.swarm_coordinator_switch_port} {station_vip}',
-                                    action_params = f'{vxlan_id}' ) 
+                                table_name = 'MyIngress.tb_swarm_control',
+                                action_name = 'MyIngress.ac_send_to_coordinator', 
+                                match_keys = f'{config.ethernet_switch_port} {station_physical_ip_address}',
+                                action_params = f'{config.wlan_switch_port} {THIS_AP_WLAN_MAC} {station_physical_mac_address}' )
        
     # Add the newly connected station to the list of connected stations
     connected_stations[station_physical_mac_address] = [ station_vmac ,station_vip, vxlan_id]

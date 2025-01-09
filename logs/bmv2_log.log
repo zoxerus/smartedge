@@ -1,0 +1,26 @@
+Line:56 at 2025-01-08 23:49:57,818 [DEBUG]: 
+response received: Obtaining JSON from switch...
+Done
+Control utility for runtime P4 table manipulation
+RuntimeCmd: Adding entry to exact match table MyIngress.tb_swarm_control
+match key:           EXACT-01:fd	EXACT-0a:02:01:06
+action:              MyIngress.ac_send_to_coordinator
+runtime data:        01:fe	12:00:00:00:00:05	02:00:00:00:00:06
+Entry has been added with handle 0
+RuntimeCmd: 
+
+Line:66 at 2025-01-08 23:49:57,818 [DEBUG]: add entry with handle 0  
+
+Line:56 at 2025-01-08 23:49:58,131 [DEBUG]: 
+response received: Obtaining JSON from switch...
+Done
+Control utility for runtime P4 table manipulation
+RuntimeCmd: Adding entry to exact match table MyIngress.tb_swarm_control
+match key:           EXACT-01:fe	EXACT-0a:2a:00:1c
+action:              MyIngress.ac_send_to_coordinator
+runtime data:        01:fd	16:00:00:00:00:05	2c:cf:67:28:6b:62
+Entry has been added with handle 1
+RuntimeCmd: 
+
+Line:66 at 2025-01-08 23:49:58,132 [DEBUG]: add entry with handle 0  
+

@@ -11,13 +11,17 @@ import os
 
 DEFAULT_IFNAME = 'wlan0'
 
+NODE_UUID = None
 for snic in psutil.net_if_addrs()[DEFAULT_IFNAME]:
     if snic.family == socket.AF_INET:
         NODE_UUID = f'SN:{snic.address[9:]}'
 
-print('Assign Node UUID:', NODE_UUID)
 
-exit()
+if NODE_UUID == None:
+    print('Error: Could not assign UUID')
+    exit()
+
+print('Assign Node UUID:', NODE_UUID)
 
 PROGRAM_LOG_FILE_NAME = './logs/program.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)

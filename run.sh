@@ -5,7 +5,7 @@ cd "$( dirname -- "$SCRIPT_PATH"; )";
 
 
 # IP Configurations
-BACKBONE_SUBNET=192.168.100.0
+BACKBONE_SUBNET=10.2.1.0
 BACKBONE_MASK=/24
 
 SWARM_SUBNET=192.168.10.0
@@ -80,14 +80,14 @@ case $ROLE in
     rawNewMac=$(( 0x$rawOldMac + $NUMID ))
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
-    # sudo ip link add smartedge-bb type vxlan id 1000 dev eth0 group 239.255.1.1 dstport 4789
-    # sudo ip link set dev smartedge-bb address $macnew
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
-    # sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
-    # sudo ip link set dev smartedge-bb up
+    sudo ip link add smartedge-bb type vxlan id 1000 dev eth0 group 239.255.1.1 dstport 4789
+    sudo ip link set dev smartedge-bb address $final_mac
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
+    sudo ip link set dev smartedge-bb up
 
-    sudo ip link set dev eth0 address $final_mac
-    sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev eth0
+    # sudo ip link set dev eth0.1 address $final_mac
+    # sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev eth0.1
     sudo python ./coordinator/coordinator.py
     ;;
 # Access Point: 
@@ -112,11 +112,11 @@ case $ROLE in
         sudo nmcli con modify SmartEdgeHotspot wifi-sec.psk "123456123"
         sudo nmcli con up SmartEdgeHotspot
     fi
-    # sudo ip link add smartedge-bb type vxlan id 1000 dev eth0 group 239.255.1.1 dstport 4789
-    # sudo ip link set dev smartedge-bb address $mac_veth
-    # sudo ip address add $BACKBONE_IP dev smartedge-bb
-    # sudo ip link set dev smartedge-bb up
-    sudo ip link set dev eth0 address $final_mac
+    sudo ip link add smartedge-bb type vxlan id 1000 dev eth0 group 239.255.1.1 dstport 4789
+    sudo ip link set dev smartedge-bb address $final_mac
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip link set dev smartedge-bb up
+    # sudo ip link set dev eth0.1 address $final_mac
 
     oldMAC=16:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
