@@ -88,7 +88,7 @@ last_request_id = 0
 
 def get_ip_from_arp_by_physical_mac(physical_mac):
     shell_command = "arp -en"
-    proc = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run( shell_command.split(), text=True)
     for line in proc.stdout.strip().splitlines():
         if physical_mac in line:
             return line.split()[0]
@@ -98,7 +98,7 @@ def get_ip_from_arp_by_physical_mac(physical_mac):
 def get_ap_physical_ip_by_ifname(ifname):
     cli_command = f"iwconfig {ifname}"
     command_as_word_array = cli_command.split()
-    proc = subprocess.run(command_as_word_array, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run(command_as_word_array, text=True)
     res_lines = proc.stdout.strip().splitlines()
     for line in res_lines:
       if 'Access Point' in line:
@@ -133,13 +133,13 @@ def handle_connection():
                 except Exception as e:
                     print(f'Error installing config: {e} Leaving Access Point' )
                     cli_command = f'nmcli connection show --active'
-                    res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+                    res = subprocess.run(cli_command.split(), text=True)
                     ap_ssid = ''
                     for line in res.stdout.strip().splitlines():
                         if DEFAULT_IFNAME in line:
                             ap_ssid = line.split()[0]
                     cli_command = f'nmcli connection down id {ap_ssid}'
-                    res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+                    res = subprocess.run(cli_command.split(), text=True )
 
                 
 
@@ -168,16 +168,16 @@ def install_swarmNode_config():
     
     for command in commands:
         # print('executing: ' + command)
-        subprocess.run(command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        subprocess.run(command.split(), text=True)
         
     get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
     get_if2_index_command = f'cat /sys/class/net/vxlan{vxlan_id}/ifindex'
-    if1_index = subprocess.run(get_if1_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)   
+    if1_index = subprocess.run(get_if1_index_command.split(), text=True )
+    if2_index = subprocess.run(get_if2_index_command.split(), text=True )
     
     commands = [
         'nikss-ctl pipeline unload id 0',        
-        'nikss-ctl pipeline load id 0 ./utils/nikss.o',
+        'nikss-ctl pipeline load id 0 ./node_manager/utils/nikss.o',
         f'nikss-ctl add-port pipe 0 dev veth0',
         f'nikss-ctl add-port pipe 0 dev vxlan{vxlan_id}',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
@@ -186,7 +186,7 @@ def install_swarmNode_config():
     
     for command in commands:
         print('executing: ' + command)
-        res = subprocess.run(command.split(), text=True  , stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        res = subprocess.run(command.split(), text=True)
         print(res.stdout.strip(), '\n\n', res.stderr.strip()  )
     
     join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {swarmNode_config[STR_VXLAN_ID]} {swarmNode_config[STR_VETH1_VIP]} {swarmNode_config[STR_VETH1_VMAC]} {swarmNode_config[STR_AP_ID]}"
@@ -216,7 +216,7 @@ def handle_disconnection():
     ]
     try:
         for command in exit_commands:
-            res = subprocess.run( command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+            res = subprocess.run( command.split(), text=True)
             if (res.stderr != None):
                 pass
               #  print(res.stderr)
@@ -232,7 +232,7 @@ def monitor_wifi(control_queue):
     monitoring_command = 'nmcli device monitor wlan0'
 
     # python runs the shell command and monitors the output in the terminal
-    process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen( monitoring_command.split() )
     previous_line = ''
     # we iterate over the output lines to read the event and react accordingly
     for output_line in iter(lambda: process.stdout.readline().decode("utf-8"), ""):

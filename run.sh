@@ -115,7 +115,8 @@ case $ROLE in
     fi
     sudo ip link add smartedge-bb type vxlan id 1000 dev eth0 group 239.255.1.1 dstport 4789
     sudo ip link set dev smartedge-bb address $final_mac
-    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip address add 10.0.1.1/24 dev smartedge-bb
     sudo ip link set dev smartedge-bb up
     # sudo ip link set dev eth0.1 address $final_mac
 

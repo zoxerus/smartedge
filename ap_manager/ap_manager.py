@@ -170,7 +170,7 @@ def exit_handler():
     for vxlan_id in created_host_ids:
         try:
             delete_vxlan_shell_command = "ip link del vxlan%s" % vxlan_id
-            result = subprocess.run(delete_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+            result = subprocess.run(delete_vxlan_shell_command.split(), text=True )
             
             
             db.delete_node_from_swarm_database(database_type=db.STR_DATABASE_TYPE_CASSANDRA, session=database_session,
@@ -201,13 +201,13 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
         add_vxlan_shell_command = "ip link add vxlan%s type vxlan id %s dev %s remote %s dstport %s" % (
             vxlan_id, vxlan_id, DEFAULT_WLAN_DEVICE_NAME, remote, port)
         
-        result = subprocess.run(add_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(add_vxlan_shell_command.split(), text=True)
                 
         logger.debug(f'\nCreating vxlan {vxlan_id}: {result.stdout} {result.stderr}')
         created_host_ids.add(vxlan_id)
         logger.debug(f'\nCreated host IDs: {created_host_ids}')            
         activate_interface_shell_command = "ip link set vxlan%s up" % vxlan_id
-        subprocess.run(activate_interface_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(activate_interface_shell_command.split(), text=True)
                 
     except Exception as e:
         logger.debug(f'\nError creating vxlan {vxlan_id}: {e}')
@@ -220,7 +220,7 @@ def delete_vxlan_by_host_id(host_id):
     vxlan_id = host_id
     logger.debug(f'\nDeleting vxlan ID: {vxlan_id}')
     delete_vxlan_shell_command = "ip link del vxlan%s" % (vxlan_id)
-    subprocess.run(delete_vxlan_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(delete_vxlan_shell_command.split(), text=True)
     available_host_ids.add(host_id)
     created_host_ids.remove(host_id)
     logger.debug(f'\nCreated host IDs: {created_host_ids}')
@@ -228,7 +228,7 @@ def delete_vxlan_by_host_id(host_id):
 
 def get_mac_from_arp_by_physical_ip(ip):
     shell_command = "arp -en"
-    proc = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run( shell_command.split(), text=True)
 
     for line in proc.stdout.strip().splitlines():
         if ip in line:
@@ -252,7 +252,7 @@ def get_ip_from_arp_by_physical_mac(physical_mac):
     shell_command = "arp -en"
     t0 = time.time()
     while time.time() - t0 < 5:
-        proc = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.run( shell_command.split(), text=True)
         for line in proc.stdout.strip().splitlines():
             if physical_mac in line and DEFAULT_WLAN_DEVICE_NAME in line:
                 return line.split()[0]
@@ -431,7 +431,7 @@ def monitor_stations():
     monitoring_command = 'iw event'
 
     # python runs the shell command and monitors the output in the terminal
-    process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE)
+    process = subprocess.Popen( monitoring_command.split() )
     previous_line = ''
     # we iterate over the output lines to read the event and react accordingly
     for output_line in iter(lambda: process.stdout.readline().decode("utf-8"), ""):
