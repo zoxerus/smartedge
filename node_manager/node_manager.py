@@ -167,7 +167,7 @@ def install_swarmNode_config():
                 ]
     
     for command in commands:
-        # print('executing: ' + command)
+        print('executing: ' + command)
         subprocess.run(command.split(), text=True)
         
     get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
@@ -181,7 +181,7 @@ def install_swarmNode_config():
         f'nikss-ctl add-port pipe 0 dev veth0',
         f'nikss-ctl add-port pipe 0 dev vxlan{vxlan_id}',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
-        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}',
+        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}'
     ]
     
     for command in commands:
@@ -215,10 +215,7 @@ def handle_disconnection():
     ]
     try:
         for command in exit_commands:
-            res = subprocess.run( command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-            if (res.stderr != None):
-                pass
-              #  print(res.stderr)
+            res = subprocess.run( command.split(), text=True)
         logger.debug( '\nDone Handling Disconnection:\n'  )
     except Exception as e:
         print(e)    
