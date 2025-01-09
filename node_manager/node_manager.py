@@ -7,26 +7,8 @@ import atexit
 import queue
 import time
 import socket
+import ipaddress
 import os
-
-DEFAULT_IFNAME = 'wlan0'
-
-NODE_UUID = None
-for snic in psutil.net_if_addrs()[DEFAULT_IFNAME]:
-    if snic.family == socket.AF_INET:
-        NODE_UUID = f'SN:{snic.address[9:]}'
-
-
-if NODE_UUID == None:
-    print('Error: Could not assign UUID')
-    exit()
-
-print('Assign Node UUID:', NODE_UUID)
-
-PROGRAM_LOG_FILE_NAME = './logs/program.log'
-os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
-
-ACCESS_POINT_IP = ''
 
 
 logger = logging.getLogger(__name__)
@@ -46,6 +28,44 @@ logger.setLevel(logging.DEBUG)
 
 logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
+
+
+
+DEFAULT_IFNAME = 'wlan0'
+
+loopback_if = 'lo:0'
+
+def int_to_mac(macint):
+    if type(macint) != int:
+        raise ValueError('invalid integer')
+    return ':'.join(['{}{}'.format(a, b)
+                     for a, b
+                     in zip(*[iter('{:012x}'.format(macint + 2199023255552))]*2)])  
+
+THIS_NODE_UUID = None
+
+for snic in psutil.net_if_addrs()[loopback_if]:
+    if snic.family == socket.AF_INET:        
+        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address)))
+        THIS_NODE_UUID = f'AP:{temp_mac[9:]}'
+if THIS_NODE_UUID == None:
+    logger.error("Could not Assign UUID to Node")
+    exit()
+print("AP ID:", THIS_NODE_UUID)
+
+
+if THIS_NODE_UUID == None:
+    print('Error: Could not assign UUID')
+    exit()
+
+print('Assign Node UUID:', THIS_NODE_UUID)
+
+PROGRAM_LOG_FILE_NAME = './logs/program.log'
+os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
+
+ACCESS_POINT_IP = ''
+
+
 
 STR_VXLAN_ID = 'vxlan_id'
 STR_VETH1_VIP = 'veth1_vip'
@@ -179,7 +199,7 @@ def install_swarmNode_config():
         res = subprocess.run(command.split(), text=True  , stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         print(res.stdout.strip(), '\n\n', res.stderr.strip()  )
     
-    join_request_data = f"Join_Request {last_request_id} {NODE_UUID} {swarmNode_config[STR_VXLAN_ID]} {swarmNode_config[STR_VETH1_VIP]} {swarmNode_config[STR_VETH1_VMAC]} {swarmNode_config[STR_AP_ID]}"
+    join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {swarmNode_config[STR_VXLAN_ID]} {swarmNode_config[STR_VETH1_VIP]} {swarmNode_config[STR_VETH1_VMAC]} {swarmNode_config[STR_AP_ID]}"
     last_request_id = last_request_id + 1
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
         print(f'connecting to {swarmNode_config[STR_COORDINATOR_VIP]}:{swarmNode_config[STR_COORDINATOR_TCP_PORT]}')
