@@ -232,7 +232,7 @@ def monitor_wifi(control_queue):
     monitoring_command = 'nmcli device monitor wlan0'
 
     # python runs the shell command and monitors the output in the terminal
-    process = subprocess.Popen( monitoring_command.split() stdout=subprocess.PIPE )
+    process = subprocess.Popen( monitoring_command.split(), stdout=subprocess.PIPE )
     previous_line = ''
     # we iterate over the output lines to read the event and react accordingly
     for output_line in iter(lambda: process.stdout.readline().decode("utf-8"), ""):
