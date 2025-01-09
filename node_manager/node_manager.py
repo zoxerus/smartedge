@@ -10,22 +10,18 @@ import socket
 import ipaddress
 import os
 
-
+PROGRAM_LOG_FILE_NAME = './logs/program.log'
+os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger(__name__)
-
 # this part handles logging to console and to a file for debugging purposes
 log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s]: %(message)s \n")
 log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-
 log_file_handler.setLevel(logging.DEBUG)
 log_file_handler.setFormatter(log_formatter)
-
-
 log_console_handler = logging.StreamHandler(sys.stdout)  # (sys.stdout)
 log_console_handler.setLevel(logging.INFO)
 log_console_handler.setFormatter(log_formatter)
 logger.setLevel(logging.DEBUG)
-
 logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
 
@@ -60,8 +56,7 @@ if THIS_NODE_UUID == None:
 
 print('Assign Node UUID:', THIS_NODE_UUID)
 
-PROGRAM_LOG_FILE_NAME = './logs/program.log'
-os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
+
 
 ACCESS_POINT_IP = ''
 
