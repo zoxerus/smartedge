@@ -371,7 +371,7 @@ def handle_new_connected_station(station_physical_mac_address):
     logger.info(f'station: {station_vmac} {station_vip} joined AP {THIS_AP_UUID} at {time.time()}')
     
     # connect to the swarm node manager and send the  required configuration for the communication with the coordinator
-    swarmNode_config_message = f'setConfig {vxlan_id} {station_vip} {station_vmac} {config.coordinator_vip} {config.coordinator_mac} {config.coordinator_tcp_port} {THIS_AP_UUID}'
+    swarmNode_config_message = f'setConfig {vxlan_id} {station_vip} {station_vmac} {config.coordinator_vip} {config.coordinator_tcp_port} {THIS_AP_UUID}'
     threading.Thread(target= send_swarmNode_config, args= (swarmNode_config_message,
                                                            (station_physical_ip_address, config.node_manager_tcp_port ), ) 
     ).start()

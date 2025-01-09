@@ -65,7 +65,6 @@ STR_VXLAN_ID = 'vxlan_id'
 STR_VETH1_VIP = 'veth1_vip'
 STR_VETH1_VMAC = 'veth1_vmac'
 STR_COORDINATOR_VIP = 'coordnator_vip'
-STR_COORDINATOR_VMAC = 'coonrdinator_vmac'
 STR_COORDINATOR_TCP_PORT = 'coordinator_tcp_port'
 STR_AP_ID = 'ap_id'
 STR_AP_IP = 'ap_ip'
@@ -78,7 +77,6 @@ swarmNode_config = {
     STR_VETH1_VIP: '',
     STR_VETH1_VMAC: '',
     STR_COORDINATOR_VIP: '',
-    STR_COORDINATOR_VMAC: '',
     STR_COORDINATOR_TCP_PORT: '',
     STR_AP_ID: '',
     STR_AP_IP: '',
@@ -127,9 +125,8 @@ def handle_connection():
                 swarmNode_config[STR_VETH1_VIP] = comm_buffer_as_word_array[2]
                 swarmNode_config[STR_VETH1_VMAC] = comm_buffer_as_word_array[3]
                 swarmNode_config[STR_COORDINATOR_VIP] = comm_buffer_as_word_array[4]
-                swarmNode_config[STR_COORDINATOR_VMAC] = comm_buffer_as_word_array[5]
-                swarmNode_config[STR_COORDINATOR_TCP_PORT] = int(comm_buffer_as_word_array[6])
-                swarmNode_config[STR_AP_ID] = comm_buffer_as_word_array[7]
+                swarmNode_config[STR_COORDINATOR_TCP_PORT] = int(comm_buffer_as_word_array[5])
+                swarmNode_config[STR_AP_ID] = comm_buffer_as_word_array[6]
                 swarmNode_config[STR_AP_IP] = ap_address[0]
                 try:
                     install_swarmNode_config()

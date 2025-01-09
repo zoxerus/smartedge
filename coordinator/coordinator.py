@@ -72,7 +72,7 @@ def add_bmv2_swarm_broadcast_port_to_ap(ap_ip,thrift_port, switch_port ):
 
 def get_ap_ip_from_ap_id(ap_id):
     try:
-        return global_config.ap_list[ap_id][1]
+        return global_config.ap_list[ap_id][0]
     except:
         return None
     
