@@ -30,7 +30,6 @@ logger.addHandler(log_console_handler)
 DEFAULT_IFNAME = 'wlan0'
 
 loopback_if = 'lo:0'
-
 def int_to_mac(macint):
     if type(macint) != int:
         raise ValueError('invalid integer')

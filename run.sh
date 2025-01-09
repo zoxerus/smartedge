@@ -8,7 +8,7 @@ cd "$( dirname -- "$SCRIPT_PATH"; )";
 BACKBONE_SUBNET=10.2.1.0
 BACKBONE_MASK=/24
 
-SWARM_SUBNET=192.168.10.0
+SWARM_SUBNET=10.0.1.0
 SWARM_SUBNET_MASK=/24
 
 # This function prints the next IP
@@ -75,9 +75,10 @@ case $ROLE in
     echo "Role is set to Coordinator"
 
     # Genereate the MAC address
-    oldMAC=02:00:00:00:00:00
+    oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
-    rawNewMac=$(( 0x$rawOldMac + $NUMID ))
+    rawNewMac=$(( 0x$rawOldMac + 167772417 ))
+    # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
     sudo ip link add smartedge-bb type vxlan id 1000 dev eth0 group 239.255.1.1 dstport 4789

@@ -19,15 +19,15 @@ this_swarm_dhcp_end  = 200        # last IP to be assigned e.g: 192.168.10.200  
 ## so for the coordinator, this is an internal IP on the docker network.
 ## in case of Access Points (and the DB is running on the coordinator node) this would be the IP of the coordinator (IP of the smartedge-bb interface of the coordinator)
 ## e.g 192.168.100.6
-database_hostname = '0.0.0.0'  
+database_hostname = '10.2.1.5'  
 database_port = 9042
 
 # This IP is used by the access points to reach the coordinator,
 # this IP is the one configured on the smartedge-bb vxlan interface of the coordinator
-coordinator_physical_ip = '10.2.1.6'
+coordinator_physical_ip = '10.2.1.5'
 
 # this is the mac that is of the  smartedge-bb of the coordinator
-coordinator_physical_mac = '02:00:10:00:00:06'  
+coordinator_physical_mac = '02:00:00:00:00:06'  
 
 
 # this IP is used to reach the coordinator by the swarm nodes
@@ -50,6 +50,6 @@ default_thrift_port = 9090
 # this list of IPs and MACs are the ones configured on the smartedge-bb on each access point
 ap_list = {
     # ID of AP       MAC of smartedge-bb    IP of smartedge-bb
-    'AP:004': [     '00:00:00:00:00:04',    '192.168.100.4'],
-    'AP:005': [     '00:00:00:00:00:05',    '192.168.100.5']
+    'AP:003': ['10.2.1.3'],
+    'AP:004': ['10.2.1.4']
     }

@@ -24,6 +24,14 @@ const bit<5> HOP_MD_WORDS = 10;
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
 
+// ARP RELATED CONST VARS
+const bit<16> ARP_HTYPE = 0x0001; //Ethernet Hardware type is 1
+const bit<16> ARP_PTYPE = TYPE_IPV4; //Protocol used for ARP is IPV4
+const bit<8>  ARP_HLEN  = 6; //Ethernet address size is 6 bytes
+const bit<8>  ARP_PLEN  = 4; //IP address size is 4 bytes
+const bit<16> ARP_REQ = 1; //Operation 1 is request
+const bit<16> ARP_REPLY = 2; //Operation 2 is reply
+
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
@@ -122,16 +130,18 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             TYPE_IPV4: parse_ipv4;
-            // TYPE_ARP: parse_arp;
+            TYPE_ARP: parse_arp;
 
             default: accept;
         }
     }
     
-	// state parse_arp {
-	// 	packet.extract(hdr.arp);
-	// 	transition accept;
-	// }
+    state parse_arp {
+      packet.extract(hdr.arp);
+        transition select(hdr.arp.op_code) {
+          ARP_REQ: accept;
+      }
+    }
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
@@ -316,6 +326,28 @@ control MyIngress(inout headers hdr,
     //------------------------------------------------------//
     //------ I N G R E S S  P R O C E S S I N G ------------//
     apply {
+
+        if (hdr.ethernet.etherType == TYPE_ARP ) {
+            //update operation code from request to reply
+            hdr.arp.op_code = ARP_REPLY;
+            
+            //reply's dst_mac is the request's src mac
+            hdr.arp.dst_mac = hdr.arp.src_mac;
+            
+            //reply's dst_ip is the request's src ip
+            hdr.arp.src_mac = (bit<48>) hdr.arp.dst_ip;
+
+            //reply's src ip is the request's dst ip
+            hdr.arp.src_ip = hdr.arp.dst_ip;
+
+            //update ethernet header
+            hdr.ethernet.dstMac = hdr.ethernet.srcMac;
+            hdr.ethernet.srcMac = (bit<48>) hdr.arp.dst_ip;
+
+            //send it back to the same port
+            standard_metadata.egress_spec = standard_metadata.ingress_port;
+            exit;
+        } 
         if (hdr.ipv4.isValid()) {
             if(tb_swarm_control.apply().hit){
                 exit;
@@ -349,9 +381,9 @@ control MyEgress(inout headers hdr,
         apply{
             // log_msg("ingress_port: {}, egress_port: {}", {standard_metadata.ingress_port, standard_metadata.egress_port });
 
-            // if (standard_metadata.ingress_port == standard_metadata.egress_port) {
-            //     mark_to_drop(standard_metadata);
-            // }
+            if (standard_metadata.ingress_port == standard_metadata.egress_port && hdr.ethernet.etherType != TYPE_ARP) {
+                mark_to_drop(standard_metadata);
+            }
 
         }
 }

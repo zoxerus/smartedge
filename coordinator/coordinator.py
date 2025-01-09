@@ -8,10 +8,19 @@ import lib.global_config as global_config
 import ipaddress
 import socket
 import re
+import ipaddress
 import subprocess
 import threading
 import lib.bmv2_thrift_lib as bmv2_thrift
 import lib.database_comms as db_comms
+
+
+def int_to_mac(macint):
+    if type(macint) != int:
+        raise ValueError('invalid integer')
+    return ':'.join(['{}{}'.format(a, b)
+                     for a, b
+                     in zip(*[iter('{:012x}'.format(macint ))]*2)])  # + 2199023255552
 
 # TCP related
 COORDINATOR_MAX_TCP_CONNNECTIONS = 5
@@ -21,6 +30,8 @@ SWARM_NODE_TCP_SERVER = ('', 29997)
 
 
 DEFAULT_THRIFT_PORT = global_config.default_thrift_port
+
+THIS_SWARM_SUBNET=ipaddress.ip_address( global_config.this_swarm_subnet )
 
 db_in_use = db_comms.STR_DATABASE_TYPE_CASSANDRA
 
@@ -178,14 +189,13 @@ def swarm_coordinator():
 
 def set_arps():
     for host_id in range(global_config.this_swarm_dhcp_start, global_config.this_swarm_dhcp_end + 1):
-        host_id_hex = f'{host_id:04x}'
-        station_virtual_ip_address = str( ipaddress.ip_address( global_config.this_swarm_subnet) + host_id )
-        station_virtual_mac_address = f'00:00:00:00:{host_id_hex[:2]}:{host_id_hex[2:]}'
+        station_virtual_ip_address = str( THIS_SWARM_SUBNET + host_id )
+        station_virtual_mac_address = int_to_mac(int( THIS_SWARM_SUBNET + host_id ))
         cli_command = f'arp -s {station_virtual_ip_address} {station_virtual_mac_address}'
         subprocess.run(cli_command.split(), text=True)
 
 def main():
-    # set_arps()
+    set_arps()
     print('Starting Coordinator')
     swarm_coordinator()
     # threading.Thread(target=ap_server).start()
