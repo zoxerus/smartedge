@@ -365,6 +365,7 @@ control MyIngress(inout headers hdr,
             // if (meta.id_dst != meta.id_src){
             //     drop();
             // }
+            tb_ipv4_lpm.apply();
             // else if( !tb_ipv4_lpm.apply().hit){
             //     tb_ipv4_mc_route_lookup.apply();
             // }
