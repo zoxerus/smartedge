@@ -148,7 +148,8 @@ def initialize_program():
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.ethernet_switch_port}")
     
     # bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {DEFAULT_COORDINATOR_INTERFACE_PEER} {config.swarm_coordinator_switch_port}")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_wlan_interface} {config.wlan_switch_port}")
+    
+    # bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_wlan_interface} {config.wlan_switch_port}")
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_ethernet_device} {config.ethernet_switch_port}")
     
    

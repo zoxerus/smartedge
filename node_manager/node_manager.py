@@ -177,7 +177,7 @@ def install_swarmNode_config():
     
     commands = [
         'nikss-ctl pipeline unload id 0',        
-        'nikss-ctl pipeline load id 0 ./utils/nikss.o',
+        'nikss-ctl pipeline load id 0 ./node_manager/utils/nikss.o',
         f'nikss-ctl add-port pipe 0 dev veth0',
         f'nikss-ctl add-port pipe 0 dev vxlan{vxlan_id}',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
