@@ -409,55 +409,9 @@
         {
           "name" : "eif",
           "bitwidth" : 9
-        },
-        {
-          "name" : "srcMac",
-          "bitwidth" : 48
-        },
-        {
-          "name" : "dstMac",
-          "bitwidth" : 48
         }
       ],
       "primitives" : [
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["ethernet", "srcMac"]
-            },
-            {
-              "type" : "runtime_data",
-              "value" : 1
-            }
-          ],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 170,
-            "column" : 8,
-            "source_fragment" : "hdr.ethernet.srcMac = srcMac"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["ethernet", "dstMac"]
-            },
-            {
-              "type" : "runtime_data",
-              "value" : 2
-            }
-          ],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 171,
-            "column" : 8,
-            "source_fragment" : "hdr.ethernet.dstMac = dstMac"
-          }
-        },
         {
           "op" : "assign",
           "parameters" : [

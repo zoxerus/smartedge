@@ -9,7 +9,7 @@ CASSANDRA_PORT = 9402
 
 # here configure the subnet range that need to be allocated to the swarm
 # here we assume a /24 subnet mask
-this_swarm_subnet='192.168.10.0'  ## this is the subnet to use for the swarm
+this_swarm_subnet='10.0.1.0'  ## this is the subnet to use for the swarm
 this_swarm_dhcp_start = 2         # this is the first IP to be assigned to the swarm node e.g: 192.168.10.2
 this_swarm_dhcp_end  = 200        # last IP to be assigned e.g: 192.168.10.200  so it supports 199 nodes (arbitrary number can be changed to any)
 
@@ -27,12 +27,12 @@ database_port = 9042
 coordinator_physical_ip = '10.2.1.6'
 
 # this is the mac that is of the  smartedge-bb of the coordinator
-coordinator_physical_mac = '02:00:10:02:01:06'  
+coordinator_physical_mac = '02:00:10:00:00:06'  
 
 
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
-coordinator_vip='192.168.10.1'
+coordinator_vip='10.0.1.1'
 
 
 

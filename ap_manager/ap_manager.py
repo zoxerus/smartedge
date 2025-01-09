@@ -102,7 +102,7 @@ THIS_AP_UUID = None
 
 for snic in psutil.net_if_addrs()[loopback_if]:
     if snic.family == socket.AF_INET:        
-        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address)))
+        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) -1 ))
         THIS_AP_UUID = f'AP:{temp_mac[9:]}'
 if THIS_AP_UUID == None:
     logger.error("Could not Assign UUID to Node")
@@ -277,25 +277,7 @@ def handle_new_connected_station(station_physical_mac_address):
     
     # get the IP of the node from its mac address from the ARP table
     station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
-     
-    # 2nd Step: Check if Node belong to a Swarm or Not
-    # to do so we first read the UUID (bottom three bytes of MAC address)
-    SN_UUID = 'SN:' + station_physical_mac_address[9:]
-    
-    # Then we search the TDD to see if the node is present in there
-    result = db.get_node_info_from_tdd(session=database_session, node_uuid=SN_UUID)
-    # in case the node is not present in the TDD we add it to the TDD
-    if (result == None):
-        db.insert_into_thing_directory_with_node_info(database_typ=db_in_use, session=database_session,
-                                                      node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0)
-    # if node is present in the TDD byt current swarm of the node is 0 meaning it is in the guest network (default swarm or also called swarm zero)
-    elif (result.node_current_swarm == 0):
-        # then we just updated the TDD to indicate that the node has connected to the current AP
-        db.update_tdd_with_new_node_status(database_type=db_in_use, session=database_session, 
-                                           node_uuid=SN_UUID, node_current_ap=THIS_AP_UUID, node_current_swarm=0)
-    
-
-    # 3d Step: Node Belongs to a swarm, continue from here    
+    # sometimes it takes more than one try to get the ip from the ARP, I don't know why
     if station_physical_ip_address == None:
         tries = 2
         while (tries > 0):
@@ -307,6 +289,40 @@ def handle_new_connected_station(station_physical_mac_address):
         if station_physical_ip_address == None:
             logger.error(f'Error: Could not get Node Physical IP from ARP table for MAC: {station_physical_mac_address}')
             return
+        
+    # # 2nd Step: Check if Node belong to a Swarm or Not
+    # # to do so we first read the UUID (bottom three bytes of MAC address)
+    # SN_UUID = 'SN:' + station_physical_mac_address[9:]
+    
+    # # Then we search the TDD to see if the node is present in there
+    # result = db.get_node_info_from_tdd(session=database_session, node_uuid=SN_UUID)
+    # # in case the node is not present in the TDD we add it to the TDD
+    # if (result == None):
+    #     db.insert_into_thing_directory_with_node_info(database_typ=db_in_use, session=database_session,
+    #                                                   node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0)
+        
+    #     # We then add two table entries to route traffic from the node to the coordinator and vice versa.    
+    #     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
+    #     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
+    #                                 table_name = 'MyIngress.tb_swarm_control',
+    #                                 action_name = 'MyIngress.ac_send_to_coordinator', 
+    #                                 match_keys = f'{config.wlan_switch_port} {config.coordinator_physical_ip}',
+    #                                 action_params = f'{config.swarm_coordinator_switch_port} {THIS_AP_ETH_MAC} {config.coordinator_physical_mac}' )
+        
+    #     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
+    #     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
+    #                                 table_name = 'MyIngress.tb_swarm_control',
+    #                                 action_name = 'MyIngress.ac_send_to_coordinator', 
+    #                                 match_keys = f'{config.ethernet_switch_port} {station_physical_ip_address}',
+    #                                 action_params = f'{config.wlan_switch_port} {THIS_AP_WLAN_MAC} {station_physical_mac_address}' )
+    # # if node is present in the TDD byt current swarm of the node is 0 meaning it is in the guest network (default swarm or also called swarm zero)
+    # elif (result.node_current_swarm == 0):
+    #     # then we just updated the TDD to indicate that the node has connected to the current AP
+    #     db.update_tdd_with_new_node_status(database_type=db_in_use, session=database_session, 
+    #                                        node_uuid=SN_UUID, node_current_ap=THIS_AP_UUID, node_current_swarm=0)
+    
+
+
         
     logger.info( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
     
@@ -336,14 +352,14 @@ def handle_new_connected_station(station_physical_mac_address):
                                 table_name = 'MyIngress.tb_swarm_control',
                                 action_name = 'MyIngress.ac_send_to_coordinator', 
                                 match_keys = f'{config.wlan_switch_port} {config.coordinator_physical_ip}',
-                                action_params = f'{config.swarm_coordinator_switch_port} {THIS_AP_ETH_MAC} {config.coordinator_physical_mac}' )
+                                action_params = f'{config.swarm_coordinator_switch_port}' )
     
     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                 table_name = 'MyIngress.tb_swarm_control',
                                 action_name = 'MyIngress.ac_send_to_coordinator', 
                                 match_keys = f'{config.ethernet_switch_port} {station_physical_ip_address}',
-                                action_params = f'{config.wlan_switch_port} {THIS_AP_WLAN_MAC} {station_physical_mac_address}' )
+                                action_params = f'{config.wlan_switch_port}' )
        
     # Add the newly connected station to the list of connected stations
     connected_stations[station_physical_mac_address] = [ station_vmac ,station_vip, vxlan_id]
