@@ -71,16 +71,16 @@ header ipv4_t {
 }
 
 header arp_t {
-    bit<16>  htype;      // HW type
-    bit<16>  ptype;      // Protocol type
-    bit<8>  hlen;       // HW addr len
-    bit<8>  plen;       // Protocol addr len
-    bit<16>  oper;       // Proto addr len
-    bit<48> srcMacAddr; // source mac addr
-    bit<32> srcIPAddr;  // source IP addr
-    bit<48> dstMacAddr; // destination mac addr
-    bit<32> dstIPAddr;  // destination IP addr
-}
+  bit<16>   h_type;
+  bit<16>   p_type;
+  bit<8>    h_len;
+  bit<8>    p_len;
+  bit<16>   op_code;
+  macAddr_t src_mac;
+  ip4Addr_t src_ip;
+  macAddr_t dst_mac;
+  ip4Addr_t dst_ip;
+  }
 
 
 header udp_t {
@@ -108,6 +108,7 @@ struct metadata {
 
 struct headers {
     ethernet_t         ethernet;
+    arp_t              arp;
     ipv4_t             ipv4;
     // int_header_t       int_header;
 }
@@ -420,6 +421,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
+        packet.emit(hdr.arp);
         packet.emit(hdr.ipv4);
         // packet.emit(hdr.udp);
         // packet.emit(hdr.shim);
