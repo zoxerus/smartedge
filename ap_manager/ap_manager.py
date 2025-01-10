@@ -354,15 +354,15 @@ def handle_new_connected_station(station_physical_mac_address):
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                 table_name = 'MyIngress.tb_swarm_control',
                                 action_name = 'MyIngress.ac_send_to_coordinator', 
-                                match_keys = f'{config.wlan_switch_port} {config.coordinator_physical_ip}',
+                                match_keys = f'{vxlan_id} {config.coordinator_vip}',
                                 action_params = f'{config.swarm_coordinator_switch_port}' )
     
     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                 table_name = 'MyIngress.tb_swarm_control',
                                 action_name = 'MyIngress.ac_send_to_coordinator', 
-                                match_keys = f'{config.ethernet_switch_port} {station_physical_ip_address}',
-                                action_params = f'{config.wlan_switch_port}' )
+                                match_keys = f'{config.swarm_coordinator_switch_port} {station_vip}',
+                                action_params = f'{vxlan_id}' )
        
     # Add the newly connected station to the list of connected stations
     connected_stations[station_physical_mac_address] = [ station_vmac ,station_vip, vxlan_id]
