@@ -152,6 +152,8 @@ def initialize_program():
     # bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_wlan_interface} {config.wlan_switch_port}")
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_ethernet_device} {config.ethernet_switch_port}")
     
+    # bmv2.add_entry_to_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_check_dst_mac')
+    
    
     # handle broadcast
     # bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}")

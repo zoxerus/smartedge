@@ -84,7 +84,7 @@ case $ROLE in
     sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     # sudo ip link set dev smartedge-bb address $final_mac
 
-    sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
+    # sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
     # sudo ip link set dev eth0.1 address $final_mac

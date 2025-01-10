@@ -1201,24 +1201,28 @@ control MyIngress(inout headers hdr,
 //     }
 
 
-// // Check the swarm id of dst host
-//     table tb_check_swarm_id_dst{
-//         key = {
-//             hdr.ipv4.dstIP: lpm;
-//         }
-//         actions = {
-//             get_swarm_id_dst;
-//             drop;
-//         }
-//         default_action = drop();
 
-//     }
+    table tb_check_dst_mac{
+        key = {
+            hdr.ethernet.dstMac: exact;
+            standard_metadata.ingress_port: exact;
+        }
+        actions = {
+            NoAction;
+            drop;
+        }
+        default_action = drop();
+
+    }
 
     //------------------------------------------------------//
     //------ I N G R E S S  P R O C E S S I N G ------------//
     apply {
+        if (!tb_check_dst_mac.apply().hit ){
+            exit;
+        }
 
-        if (hdr.ethernet.etherType == TYPE_ARP ) {
+        if (hdr.ethernet.etherType == TYPE_ARP && hdr.arp.op_code == ARP_REQ ) {
             //update operation code from request to reply
             hdr.arp.op_code = ARP_REPLY;
 

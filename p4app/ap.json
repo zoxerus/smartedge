@@ -234,7 +234,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "./ap.p4",
-        "line" : 429,
+        "line" : 433,
         "column" : 8,
         "source_fragment" : "MyDeparser"
       },
@@ -251,7 +251,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "./ap.p4",
-        "line" : 406,
+        "line" : 410,
         "column" : 8,
         "source_fragment" : "update_checksum( ..."
       },
@@ -329,36 +329,10 @@
       "primitives" : []
     },
     {
-      "name" : "MyIngress.drop",
+      "name" : "NoAction",
       "id" : 3,
       "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "mark_to_drop",
-          "parameters" : [
-            {
-              "type" : "header",
-              "value" : "standard_metadata"
-            }
-          ],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 183,
-            "column" : 8,
-            "source_fragment" : "mark_to_drop(standard_metadata)"
-          }
-        },
-        {
-          "op" : "exit",
-          "parameters" : [],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 184,
-            "column" : 8,
-            "source_fragment" : "exit"
-          }
-        }
-      ]
+      "primitives" : []
     },
     {
       "name" : "MyIngress.drop",
@@ -425,8 +399,72 @@
       ]
     },
     {
-      "name" : "MyIngress.ac_send_to_coordinator",
+      "name" : "MyIngress.drop",
       "id" : 6,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "mark_to_drop",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "standard_metadata"
+            }
+          ],
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 183,
+            "column" : 8,
+            "source_fragment" : "mark_to_drop(standard_metadata)"
+          }
+        },
+        {
+          "op" : "exit",
+          "parameters" : [],
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 184,
+            "column" : 8,
+            "source_fragment" : "exit"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.drop",
+      "id" : 7,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "mark_to_drop",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "standard_metadata"
+            }
+          ],
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 183,
+            "column" : 8,
+            "source_fragment" : "mark_to_drop(standard_metadata)"
+          }
+        },
+        {
+          "op" : "exit",
+          "parameters" : [],
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 184,
+            "column" : 8,
+            "source_fragment" : "exit"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.ac_send_to_coordinator",
+      "id" : 8,
       "runtime_data" : [
         {
           "name" : "eif",
@@ -457,7 +495,7 @@
     },
     {
       "name" : "MyIngress.ac_ipv4_forward_mac",
-      "id" : 7,
+      "id" : 9,
       "runtime_data" : [
         {
           "name" : "port",
@@ -553,7 +591,7 @@
     },
     {
       "name" : "MyIngress.ac_ipv4_forward",
-      "id" : 8,
+      "id" : 10,
       "runtime_data" : [
         {
           "name" : "port",
@@ -626,7 +664,7 @@
     },
     {
       "name" : "MyIngress.ac_l2_forward",
-      "id" : 9,
+      "id" : 11,
       "runtime_data" : [
         {
           "name" : "eif",
@@ -656,8 +694,25 @@
       ]
     },
     {
-      "name" : "ap340",
-      "id" : 10,
+      "name" : "ap339",
+      "id" : 12,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "exit",
+          "parameters" : [],
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 339,
+            "column" : 12,
+            "source_fragment" : "exit"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "ap344",
+      "id" : 13,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -693,7 +748,7 @@
           ],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 343,
+            "line" : 347,
             "column" : 12,
             "source_fragment" : "hdr.arp.dst_mac = hdr.arp.src_mac"
           }
@@ -725,7 +780,7 @@
           ],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 346,
+            "line" : 350,
             "column" : 12,
             "source_fragment" : "hdr.arp.src_mac = (bit<48>) hdr.arp.dst_ip"
           }
@@ -744,7 +799,7 @@
           ],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 349,
+            "line" : 353,
             "column" : 12,
             "source_fragment" : "hdr.arp.src_ip = hdr.arp.dst_ip"
           }
@@ -763,7 +818,7 @@
           ],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 352,
+            "line" : 356,
             "column" : 12,
             "source_fragment" : "hdr.ethernet.dstMac = hdr.ethernet.srcMac"
           }
@@ -795,7 +850,7 @@
           ],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 353,
+            "line" : 357,
             "column" : 12,
             "source_fragment" : "hdr.ethernet.srcMac = (bit<48>) hdr.arp.dst_ip"
           }
@@ -814,7 +869,7 @@
           ],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 356,
+            "line" : 360,
             "column" : 12,
             "source_fragment" : "standard_metadata.egress_spec = standard_metadata.ingress_port"
           }
@@ -824,7 +879,7 @@
           "parameters" : [],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 357,
+            "line" : 361,
             "column" : 12,
             "source_fragment" : "exit"
           }
@@ -832,8 +887,8 @@
       ]
     },
     {
-      "name" : "ap361",
-      "id" : 11,
+      "name" : "ap365",
+      "id" : 14,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -841,7 +896,7 @@
           "parameters" : [],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 361,
+            "line" : 365,
             "column" : 16,
             "source_fragment" : "exit"
           }
@@ -849,8 +904,8 @@
       ]
     },
     {
-      "name" : "ap394",
-      "id" : 12,
+      "name" : "ap398",
+      "id" : 15,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -863,7 +918,7 @@
           ],
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 394,
+            "line" : 398,
             "column" : 16,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -881,14 +936,86 @@
         "column" : 8,
         "source_fragment" : "MyIngress"
       },
-      "init_table" : "node_2",
+      "init_table" : "MyIngress.tb_check_dst_mac",
       "tables" : [
         {
-          "name" : "tbl_ap340",
+          "name" : "MyIngress.tb_check_dst_mac",
           "id" : 0,
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 340,
+            "line" : 322,
+            "column" : 10,
+            "source_fragment" : "tb_check_dst_mac"
+          },
+          "key" : [
+            {
+              "match_type" : "exact",
+              "name" : "hdr.ethernet.dstMac",
+              "target" : ["ethernet", "dstMac"],
+              "mask" : null
+            },
+            {
+              "match_type" : "exact",
+              "name" : "standard_metadata.ingress_port",
+              "target" : ["standard_metadata", "ingress_port"],
+              "mask" : null
+            }
+          ],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [3, 7],
+          "actions" : ["NoAction", "MyIngress.drop"],
+          "base_default_next" : null,
+          "next_tables" : {
+            "__MISS__" : "tbl_ap339",
+            "__HIT__" : "node_4"
+          },
+          "default_entry" : {
+            "action_id" : 7,
+            "action_const" : false,
+            "action_data" : [],
+            "action_entry_const" : false
+          }
+        },
+        {
+          "name" : "tbl_ap339",
+          "id" : 1,
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 339,
+            "column" : 12,
+            "source_fragment" : "exit"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [12],
+          "actions" : ["ap339"],
+          "base_default_next" : "node_4",
+          "next_tables" : {
+            "ap339" : "node_4"
+          },
+          "default_entry" : {
+            "action_id" : 12,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_ap344",
+          "id" : 2,
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 344,
             "column" : 28,
             "source_fragment" : "= ARP_REPLY; ..."
           },
@@ -899,14 +1026,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [10],
-          "actions" : ["ap340"],
-          "base_default_next" : "node_4",
+          "action_ids" : [13],
+          "actions" : ["ap344"],
+          "base_default_next" : "node_6",
           "next_tables" : {
-            "ap340" : "node_4"
+            "ap344" : "node_6"
           },
           "default_entry" : {
-            "action_id" : 10,
+            "action_id" : 13,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -914,7 +1041,7 @@
         },
         {
           "name" : "MyIngress.tb_swarm_control",
-          "id" : 1,
+          "id" : 3,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 197,
@@ -941,11 +1068,11 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [0, 6, 3],
+          "action_ids" : [0, 8, 4],
           "actions" : ["NoAction", "MyIngress.ac_send_to_coordinator", "MyIngress.drop"],
           "base_default_next" : null,
           "next_tables" : {
-            "__HIT__" : "tbl_ap361",
+            "__HIT__" : "tbl_ap365",
             "__MISS__" : "MyIngress.tb_ipv4_lpm"
           },
           "default_entry" : {
@@ -956,11 +1083,11 @@
           }
         },
         {
-          "name" : "tbl_ap361",
-          "id" : 2,
+          "name" : "tbl_ap365",
+          "id" : 4,
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 361,
+            "line" : 365,
             "column" : 16,
             "source_fragment" : "exit"
           },
@@ -971,14 +1098,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [11],
-          "actions" : ["ap361"],
+          "action_ids" : [14],
+          "actions" : ["ap365"],
           "base_default_next" : "MyIngress.tb_ipv4_lpm",
           "next_tables" : {
-            "ap361" : "MyIngress.tb_ipv4_lpm"
+            "ap365" : "MyIngress.tb_ipv4_lpm"
           },
           "default_entry" : {
-            "action_id" : 11,
+            "action_id" : 14,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -986,7 +1113,7 @@
         },
         {
           "name" : "MyIngress.tb_ipv4_lpm",
-          "id" : 3,
+          "id" : 5,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 254,
@@ -1007,7 +1134,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [8, 7, 4, 1],
+          "action_ids" : [10, 9, 5, 1],
           "actions" : ["MyIngress.ac_ipv4_forward", "MyIngress.ac_ipv4_forward_mac", "MyIngress.drop", "NoAction"],
           "base_default_next" : null,
           "next_tables" : {
@@ -1025,7 +1152,7 @@
         },
         {
           "name" : "MyIngress.tb_l2_forward",
-          "id" : 4,
+          "id" : 6,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 280,
@@ -1046,7 +1173,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [9, 5, 2],
+          "action_ids" : [11, 6, 2],
           "actions" : ["MyIngress.ac_l2_forward", "MyIngress.drop", "NoAction"],
           "base_default_next" : null,
           "next_tables" : {
@@ -1065,37 +1192,57 @@
       "action_profiles" : [],
       "conditionals" : [
         {
-          "name" : "node_2",
+          "name" : "node_4",
           "id" : 0,
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 338,
+            "line" : 342,
             "column" : 12,
-            "source_fragment" : "hdr.ethernet.etherType == TYPE_ARP"
+            "source_fragment" : "hdr.ethernet.etherType == TYPE_ARP && hdr.arp.op_code == ARP_REQ"
           },
           "expression" : {
             "type" : "expression",
             "value" : {
-              "op" : "==",
+              "op" : "and",
               "left" : {
-                "type" : "field",
-                "value" : ["ethernet", "etherType"]
+                "type" : "expression",
+                "value" : {
+                  "op" : "==",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["ethernet", "etherType"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0x0806"
+                  }
+                }
               },
               "right" : {
-                "type" : "hexstr",
-                "value" : "0x0806"
+                "type" : "expression",
+                "value" : {
+                  "op" : "==",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["arp", "op_code"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0x0001"
+                  }
+                }
               }
             }
           },
-          "true_next" : "tbl_ap340",
-          "false_next" : "node_4"
+          "true_next" : "tbl_ap344",
+          "false_next" : "node_6"
         },
         {
-          "name" : "node_4",
+          "name" : "node_6",
           "id" : 1,
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 359,
+            "line" : 363,
             "column" : 12,
             "source_fragment" : "hdr.ipv4.isValid()"
           },
@@ -1111,14 +1258,14 @@
             }
           },
           "true_next" : "MyIngress.tb_swarm_control",
-          "false_next" : "node_8"
+          "false_next" : "node_10"
         },
         {
-          "name" : "node_8",
+          "name" : "node_10",
           "id" : 2,
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 373,
+            "line" : 377,
             "column" : 17,
             "source_fragment" : "hdr.ethernet.isValid()"
           },
@@ -1143,18 +1290,18 @@
       "id" : 1,
       "source_info" : {
         "filename" : "./ap.p4",
-        "line" : 387,
+        "line" : 391,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
-      "init_table" : "node_12",
+      "init_table" : "node_14",
       "tables" : [
         {
-          "name" : "tbl_ap394",
-          "id" : 5,
+          "name" : "tbl_ap398",
+          "id" : 7,
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 394,
+            "line" : 398,
             "column" : 16,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           },
@@ -1165,14 +1312,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [12],
-          "actions" : ["ap394"],
+          "action_ids" : [15],
+          "actions" : ["ap398"],
           "base_default_next" : null,
           "next_tables" : {
-            "ap394" : null
+            "ap398" : null
           },
           "default_entry" : {
-            "action_id" : 12,
+            "action_id" : 15,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1182,11 +1329,11 @@
       "action_profiles" : [],
       "conditionals" : [
         {
-          "name" : "node_12",
+          "name" : "node_14",
           "id" : 3,
           "source_info" : {
             "filename" : "./ap.p4",
-            "line" : 393,
+            "line" : 397,
             "column" : 16,
             "source_fragment" : "standard_metadata.ingress_port == standard_metadata.egress_port && hdr.ethernet.etherType != TYPE_ARP"
           },
@@ -1225,7 +1372,7 @@
             }
           },
           "false_next" : null,
-          "true_next" : "tbl_ap394"
+          "true_next" : "tbl_ap398"
         }
       ]
     }
@@ -1236,7 +1383,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "./ap.p4",
-        "line" : 406,
+        "line" : 410,
         "column" : 8,
         "source_fragment" : "update_checksum( ..."
       },
