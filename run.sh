@@ -8,7 +8,7 @@ cd "$( dirname -- "$SCRIPT_PATH"; )";
 BACKBONE_SUBNET=10.1.0.0
 BACKBONE_MASK=/24
 
-SWARM_SUBNET=10.2.0.0
+SWARM_SUBNET=10.0.1.0
 SWARM_SUBNET_MASK=/24
 
 # This function prints the next IP
@@ -75,16 +75,17 @@ case $ROLE in
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
     echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
-    oldMAC=00:00:00:00:00:00
-    rawOldMac=$(echo $oldMAC | tr -d ':')
-    rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
-    # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
-    final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
+    oldMAC=00:00:0a:00:01:01
+    # rawOldMac=$(echo $oldMAC | tr -d ':')
+    # rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
+    # # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
+    # final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
+
     sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
     sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
-    # sudo ip link set dev smartedge-bb address $final_mac
+    sudo ip link set dev smartedge-bb address $oldMAC
 
-    # sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
+    sudo ip address add 10.0.1.1/24 dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
     # sudo ip link set dev eth0.1 address $final_mac
@@ -117,7 +118,7 @@ case $ROLE in
         sudo nmcli con up SmartEdgeHotspot
     fi
     sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
-    # sudo ip link set dev smartedge-bb address $final_mac
+    sudo ip link set dev smartedge-bb address $final_mac
     sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
     # sudo ip link set dev eth0.1 address $final_mac

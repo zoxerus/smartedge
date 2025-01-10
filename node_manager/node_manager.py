@@ -42,7 +42,7 @@ THIS_NODE_UUID = None
 for snic in psutil.net_if_addrs()[loopback_if]:
     if snic.family == socket.AF_INET:        
         temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) - 1))
-        THIS_NODE_UUID = f'AP:{temp_mac[9:]}'
+        THIS_NODE_UUID = f'SN:{temp_mac[9:]}'
 if THIS_NODE_UUID == None:
     logger.error("Could not Assign UUID to Node")
     exit()

@@ -50,6 +50,6 @@ default_thrift_port = 9090
 # this list of IPs and MACs are the ones configured on the smartedge-bb on each access point
 ap_list = {
     # ID of AP       MAC of smartedge-bb    IP of smartedge-bb
-    'AP:003': ['10.1.0.3'],
-    'AP:004': ['10.1.0.4']
+    'AP:00:00:03': ['10.1.0.3'],
+    'AP:00:00:04': ['10.1.0.4']
     }
