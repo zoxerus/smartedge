@@ -5,10 +5,10 @@ cd "$( dirname -- "$SCRIPT_PATH"; )";
 
 
 # IP Configurations
-BACKBONE_SUBNET=10.2.1.0
+BACKBONE_SUBNET=10.1.0.0
 BACKBONE_MASK=/24
 
-SWARM_SUBNET=10.0.1.0
+SWARM_SUBNET=10.2.0.0
 SWARM_SUBNET_MASK=/24
 
 # This function prints the next IP
