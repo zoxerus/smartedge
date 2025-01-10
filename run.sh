@@ -15,12 +15,11 @@ SWARM_SUBNET_MASK=/24
 nextip(){
     IP=$1
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $IP | sed -e 's/\./ /g'`)
+
     NEXT_IP_HEX=$(printf %.8X `echo $(( 0x$IP_HEX + $2 ))`)
     NEXT_IP=$(printf '%d.%d.%d.%d\n' `echo $NEXT_IP_HEX | sed -r 's/(..)/0x\1 /g'`)
     echo "$NEXT_IP"
 }
-
-
 
 
 # Check if number of parameters passed to the script is equal to 2
@@ -73,17 +72,18 @@ case $ROLE in
 # Coordinator:
     co)
     echo "Role is set to Coordinator"
-
+    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
+    echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
-    rawNewMac=$(( 0x$rawOldMac + 167772417 ))
+    rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
     # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
-
-    sudo ip link add smartedge-bb type vxlan id 1000 dev eth0 group 239.255.1.1 dstport 4789
-    sudo ip link set dev smartedge-bb address $final_mac
+    sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
     sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip link set dev smartedge-bb address $final_mac
+
     sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
@@ -95,10 +95,13 @@ case $ROLE in
     ap)
     echo "Role is set as Access Point"
 
+    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
+    echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
-    oldMAC=12:00:00:00:00:00
+    oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
-    rawNewMac=$(( 0x$rawOldMac + $NUMID ))
+    rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
+    # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
     sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
@@ -113,25 +116,24 @@ case $ROLE in
         sudo nmcli con modify SmartEdgeHotspot wifi-sec.psk "123456123"
         sudo nmcli con up SmartEdgeHotspot
     fi
-    sudo ip link add smartedge-bb type vxlan id 1000 dev eth0 group 239.255.1.1 dstport 4789
+    sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
     sudo ip link set dev smartedge-bb address $final_mac
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
-    sudo ip address add 10.0.1.1/24 dev smartedge-bb
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
     # sudo ip link set dev eth0.1 address $final_mac
 
-    oldMAC=16:00:00:00:00:00
-    rawOldMac=$(echo $oldMAC | tr -d ':')
-    rawNewMac=$(( 0x$rawOldMac + $NUMID ))
-    final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
-    sudo ip link set dev wlan0 address $final_mac
+    # oldMAC=16:00:00:00:00:00
+    # rawOldMac=$(echo $oldMAC | tr -d ':')
+    # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
+    # final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
+    # sudo ip link set dev wlan0 address $final_mac
     sudo python ./ap_manager/ap_manager.py
     ;;
 # Smart Node
     sn)
     echo "Role is set as Smart Node"
     # Genereate the MAC address
-    oldMAC=22:00:00:00:00:00
+    oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
     rawNewMac=$(( 0x$rawOldMac + $NUMID ))
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
