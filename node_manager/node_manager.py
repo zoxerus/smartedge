@@ -132,6 +132,7 @@ def handle_connection():
                     install_swarmNode_config()
                 except Exception as e:
                     print(f'Error installing config: {e} Leaving Access Point' )
+                    return
                     cli_command = f'nmcli connection show --active'
                     res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
                     ap_ssid = ''
@@ -168,7 +169,6 @@ def install_swarmNode_config():
     for command in commands:
         print('executing: ' + command)
         subprocess.run(command.split(), text=True)
-        time.sleep(5)
         
     get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
     get_if2_index_command = f'cat /sys/class/net/vxlan{vxlan_id}/ifindex'
