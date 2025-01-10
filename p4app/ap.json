@@ -329,10 +329,36 @@
       "primitives" : []
     },
     {
-      "name" : "NoAction",
+      "name" : "MyIngress.drop",
       "id" : 3,
       "runtime_data" : [],
-      "primitives" : []
+      "primitives" : [
+        {
+          "op" : "mark_to_drop",
+          "parameters" : [
+            {
+              "type" : "header",
+              "value" : "standard_metadata"
+            }
+          ],
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 183,
+            "column" : 8,
+            "source_fragment" : "mark_to_drop(standard_metadata)"
+          }
+        },
+        {
+          "op" : "exit",
+          "parameters" : [],
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 184,
+            "column" : 8,
+            "source_fragment" : "exit"
+          }
+        }
+      ]
     },
     {
       "name" : "MyIngress.drop",
@@ -399,72 +425,8 @@
       ]
     },
     {
-      "name" : "MyIngress.drop",
-      "id" : 6,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "mark_to_drop",
-          "parameters" : [
-            {
-              "type" : "header",
-              "value" : "standard_metadata"
-            }
-          ],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 183,
-            "column" : 8,
-            "source_fragment" : "mark_to_drop(standard_metadata)"
-          }
-        },
-        {
-          "op" : "exit",
-          "parameters" : [],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 184,
-            "column" : 8,
-            "source_fragment" : "exit"
-          }
-        }
-      ]
-    },
-    {
-      "name" : "MyIngress.drop",
-      "id" : 7,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "mark_to_drop",
-          "parameters" : [
-            {
-              "type" : "header",
-              "value" : "standard_metadata"
-            }
-          ],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 183,
-            "column" : 8,
-            "source_fragment" : "mark_to_drop(standard_metadata)"
-          }
-        },
-        {
-          "op" : "exit",
-          "parameters" : [],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 184,
-            "column" : 8,
-            "source_fragment" : "exit"
-          }
-        }
-      ]
-    },
-    {
       "name" : "MyIngress.ac_send_to_coordinator",
-      "id" : 8,
+      "id" : 6,
       "runtime_data" : [
         {
           "name" : "eif",
@@ -495,7 +457,7 @@
     },
     {
       "name" : "MyIngress.ac_ipv4_forward_mac",
-      "id" : 9,
+      "id" : 7,
       "runtime_data" : [
         {
           "name" : "port",
@@ -591,7 +553,7 @@
     },
     {
       "name" : "MyIngress.ac_ipv4_forward",
-      "id" : 10,
+      "id" : 8,
       "runtime_data" : [
         {
           "name" : "port",
@@ -664,7 +626,7 @@
     },
     {
       "name" : "MyIngress.ac_l2_forward",
-      "id" : 11,
+      "id" : 9,
       "runtime_data" : [
         {
           "name" : "eif",
@@ -694,25 +656,8 @@
       ]
     },
     {
-      "name" : "ap339",
-      "id" : 12,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "exit",
-          "parameters" : [],
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 339,
-            "column" : 12,
-            "source_fragment" : "exit"
-          }
-        }
-      ]
-    },
-    {
       "name" : "ap344",
-      "id" : 13,
+      "id" : 10,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -888,7 +833,7 @@
     },
     {
       "name" : "ap365",
-      "id" : 14,
+      "id" : 11,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -905,7 +850,7 @@
     },
     {
       "name" : "ap398",
-      "id" : 15,
+      "id" : 12,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -936,83 +881,11 @@
         "column" : 8,
         "source_fragment" : "MyIngress"
       },
-      "init_table" : "MyIngress.tb_check_dst_mac",
+      "init_table" : "node_2",
       "tables" : [
         {
-          "name" : "MyIngress.tb_check_dst_mac",
-          "id" : 0,
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 322,
-            "column" : 10,
-            "source_fragment" : "tb_check_dst_mac"
-          },
-          "key" : [
-            {
-              "match_type" : "exact",
-              "name" : "hdr.ethernet.dstMac",
-              "target" : ["ethernet", "dstMac"],
-              "mask" : null
-            },
-            {
-              "match_type" : "exact",
-              "name" : "standard_metadata.ingress_port",
-              "target" : ["standard_metadata", "ingress_port"],
-              "mask" : null
-            }
-          ],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [3, 7],
-          "actions" : ["NoAction", "MyIngress.drop"],
-          "base_default_next" : null,
-          "next_tables" : {
-            "__MISS__" : "tbl_ap339",
-            "__HIT__" : "node_4"
-          },
-          "default_entry" : {
-            "action_id" : 7,
-            "action_const" : false,
-            "action_data" : [],
-            "action_entry_const" : false
-          }
-        },
-        {
-          "name" : "tbl_ap339",
-          "id" : 1,
-          "source_info" : {
-            "filename" : "./ap.p4",
-            "line" : 339,
-            "column" : 12,
-            "source_fragment" : "exit"
-          },
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [12],
-          "actions" : ["ap339"],
-          "base_default_next" : "node_4",
-          "next_tables" : {
-            "ap339" : "node_4"
-          },
-          "default_entry" : {
-            "action_id" : 12,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
           "name" : "tbl_ap344",
-          "id" : 2,
+          "id" : 0,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 344,
@@ -1026,14 +899,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [13],
+          "action_ids" : [10],
           "actions" : ["ap344"],
-          "base_default_next" : "node_6",
+          "base_default_next" : "node_4",
           "next_tables" : {
-            "ap344" : "node_6"
+            "ap344" : "node_4"
           },
           "default_entry" : {
-            "action_id" : 13,
+            "action_id" : 10,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1041,7 +914,7 @@
         },
         {
           "name" : "MyIngress.tb_swarm_control",
-          "id" : 3,
+          "id" : 1,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 197,
@@ -1068,7 +941,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [0, 8, 4],
+          "action_ids" : [0, 6, 3],
           "actions" : ["NoAction", "MyIngress.ac_send_to_coordinator", "MyIngress.drop"],
           "base_default_next" : null,
           "next_tables" : {
@@ -1084,7 +957,7 @@
         },
         {
           "name" : "tbl_ap365",
-          "id" : 4,
+          "id" : 2,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 365,
@@ -1098,14 +971,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [14],
+          "action_ids" : [11],
           "actions" : ["ap365"],
           "base_default_next" : "MyIngress.tb_ipv4_lpm",
           "next_tables" : {
             "ap365" : "MyIngress.tb_ipv4_lpm"
           },
           "default_entry" : {
-            "action_id" : 14,
+            "action_id" : 11,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1113,7 +986,7 @@
         },
         {
           "name" : "MyIngress.tb_ipv4_lpm",
-          "id" : 5,
+          "id" : 3,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 254,
@@ -1134,7 +1007,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [10, 9, 5, 1],
+          "action_ids" : [8, 7, 4, 1],
           "actions" : ["MyIngress.ac_ipv4_forward", "MyIngress.ac_ipv4_forward_mac", "MyIngress.drop", "NoAction"],
           "base_default_next" : null,
           "next_tables" : {
@@ -1152,7 +1025,7 @@
         },
         {
           "name" : "MyIngress.tb_l2_forward",
-          "id" : 6,
+          "id" : 4,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 280,
@@ -1173,7 +1046,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [11, 6, 2],
+          "action_ids" : [9, 5, 2],
           "actions" : ["MyIngress.ac_l2_forward", "MyIngress.drop", "NoAction"],
           "base_default_next" : null,
           "next_tables" : {
@@ -1192,7 +1065,7 @@
       "action_profiles" : [],
       "conditionals" : [
         {
-          "name" : "node_4",
+          "name" : "node_2",
           "id" : 0,
           "source_info" : {
             "filename" : "./ap.p4",
@@ -1235,10 +1108,10 @@
             }
           },
           "true_next" : "tbl_ap344",
-          "false_next" : "node_6"
+          "false_next" : "node_4"
         },
         {
-          "name" : "node_6",
+          "name" : "node_4",
           "id" : 1,
           "source_info" : {
             "filename" : "./ap.p4",
@@ -1258,10 +1131,10 @@
             }
           },
           "true_next" : "MyIngress.tb_swarm_control",
-          "false_next" : "node_10"
+          "false_next" : "node_8"
         },
         {
-          "name" : "node_10",
+          "name" : "node_8",
           "id" : 2,
           "source_info" : {
             "filename" : "./ap.p4",
@@ -1294,11 +1167,11 @@
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
-      "init_table" : "node_14",
+      "init_table" : "node_12",
       "tables" : [
         {
           "name" : "tbl_ap398",
-          "id" : 7,
+          "id" : 5,
           "source_info" : {
             "filename" : "./ap.p4",
             "line" : 398,
@@ -1312,14 +1185,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [15],
+          "action_ids" : [12],
           "actions" : ["ap398"],
           "base_default_next" : null,
           "next_tables" : {
             "ap398" : null
           },
           "default_entry" : {
-            "action_id" : 15,
+            "action_id" : 12,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1329,7 +1202,7 @@
       "action_profiles" : [],
       "conditionals" : [
         {
-          "name" : "node_14",
+          "name" : "node_12",
           "id" : 3,
           "source_info" : {
             "filename" : "./ap.p4",

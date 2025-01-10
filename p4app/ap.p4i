@@ -1218,9 +1218,9 @@ control MyIngress(inout headers hdr,
     //------------------------------------------------------//
     //------ I N G R E S S  P R O C E S S I N G ------------//
     apply {
-        if (!tb_check_dst_mac.apply().hit ){
-            exit;
-        }
+        // if (!tb_check_dst_mac.apply().hit ){
+        //     exit;
+        // }
 
         if (hdr.ethernet.etherType == TYPE_ARP && hdr.arp.op_code == ARP_REQ ) {
             //update operation code from request to reply
