@@ -389,8 +389,7 @@ def handle_disconnected_station(station_physical_mac_address):
     
     
     # delete the node from the database
-    db.delete_node_from_swarm_database(database_type=db.STR_DATABASE_TYPE_CASSANDRA, session=database_session,
-                                    node_swarm_id= station_vxlan_id)
+    db.delete_node_from_swarm_database(node_swarm_id= station_vxlan_id)
 
     
     logger.debug(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')

@@ -131,6 +131,7 @@ def handle_tcp_communication():
                 try:
                     install_swarmNode_config()
                 except Exception as e:
+                    pass
                     print(f'Error installing config: {e} Leaving Access Point' )
                     cli_command = f'nmcli connection show --active'
                     res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
@@ -202,6 +203,7 @@ def exit_handler():
         
         
 def handle_disconnection():
+    return
     logger.debug( '\nHandling Disconnection:\n'  )
     exit_commands = [
         'ifconfig veth1 0.0.0.0',
