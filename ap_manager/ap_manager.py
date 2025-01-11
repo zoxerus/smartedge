@@ -223,14 +223,17 @@ def get_mac_from_arp_by_physical_ip(ip):
 
 def get_ip_from_arp_by_physical_mac(physical_mac):
     shell_command = "arp -en"
-    result = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if (result.stderr):
-        logger.error(f'\nCould not run arp for {physical_mac}:\n\t {result.stderr}')
-        return
-    logger.debug(f'ARP result:\n {result.stdout}')
-    for line in result.stdout.strip().splitlines():
-        if physical_mac in line and DEFAULT_WLAN_DEVICE_NAME in line:
-            return line.split()[0]
+    t0 = time.time()
+    while time.time() - t0 < 5:
+        result = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if (result.stderr):
+            logger.error(f'\nCould run arp for {physical_mac}:\n\t {result.stderr}')
+            return
+        for line in result.stdout.strip().splitlines():
+            if physical_mac in line and DEFAULT_WLAN_DEVICE_NAME in line:
+                ip = line.split()[0]
+                logger.error(f'\nIP {ip} was found in ARP for {physical_mac} after {time.time() - t0}')                
+                return ip
     logger.error(f'\nIP not found in ARP for {physical_mac}')
 
 
@@ -255,18 +258,6 @@ def handle_new_connected_station(station_physical_mac_address):
     
     # get the IP of the node from its mac address from the ARP table
     station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
-    # sometimes it takes more than one try to get the ip from the ARP, I don't know why
-    if station_physical_ip_address == None:
-        tries = 2
-        while (tries > 0):
-            station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
-            if station_physical_ip_address != None:
-                break
-            time.sleep(0.05)
-            tries = tries - 1
-        if station_physical_ip_address == None:
-            logger.error(f'Error: Could not get Node Physical IP from ARP table for MAC: {station_physical_mac_address}')
-            return
         
     # # 2nd Step: Check if Node belong to a Swarm or Not
     # # to do so we first read the UUID (bottom three bytes of MAC address)
@@ -302,7 +293,7 @@ def handle_new_connected_station(station_physical_mac_address):
 
 
         
-    logger.debug( f'\nHandling New Station: {station_physical_mac_address} {station_physical_ip_address} at {time.time()}')
+    logger.debug( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
     
     host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
                 max_host_id=cfg.this_swarm_dhcp_end)
