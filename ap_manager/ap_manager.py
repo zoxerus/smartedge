@@ -183,7 +183,7 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
     if (result.stderr):
         logger.error(f'\nCould not create vxlan{vxlan_id}:\n\t {result.stderr}')
         return -1
-    logger.debug(f'\nCreate vxlan{vxlan_id}:\n\t {result.stdout}')
+    logger.debug(f'\nCreated vxlan{vxlan_id}:\n\t {result.stdout}')
     created_host_ids.add(vxlan_id)
     logger.debug(f'\nCreated host IDs:\n\t {created_host_ids}')            
     activate_interface_shell_command = "ip link set vxlan%s up" % vxlan_id

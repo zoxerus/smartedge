@@ -20,13 +20,13 @@ DEFAULT_THRIFT_PORT = 9090
 def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     command_as_word_array = ['docker','exec',BMV2_DOCKER_CONTAINER_NAME,'sh', '-c', f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {thrift_ip} --thrift-port {thrift_port}"  ]
 
-    bmv2_logger.debug(f'Sending command "{cli_command}" to bmv2')
+    # bmv2_logger.debug(f'Sending command "{cli_command}" to bmv2')
     proc = subprocess.run(command_as_word_array, text=True, stdout=subprocess.PIPE , stderr=subprocess.PIPE)
     if (proc.stderr):
         bmv2_logger.error(f'\nBMV2ERROR:\nsending command:\n{cli_command}\nERROR MESSAGE:\n{proc.stderr}')
     response = proc.stdout.strip()
 
-    bmv2_logger.debug(f'Sent command "{cli_command}" to bmv2\nResponse Received:\n\t {response}')
+    bmv2_logger.debug(f'Sent command "{cli_command}" to bmv2\nResponse Received: {response}')
     return response
     
 
@@ -38,18 +38,19 @@ def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_key
         if 'Invalid table operation (BAD_MATCH_KEY)' in response: # entry doesn't exist
             cli_command = "table_add " + table_name + ' ' + action_name + ' ' + match_keys + ' => ' + action_params
             response = send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port)
-            bmv2_logger.debug('\nresponse received: ' + response )
+            # bmv2_logger.debug('\nresponse received: ' + response )
             response_as_lines = response.splitlines()
-            if ( 'Error' in response_as_lines[SWITCH_RESPONSE_LAST_LINE_INDEX] ):
-                bmv2_logger.error( f'P4 Command Error:\n {cli_command} \nResponse Obtained: {response} ')
-                return SWITCH_RESPONSE_ERROR
-            elif 'Invalid' in response_as_lines[SWITCH_RESPONSE_LAST_LINE_INDEX]:
-                bmv2_logger.error( f'P4 Command Invalid:\n {cli_command} \nResponse Obtained: {response} ')
-                return SWITCH_RESPONSE_INVALID
-            elif response_as_lines[-2].startswith("Entry has been added with handle"):
-                handle = [int(s) for s in response_as_lines[4] if s.isdigit()][0]
-                bmv2_logger.debug("add entry with handle %d " % handle)
-                return handle
+            for line in response_as_lines:
+                if ( 'Error' in line ):
+                    bmv2_logger.error( f'P4 Command Error:\n {cli_command} \nResponse Obtained: {response} ')
+                    return SWITCH_RESPONSE_ERROR
+                elif 'Invalid' in line:
+                    bmv2_logger.error( f'P4 Command Invalid:\n {cli_command} \nResponse Obtained: {response} ')
+                    return SWITCH_RESPONSE_INVALID
+                elif line.startswith("Entry has been added with handle"):
+                    handle =  re.findall(r'\b\d+\b', line, re.I)[0]
+                    bmv2_logger.debug(f"Added entry with handle {handle} detected from line: {line} ")
+                    return handle
         else:
             for line in response.splitlines():
                 if 'Dumping entry' in line:
