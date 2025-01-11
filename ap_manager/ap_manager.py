@@ -223,16 +223,15 @@ def get_mac_from_arp_by_physical_ip(ip):
 
 def get_ip_from_arp_by_physical_mac(physical_mac):
     shell_command = "arp -en"
-    t0 = time.time()
-    while time.time() - t0 < 5:
-        result = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if (result.stderr):
-            logger.error(f'\nCould run arp for {physical_mac}:\n\t {result.stderr}')
-            return
-        for line in result.stdout.strip().splitlines():
-            if physical_mac in line and DEFAULT_WLAN_DEVICE_NAME in line:
-                return line.split()[0]
-        logger.error(f'\nIP not found in ARP for {physical_mac}')
+    result = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if (result.stderr):
+        logger.error(f'\nCould not run arp for {physical_mac}:\n\t {result.stderr}')
+        return
+    logger.debug(f'ARP result:\n {result.stdout}')
+    for line in result.stdout.strip().splitlines():
+        if physical_mac in line and DEFAULT_WLAN_DEVICE_NAME in line:
+            return line.split()[0]
+    logger.error(f'\nIP not found in ARP for {physical_mac}')
 
 
 def assign_virtual_mac_and_ip_by_host_id(host_id):
@@ -246,6 +245,7 @@ def assign_virtual_mac_and_ip_by_host_id(host_id):
 
 
 def handle_new_connected_station(station_physical_mac_address):
+    logger.debug(f"handling newly connected staion {station_physical_mac_address}")
     # First Step check if node is already in the Connected Nodes 
     # sometimes an already connected station is randomly detected as connecting again, 
     # this check skips the execution of the rest of the code, as the station is already connected and set up.
@@ -302,7 +302,7 @@ def handle_new_connected_station(station_physical_mac_address):
 
 
         
-    logger.debug( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
+    logger.debug( f'\nHandling New Station: {station_physical_mac_address} {station_physical_ip_address} at {time.time()}')
     
     host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
                 max_host_id=cfg.this_swarm_dhcp_end)

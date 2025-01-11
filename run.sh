@@ -78,7 +78,7 @@ case $ROLE in
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
     # echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
-    oldMAC=00:00:0a:00:01:01
+    oldMAC=00:00:0a:00:01:FE
     # rawOldMac=$(echo $oldMAC | tr -d ':')
     # rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
     # # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
@@ -88,7 +88,7 @@ case $ROLE in
     sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb address $oldMAC
 
-    sudo ip address add 10.0.1.1/24 dev smartedge-bb
+    sudo ip address add 10.0.1.254/24 dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
     # sudo ip link set dev eth0.1 address $final_mac
