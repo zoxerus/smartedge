@@ -26,7 +26,7 @@ database_port = CASSANDRA_PORT
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
 # it is sent to the swarm node when it connects to the AP
-coordinator_vip='10.0.1.1'
+coordinator_vip='10.0.1.254'
 
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
