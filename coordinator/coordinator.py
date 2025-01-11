@@ -138,12 +138,12 @@ class Swarm_Node_Handler:
                 entry_handle = bmv2_thrift.add_entry_to_bmv2(communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_swarm_ip}/32' , 
-                        action_params= f'{global_config.swarm_backbone_switch_port}', thrift_ip= global_config.ap_list[key][1], thrift_port= DEFAULT_THRIFT_PORT )
+                        action_params= f'{global_config.swarm_backbone_switch_port}', thrift_ip= global_config.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT )
                 
                 entry_handle = bmv2_thrift.add_entry_to_bmv2(communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, 
                                         table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
                                         match_keys= f'{node_swarm_mac}', action_params= str(global_config.swarm_backbone_switch_port),
-                                        thrift_ip= global_config.ap_list[key][1], thrift_port= DEFAULT_THRIFT_PORT)
+                                        thrift_ip= global_config.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT)
                     
                                 
         self.node_socket.send( bytes( f'{req_id} accepted'.encode() ) )
