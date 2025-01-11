@@ -131,16 +131,16 @@ def handle_tcp_communication():
                 try:
                     install_swarmNode_config()
                 except Exception as e:
-                    pass
+                    
                     print(f'Error installing config: {e} Leaving Access Point' )
-                    cli_command = f'nmcli connection show --active'
-                    res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
-                    ap_ssid = ''
-                    for line in res.stdout.strip().splitlines():
-                        if DEFAULT_IFNAME in line:
-                            ap_ssid = line.split()[0]
-                    cli_command = f'nmcli connection down id {ap_ssid}'
-                    subprocess.run(cli_command.split(), text=True)
+                    # cli_command = f'nmcli connection show --active'
+                    # res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
+                    # ap_ssid = ''
+                    # for line in res.stdout.strip().splitlines():
+                    #     if DEFAULT_IFNAME in line:
+                    #         ap_ssid = line.split()[0]
+                    # cli_command = f'nmcli connection down id {ap_ssid}'
+                    # subprocess.run(cli_command.split(), text=True)
 
                 
 
