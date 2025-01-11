@@ -73,8 +73,10 @@ case $ROLE in
 # Coordinator:
     co)
     echo "Role is set to Coordinator"
+    /bin/bash ./run_cassandra_docker.sh
+    /bin/bash ./run_bmv2_docker.sh co
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
-    echo -e "IP $IP in HEX: $IP_HEX"
+    # echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
     oldMAC=00:00:0a:00:01:01
     # rawOldMac=$(echo $oldMAC | tr -d ':')
@@ -96,9 +98,9 @@ case $ROLE in
 # Access Point: 
     ap)
     echo "Role is set as Access Point"
-
+    /bin/bash ./run_bmv2_docker.sh
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
-    echo -e "IP $IP in HEX: $IP_HEX"
+    # echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
