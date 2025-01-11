@@ -115,6 +115,9 @@ def initialize_program():
     logger.addHandler(client_monitor_log_file_handler)
     logger.addHandler(client_monitor_log_console_handler)
     
+    db.db_logger = logger
+    bmv2.bmv2_logger = logger
+    
     
     # remvoe all configureation from bmv2, start fresh
     bmv2.send_cli_command_to_bmv2(cli_command="reset_state")
