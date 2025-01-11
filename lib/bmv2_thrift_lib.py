@@ -9,26 +9,11 @@ SWITCH_RESPONSE_INVALID = -2
 SWITCH_RESPONSE_LAST_LINE_INDEX = -2
 P4_CONTROL_METHOD_THRIFT_CLI = 'THRIFT_CLI'
 P4_CONTROL_METHOD_P4RT_GRPC = 'P4RT_GRPC'
-BMV2_LOG_FILE_NAME = './logs/bmv2_log.log'
 
 BMV2_DOCKER_CONTAINER_NAME = 'bmv2smartedge'
 
-bmv2_logger = logging.getLogger('bmv2_logger')
-os.makedirs(os.path.dirname(BMV2_LOG_FILE_NAME), exist_ok=True)
 
-bmv2_lib_log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s]: %(message)s \n")
-
-bmv2_file_handler = logging.FileHandler(BMV2_LOG_FILE_NAME, mode='w')
-bmv2_file_handler.setLevel(logging.DEBUG)
-bmv2_file_handler.setFormatter(bmv2_lib_log_formatter)
-
-bmv2_console_handler = logging.StreamHandler(sys.stdout)
-bmv2_console_handler.setLevel(logging.INFO)
-bmv2_console_handler.setFormatter(bmv2_lib_log_formatter)
-
-bmv2_logger.setLevel(logging.DEBUG)
-bmv2_logger.addHandler(bmv2_console_handler)
-bmv2_logger.addHandler(bmv2_file_handler)
+bmv2_logger = None
 
 DEFAULT_THRIFT_PORT = 9090
 
