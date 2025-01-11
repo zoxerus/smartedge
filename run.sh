@@ -101,7 +101,7 @@ case $ROLE in
     echo "Role is set as Access Point"
     /bin/bash ./run_bmv2_docker.sh
     sleep 3
-    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
+    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
     # echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
     oldMAC=00:00:00:00:00:00
