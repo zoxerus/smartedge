@@ -446,7 +446,7 @@ def ap_id_to_vxlan_id(access_point_id):
         
                
 def main():
-    logger.debugc("AP: Program Started")
+    logger.debug("AP: Program Started")
     initialize_program()
     
     
