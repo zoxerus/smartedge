@@ -101,7 +101,7 @@ for snic in psutil.net_if_addrs()[loopback_if]:
 if THIS_AP_UUID == None:
     logger.error("Could not Assign UUID to Node")
     exit()
-logger.debug("AP ID:", THIS_AP_UUID)
+logger.debug(f"AP ID: {THIS_AP_UUID}" )
 
 THIS_AP_ETH_MAC = None
 for snic in psutil.net_if_addrs()[cfg.default_backbone_device]:
@@ -446,7 +446,7 @@ def ap_id_to_vxlan_id(access_point_id):
         
                
 def main():
-    logger.debug("AP: Program Started")
+    logger.debugc("AP: Program Started")
     initialize_program()
     
     
