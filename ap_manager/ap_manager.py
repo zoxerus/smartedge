@@ -20,12 +20,29 @@ import lib.bmv2_thrift_lib as bmv2
 import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-print(f'running in: {dir_path}')
 
-
+# this part handles logging to console and to a file for debugging purposes
 # where to store program logs
 PROGRAM_LOG_FILE_NAME = './logs/ap.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
+client_monitor_log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
+client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
+client_monitor_log_file_handler.setLevel(logging.INFO)
+client_monitor_log_file_handler.setFormatter(client_monitor_log_formatter)
+client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
+client_monitor_log_console_handler.setLevel(logging.INFO)
+client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
+logger = logging.getLogger('ap_logger')
+logger.setLevel(logging.INFO)    
+logger.addHandler(client_monitor_log_file_handler)
+logger.addHandler(client_monitor_log_console_handler)
+
+db.db_logger = logger
+bmv2.bmv2_logger = logger
+logger.debug(f'running in: {dir_path}')
+
+
+
 
 # a global variable to set the communication protocol with the switch
 P4CTRL = bmv2.P4_CONTROL_METHOD_THRIFT_CLI
@@ -67,7 +84,6 @@ CONNECTED_STATION_VXLAN_INDEX = 2
 DEFAULT_WLAN_DEVICE_NAME= cfg.default_wlan_device
 
 loopback_if = 'lo:0'
-logger = logging.getLogger('ap_logger')
 
 db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
 database_session = db.connect_to_database(cfg.database_hostname, cfg.database_port)
@@ -88,7 +104,7 @@ for snic in psutil.net_if_addrs()[loopback_if]:
 if THIS_AP_UUID == None:
     logger.error("Could not Assign UUID to Node")
     exit()
-print("AP ID:", THIS_AP_UUID)
+logger.debug("AP ID:", THIS_AP_UUID)
 
 THIS_AP_ETH_MAC = None
 for snic in psutil.net_if_addrs()[cfg.default_backbone_device]:
@@ -107,20 +123,20 @@ if THIS_AP_WLAN_MAC == None:
     exit()
                          
 def initialize_program():
-    # this part handles logging to console and to a file for debugging purposes
-    client_monitor_log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
-    client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-    client_monitor_log_file_handler.setLevel(logging.INFO)
-    client_monitor_log_file_handler.setFormatter(client_monitor_log_formatter)
-    client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
-    client_monitor_log_console_handler.setLevel(logging.INFO)
-    client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
-    logger.setLevel(logging.INFO)    
-    logger.addHandler(client_monitor_log_file_handler)
-    logger.addHandler(client_monitor_log_console_handler)
+    # # this part handles logging to console and to a file for debugging purposes
+    # client_monitor_log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
+    # client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
+    # client_monitor_log_file_handler.setLevel(logging.INFO)
+    # client_monitor_log_file_handler.setFormatter(client_monitor_log_formatter)
+    # client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
+    # client_monitor_log_console_handler.setLevel(logging.INFO)
+    # client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
+    # logger.setLevel(logging.INFO)    
+    # logger.addHandler(client_monitor_log_file_handler)
+    # logger.addHandler(client_monitor_log_console_handler)
     
-    db.db_logger = logger
-    bmv2.bmv2_logger = logger
+    # db.db_logger = logger
+    # bmv2.bmv2_logger = logger
     
     
     # remvoe all configureation from bmv2, start fresh
@@ -129,11 +145,11 @@ def initialize_program():
     # attach the backbone interface to the bmv2
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {cfg.swarm_backbone_switch_port}")
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {cfg.default_backbone_device} {cfg.swarm_backbone_switch_port}")
-    logger.info('Program Initialized')
+    logger.debug('Program Initialized')
 
 # a handler to clean exit the programs
 def exit_handler():
-    logger.info('Handling exit')
+    logger.debug('Handling exit')
     logger.debug(f'Created vxlan ids: {created_host_ids}') 
                
     # delete any created vxlans during the program lifetime

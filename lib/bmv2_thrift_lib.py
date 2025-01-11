@@ -20,13 +20,13 @@ DEFAULT_THRIFT_PORT = 9090
 def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     command_as_word_array = ['docker','exec',BMV2_DOCKER_CONTAINER_NAME,'sh', '-c', f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {thrift_ip} --thrift-port {thrift_port}"  ]
 
+    bmv2_logger.debug(f'Sending command "{cli_command}" to bmv2')
     proc = subprocess.run(command_as_word_array, text=True, stdout=subprocess.PIPE , stderr=subprocess.PIPE)
     if (proc.stderr):
         bmv2_logger.error(f'\nBMV2ERROR:\nsending command:\n{cli_command}\nERROR MESSAGE:\n{proc.stderr}')
-    
     response = proc.stdout.strip()
 
-    print(response)
+    bmv2_logger.debug(f'Sent command "{cli_command}" to bmv2\nResponse Received:\n\t {response}')
     return response
     
 
