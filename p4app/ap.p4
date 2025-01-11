@@ -245,6 +245,13 @@ control MyIngress(inout headers hdr,
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
+    action ac_ipv4_forward_mac_from_dst_ip(egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+        // hdr.ethernet.srcMac = hdr.ethernet.dstMac;
+        hdr.ethernet.dstMac = bit<48> hdr.ipv4.dstIP;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+
     /* Experimental; forward WTHOUT setting MAC address */
     action ac_ipv4_forward(egressSpec_t port) {
         standard_metadata.egress_spec = port;
@@ -259,6 +266,7 @@ control MyIngress(inout headers hdr,
         actions = {
             ac_ipv4_forward;
             ac_ipv4_forward_mac;
+            ac_ipv4_forward_mac_from_dst_ip;
             drop;
             NoAction;
         }
