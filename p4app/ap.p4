@@ -248,7 +248,7 @@ control MyIngress(inout headers hdr,
     action ac_ipv4_forward_mac_from_dst_ip(egressSpec_t port) {
         standard_metadata.egress_spec = port;
         // hdr.ethernet.srcMac = hdr.ethernet.dstMac;
-        hdr.ethernet.dstMac = bit<48> hdr.ipv4.dstIP;
+        hdr.ethernet.dstMac = (bit<48>) hdr.ipv4.dstIP;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
@@ -327,18 +327,18 @@ control MyIngress(inout headers hdr,
 
 
 
-    table tb_check_dst_mac{
-        key = {
-            hdr.ethernet.dstMac: exact;
-            standard_metadata.ingress_port: exact;
-        }
-        actions = {
-            NoAction;
-            drop;
-        }
-        default_action = drop();
+    // table tb_check_dst_mac{
+    //     key = {
+    //         hdr.ethernet.dstMac: exact;
+    //         standard_metadata.ingress_port: exact;
+    //     }
+    //     actions = {
+    //         NoAction;
+    //         drop;
+    //     }
+    //     default_action = drop();
         
-    }
+    // }
 
     //------------------------------------------------------//
     //------ I N G R E S S  P R O C E S S I N G ------------//
