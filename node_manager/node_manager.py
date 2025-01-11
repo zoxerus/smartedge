@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 # this part handles logging to console and to a file for debugging purposes
 log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s]: %(message)s \n")
 log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-log_file_handler.setLevel(logging.DEBUG)
+log_file_handler.setLevel(logging.INFO)
 log_file_handler.setFormatter(log_formatter)
 log_console_handler = logging.StreamHandler(sys.stdout)  # (sys.stdout)
 log_console_handler.setLevel(logging.INFO)
 log_console_handler.setFormatter(log_formatter)
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
 
@@ -107,7 +107,7 @@ def get_ap_physical_ip_by_ifname(ifname):
             return get_ip_from_arp_by_physical_mac(mac)
                 
 
-def handle_connection():
+def handle_tcp_communication():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_manager_socket:
         try:
             node_manager_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -132,7 +132,6 @@ def handle_connection():
                     install_swarmNode_config()
                 except Exception as e:
                     print(f'Error installing config: {e} Leaving Access Point' )
-                    return
                     cli_command = f'nmcli connection show --active'
                     res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
                     ap_ssid = ''
@@ -220,10 +219,9 @@ def handle_disconnection():
     except Exception as e:
         print(e)    
 
-def monitor_wifi(control_queue):
+def monitor_wifi_status():
     global ACCESS_POINT_IP
   
-   
     # this command is run in the shell to monitor wireless events using the iw tool
     monitoring_command = 'nmcli device monitor wlan0'
 
@@ -249,8 +247,8 @@ def monitor_wifi(control_queue):
   
 def main():
     print('program started')
-    threading.Thread(target=handle_connection, args=() ).start()
-    threading.Thread(target= monitor_wifi, args=(join_queue,) ).start()
+    threading.Thread(target=handle_tcp_communication, args=() ).start()
+    threading.Thread(target= monitor_wifi_status, args=() ).start()
 
 
 if __name__ == '__main__':
