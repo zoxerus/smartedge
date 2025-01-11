@@ -8,7 +8,7 @@ CASSANDRA_PORT = 9042
 # the backbone network is the network that connects the APs to the coordinator
 swarm_backbone_switch_port = 510
 
-default_backbone_device = 'eth0'
+default_backbone_device = 'smartedge-bb'
 default_wlan_device = 'wlan0'
 
 # here configure the subnet range that need to be allocated to the swarm
