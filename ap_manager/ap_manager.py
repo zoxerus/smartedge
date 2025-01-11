@@ -25,22 +25,20 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 # where to store program logs
 PROGRAM_LOG_FILE_NAME = './logs/ap.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
+logger = logging.getLogger('ap_logger')
 client_monitor_log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
 client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-client_monitor_log_file_handler.setLevel(logging.INFO)
+client_monitor_log_file_handler.setLevel(logging.DEBUG)
 client_monitor_log_file_handler.setFormatter(client_monitor_log_formatter)
 client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
-client_monitor_log_console_handler.setLevel(logging.INFO)
+client_monitor_log_console_handler.setLevel(logging.DEBUG)
 client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
-logger = logging.getLogger('ap_logger')
-logger.setLevel(logging.INFO)    
+logger.setLevel(logging.DEBUG)    
 logger.addHandler(client_monitor_log_file_handler)
 logger.addHandler(client_monitor_log_console_handler)
-
 db.db_logger = logger
 bmv2.bmv2_logger = logger
 logger.debug(f'running in: {dir_path}')
-
 
 
 
@@ -88,7 +86,6 @@ loopback_if = 'lo:0'
 db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
 database_session = db.connect_to_database(cfg.database_hostname, cfg.database_port)
 db.DATABASE_SESSION = database_session
-
 def int_to_mac(macint):
     if type(macint) != int:
         raise ValueError('invalid integer')
@@ -123,7 +120,6 @@ if THIS_AP_WLAN_MAC == None:
     exit()
                          
 def initialize_program():
-    # # this part handles logging to console and to a file for debugging purposes
     # client_monitor_log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
     # client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
     # client_monitor_log_file_handler.setLevel(logging.INFO)
@@ -134,9 +130,10 @@ def initialize_program():
     # logger.setLevel(logging.INFO)    
     # logger.addHandler(client_monitor_log_file_handler)
     # logger.addHandler(client_monitor_log_console_handler)
-    
+
     # db.db_logger = logger
     # bmv2.bmv2_logger = logger
+    # logger.debug(f'running in: {dir_path}')
     
     
     # remvoe all configureation from bmv2, start fresh
@@ -449,7 +446,7 @@ def ap_id_to_vxlan_id(access_point_id):
         
                
 def main():
-    logger.debug("Program Started")
+    logger.debug("AP: Program Started")
     initialize_program()
     
     

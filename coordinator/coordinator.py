@@ -17,7 +17,7 @@ import lib.bmv2_thrift_lib as bmv2
 import lib.database_comms as db_comms
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-print(f'running in: {dir_path}')
+
 
 # where to store program logs
 PROGRAM_LOG_FILE_NAME = './logs/coordinator.log'
@@ -26,17 +26,20 @@ logger = logging.getLogger('coordinator_logger')
 # this part handles logging to console and to a file for debugging purposes
 log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
 log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-log_file_handler.setLevel(logging.INFO)
+log_file_handler.setLevel(logging.DEBUG)
 log_file_handler.setFormatter(log_formatter)
 log_console_handler = logging.StreamHandler(sys.stdout)
-log_console_handler.setLevel(logging.INFO)
+log_console_handler.setLevel(logging.DEBUG)
 log_console_handler.setFormatter(log_formatter)
-logger.setLevel(logging.INFO)    
+logger.setLevel(logging.DEBUG)    
 logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
 
+logger.debug(f'running in: {dir_path}')
+
 db_comms.db_logger = logger
 bmv2.bmv2_logger = logger
+
 
 
 def int_to_mac(macint):
@@ -220,7 +223,8 @@ def set_arps():
         subprocess.run(cli_command.split(), text=True)
 
 def main():
-    set_arps()
+    # set_arps()
+    logger.debug('Coordinator Starting')
     print('Starting Coordinator')
     swarm_coordinator()
     # threading.Thread(target=ap_server).start()
