@@ -8,11 +8,35 @@ import lib.global_config as global_config
 import ipaddress
 import socket
 import re
+import os
+import logging
 import ipaddress
 import subprocess
 import threading
-import lib.bmv2_thrift_lib as bmv2_thrift
+import lib.bmv2_thrift_lib as bmv2
 import lib.database_comms as db_comms
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+print(f'running in: {dir_path}')
+
+# where to store program logs
+PROGRAM_LOG_FILE_NAME = './logs/coordinator.log'
+os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
+logger = logging.getLogger('coordinator_logger')
+# this part handles logging to console and to a file for debugging purposes
+log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
+log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
+log_file_handler.setLevel(logging.INFO)
+log_file_handler.setFormatter(log_formatter)
+log_console_handler = logging.StreamHandler(sys.stdout)
+log_console_handler.setLevel(logging.INFO)
+log_console_handler.setFormatter(log_formatter)
+logger.setLevel(logging.INFO)    
+logger.addHandler(log_file_handler)
+logger.addHandler(log_console_handler)
+
+db_comms.db_logger = logger
+bmv2.bmv2_logger = logger
 
 
 def int_to_mac(macint):
@@ -29,13 +53,14 @@ COORDINATOR_MAX_TCP_CONNNECTIONS = 5
 SWARM_NODE_TCP_SERVER = ('', 29997) 
 
 
-DEFAULT_THRIFT_PORT = global_config.default_thrift_port
+DEFAULT_THRIFT_PORT = bmv2.DEFAULT_THRIFT_PORT
 
 THIS_SWARM_SUBNET=ipaddress.ip_address( global_config.this_swarm_subnet )
 
-db_in_use = db_comms.STR_DATABASE_TYPE_CASSANDRA
+db_comms.DATABASE_IN_USE = db_comms.STR_DATABASE_TYPE_CASSANDRA
 
-database_session = db_comms.init_database(db_in_use, '0.0.0.0', global_config.database_port)
+database_session = db_comms.init_database('0.0.0.0', global_config.database_port)
+db_comms.DATABASE_SESSION = database_session
 
 # a function to parse a string and extract integers
 # needed for interactiosn with bmv2
@@ -57,7 +82,7 @@ def extract_numbers(lst):
 
 # this updates the list of broadcast ports in bmv2
 def add_bmv2_swarm_broadcast_port_to_ap(ap_ip,thrift_port, switch_port ):
-        res = bmv2_thrift.send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port)
+        res = bmv2.send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port)
         res_lines = res.splitlines()
         i = 0
         
@@ -66,7 +91,7 @@ def add_bmv2_swarm_broadcast_port_to_ap(ap_ip,thrift_port, switch_port ):
                 port_list = set(extract_numbers([ res_lines[i+1].split('ports=[')[1].split(']')[0] ]))
                 port_list.add(switch_port)
                 broadcast_ports =  ' '.join( str(port) for port in port_list)
-                bmv2_thrift.send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port )  
+                bmv2.send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port )  
             i = i + 1
 
 
@@ -109,16 +134,16 @@ class Swarm_Node_Handler:
             print(f'Error: could not find IP of access point {node_swarm_ap}')
             return
     
-        db_comms.update_db_with_joined_node(db_in_use, database_session, node_uuid, node_swarm_id)
+        db_comms.update_db_with_joined_node(node_uuid, node_swarm_id)
                     
         # add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= node_swarm_id)
 
-        entry_handle = bmv2_thrift.add_entry_to_bmv2(communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI,
+        entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
             action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{node_swarm_ip}/32' , 
             action_params= f'{str(node_swarm_id)} {node_swarm_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
     
-        entry_handle = bmv2_thrift.add_entry_to_bmv2(communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, 
+        entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                                     table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
                                                     match_keys= f'{node_swarm_mac}', action_params= str(node_swarm_id),
                                                     thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
@@ -135,12 +160,12 @@ class Swarm_Node_Handler:
         # insert table entries in the rest of the APs
         for key in global_config.ap_list.keys():
             if key != node_swarm_ap:
-                entry_handle = bmv2_thrift.add_entry_to_bmv2(communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI,
+                entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_swarm_ip}/32' , 
                         action_params= f'{global_config.swarm_backbone_switch_port}', thrift_ip= global_config.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT )
                 
-                entry_handle = bmv2_thrift.add_entry_to_bmv2(communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, 
+                entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                         table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
                                         match_keys= f'{node_swarm_mac}', action_params= str(global_config.swarm_backbone_switch_port),
                                         thrift_ip= global_config.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT)

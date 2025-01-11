@@ -2,8 +2,7 @@
 
 # these are the L3 port numbers on which the databases listen
 REDIS_PORT = 6379
-CASSANDRA_PORT = 9402
-
+CASSANDRA_PORT = 9042
 
 # This is the number of the bmv2 port that is attached to the backbone network
 # the backbone network is the network that connects the APs to the coordinator

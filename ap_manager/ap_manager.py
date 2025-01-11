@@ -19,15 +19,17 @@ import lib.database_comms as db
 import lib.bmv2_thrift_lib as bmv2
 import os
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+print(f'running in: {dir_path}')
+
 
 # where to store program logs
-PROGRAM_LOG_FILE_NAME = '../logs/ap.log'
+PROGRAM_LOG_FILE_NAME = './logs/ap.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 
 # a global variable to set the communication protocol with the switch
 P4CTRL = bmv2.P4_CONTROL_METHOD_THRIFT_CLI
 # Set which database the program is going to use
-DB_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
 
 # string constants
 STR_NODE_VIP = 'Node_vIP'
@@ -67,7 +69,9 @@ DEFAULT_WLAN_DEVICE_NAME= cfg.default_wlan_device
 loopback_if = 'lo:0'
 logger = logging.getLogger('ap_logger')
 
-database_session = db.connect_to_database(DB_IN_USE, cfg.database_hostname, cfg.database_port)
+db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
+database_session = db.connect_to_database(cfg.database_hostname, cfg.database_port)
+db.DATABASE_SESSION = database_session
 
 def int_to_mac(macint):
     if type(macint) != int:
@@ -111,7 +115,7 @@ def initialize_program():
     client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
     client_monitor_log_console_handler.setLevel(logging.INFO)
     client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
-    logger.setLevel(logging.info)    
+    logger.setLevel(logging.INFO)    
     logger.addHandler(client_monitor_log_file_handler)
     logger.addHandler(client_monitor_log_console_handler)
     
