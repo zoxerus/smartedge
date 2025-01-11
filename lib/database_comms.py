@@ -103,6 +103,7 @@ def get_next_available_host_id_from_swarm_table(database_typ, session, first_hos
         for row in result:
             id_list.append(row[0])
         if (id_list == []):
+            print(f"Assigning Host ID: {first_host_id}")
             return first_host_id
         return min(set(range(first_host_id, max_host_id + 1 )) - set(id_list))
 
