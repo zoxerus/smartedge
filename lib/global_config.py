@@ -42,8 +42,8 @@ node_manager_tcp_port = 29997
 # it is a different subnet from the one used by the swarm
 ap_list = {
     # ID of AP       MAC of smartedge-bb    IP of smartedge-bb
-    'AP:00:00:03': ['10.1.0.3'],
-    'AP:00:00:04': ['10.1.0.4']
+    'AP:00:00:03': ['10.30.2.194'], # ['10.1.0.3'],
+    'AP:00:00:04': ['10.30.2.142']  # ['10.1.0.4']
     }
 
 ## currently unused

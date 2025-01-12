@@ -336,7 +336,8 @@ def handle_new_connected_station(station_physical_mac_address):
     
     # Now we should insert the new connected station in the swarm database
     db.insert_node_into_swarm_database(this_ap_id= THIS_AP_UUID,
-                                    host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, node_phy_mac=station_physical_mac_address)
+                                    host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
+                                    node_phy_mac=station_physical_mac_address)
     
     logger.debug(f'station: {station_vmac} {station_vip} joined AP {THIS_AP_UUID} at {time.time()}')
     
@@ -389,7 +390,7 @@ def handle_disconnected_station(station_physical_mac_address):
     
     
     # delete the node from the database
-    db.delete_node_from_swarm_database(node_swarm_id= station_vxlan_id)
+    db.update_db_with_left_node(node_swarm_id=station_vxlan_id)
 
     
     logger.debug(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')

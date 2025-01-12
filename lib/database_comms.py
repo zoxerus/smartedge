@@ -28,16 +28,16 @@ def init_database(host, port):
         # CREATE A NAME SPACE IN THE DATABSE FOR STORING SWARM INFO
         query = cassandra_db.QUERY_DATABASE_CREATE_KEYSPACE
         result = session.execute( query )
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         
         # CREATE A TABLE TO MANAGE ACTIVE SWARM NODES
         query = cassandra_db.QUERY_DATABASE_CREATE_TABLE_ACTIVE_NODES
         result = session.execute(cassandra_db.QUERY_DATABASE_CREATE_TABLE_ACTIVE_NODES)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         
         # query = cassandra_db.QUERY_DATABASE_CREATE_TABLE_DEFAULT_SWARM
         # result = session.execute(cassandra_db.QUERY_DATABASE_CREATE_TABLE_DEFAULT_SWARM)
-        # db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        # db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         return session
     
 def connect_to_database(host, port):
@@ -62,7 +62,7 @@ def get_node_swarm_mac_by_swarm_ip(node_swarm_ip):
         {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_IP} = '{node_swarm_ip}' ALLOW FILTERING; """
         result = DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         if (result.one() == None or len(result.one()) > 1 ):
             db_logger.error(f'Node {node_swarm_ip} not found in database or is duplicate, Node rejected')
         return result.one()[0]
@@ -76,9 +76,21 @@ def update_db_with_joined_node(node_uuid, node_swarm_id):
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
         """
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         return result
     
+    
+def update_db_with_left_node(node_swarm_id):
+    if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
+        query = f"""UPDATE {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}
+        SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.LEFT.value}'
+        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
+        """
+        result =  DATABASE_SESSION.execute(query)
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
+        return result
+
+
 def insert_node_into_swarm_database(host_id, this_ap_id, node_vip, node_vmac, node_phy_mac):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
         query = f"""
@@ -92,28 +104,41 @@ def insert_node_into_swarm_database(host_id, this_ap_id, node_vip, node_vmac, no
         '{node_vip}', '{node_vmac}', '{node_phy_mac}') IF NOT EXISTS;
         """
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         return result
 
+def reuse_node_swarm_id(node_physical_mac):
+    if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
+        query = f""" 
+        SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} from 
+        {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}
+        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_PHYSICAL_MAC} = '{node_physical_mac}' ALLOW FILTERING;
+        """
+        result =  DATABASE_SESSION.execute(query)
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
+        return result
 
 # GET NEXT AVAILABLE HOST ID FROM SWARM TABLE
-def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id):
-    if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:    
-        query = f""" SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} FROM 
-            {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}"""
-        result = DATABASE_SESSION.execute(query)
-        print('got results: ', result)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
-        id_list = []
-        for row in result:
-            db_logger.debug(f"received Row from DB: {row}")
-            id_list.append(row[0])
-        if (id_list == []):
-            db_logger.debug(f"getting next host id: id_list is empty: {id_list} returning {first_host_id}")
-            return first_host_id
-        result = min(set(range(first_host_id, max_host_id + 1 )) - set(id_list)) 
-        db_logger.debug(f"getting next host id: {result}")
-        return result 
+def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id, node_physical_mac=None):
+    if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
+        first_result = reuse_node_swarm_id(node_physical_mac)
+        if first_result.one() == None:   
+            query = f""" SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} FROM 
+                {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}"""
+            result = DATABASE_SESSION.execute(query)
+        
+            db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
+            id_list = []
+            for row in result:
+                db_logger.debug(f"received Row from DB: {row}")
+                id_list.append(row[0])
+            if (id_list == []):
+                db_logger.debug(f"getting next host id: id_list is empty: {id_list} returning {first_host_id}")
+                return first_host_id
+            result = min(set(range(first_host_id, max_host_id + 1 )) - set(id_list)) 
+            db_logger.debug(f"getting next host id: {result}")
+            return result 
+        else: return first_result.one()[0]
 
 
 # GET NODE INFO FROM TDD
@@ -125,7 +150,7 @@ def get_node_info_from_tdd(node_uuid):
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{node_uuid}';
         """
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         return result
   
 
@@ -147,7 +172,7 @@ def insert_into_thing_directory_with_node_info(node_uuid, current_ap, swarm_id):
         ) IF NOT EXISTS;
             """
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         return result
 
 
@@ -159,7 +184,7 @@ def delete_node_from_swarm_database(node_swarm_id):
             WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
             """
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         return result
         
         
@@ -175,5 +200,5 @@ def update_tdd_with_new_node_status(node_uuid, node_current_ap, node_current_swa
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{node_uuid}';
         """
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
         return result
