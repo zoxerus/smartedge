@@ -73,7 +73,7 @@ def update_db_with_joined_node(node_uuid, node_swarm_id):
         query = f"""UPDATE {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}
         SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{node_uuid}', 
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.JOINED.value}'
-        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
+        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id} IF EXISTS;
         """
         result =  DATABASE_SESSION.execute(query)
         db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
@@ -84,7 +84,7 @@ def update_db_with_left_node(node_swarm_id):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
         query = f"""UPDATE {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}
         SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.LEFT.value}'
-        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
+        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id} IF EXISTS ;
         """
         result =  DATABASE_SESSION.execute(query)
         db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
