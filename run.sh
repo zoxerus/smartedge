@@ -3,14 +3,28 @@
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}";
 cd "$( dirname -- "$SCRIPT_PATH"; )";
 
-##
+extract_quoted_strings() {
+  local input="$1"
+  # Use grep to extract quoted strings, then remove the quotes using sed
+  echo "$input" | grep -Eo '"[^"]*"|'\''[^'\'']*'\''' | sed -E 's/^["'\''"]|["'\''"]$//g'
+}
+
+ 
+while IFS= read -r line; do 
+    if [[ "$line" == *"this_swarm_subnet="* ]] then 
+        SWARM_SUBNET=$(extract_quoted_strings "$line"); 
+        echo "This Swarm Subnet $SWARM_SUBNET"; 
+    fi  
+    if [[ "$line" == *"this_swarm_subnet_mask="* ]] then 
+        SWARM_SUBNET_MASK=$(extract_quoted_strings "$line"); 
+        echo "This Swarm Subnet MASK $SWARM_SUBNET_MASK "; 
+    fi 
+    
+done < ./lib/global_config.py
 
 # IP Configurations
 BACKBONE_SUBNET=10.1.0.0
 BACKBONE_MASK=/24
-
-SWARM_SUBNET=10.0.1.0
-SWARM_SUBNET_MASK=/24
 
 # This function prints the next IP
 nextip(){
@@ -24,9 +38,9 @@ nextip(){
 
 
 # Check if number of parameters passed to the script is equal to 2
-if [ "$#" != '2' ] || [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
+if [ "$#" != '3' ] || [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
     echo -e "\e[32mError:\e[0m"
-    echo -e "Script must be sourced with parameters: \nparam1 Script Type: [ap, co, nd] \nparam2 a numeric id\n"
+    echo -e "Script must be sourced with parameters: \nparam1 Script Type: [ap, co, nd] \nparam2 a numeric id\nparam3 Log LeveL: [0,10,20,30,40,50]"
     echo -e "for example:\nsource ./run ap 1\n"
     return
 fi
@@ -34,15 +48,15 @@ fi
 # read the script Role from first parameters and the numeric ID of the node from the second parameter
 export ROLE=$1
 export NUMID=$2
-
+export LOGLEVEL=$3
 
 # generate the IP addresses for the node
 
-BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
-SWARM_IP=$(nextip $SWARM_SUBNET $NUMID)
+# BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
+# SWARM_IP=$(nextip $SWARM_SUBNET $NUMID)
+
+
 l0_ip=$(nextip 127.0.0.1 $NUMID)
-
-
 
 [[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
 
@@ -76,20 +90,23 @@ case $ROLE in
     /bin/bash ./run_cassandra_docker.sh
     /bin/bash ./run_bmv2_docker.sh co
     sleep 5
-    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
+    
+    
     # echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
-    oldMAC=00:00:0a:00:01:FE
-    # rawOldMac=$(echo $oldMAC | tr -d ':')
-    # rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
+    SWARM_IP=$(nextip $SWARM_SUBNET 254)
+    oldMAC=00:00:00:00:00:00
+    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
+    rawOldMac=$(echo $oldMAC | tr -d ':')
+    rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
     # # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
-    # final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
+    final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
     sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
-    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
-    sudo ip link set dev smartedge-bb address $oldMAC
-
-    sudo ip address add 10.0.1.254/24 dev smartedge-bb
+    sudo ip address flush smartedge-bb
+    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip link set dev smartedge-bb address $final_mac
+    sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
     # sudo ip link set dev eth0.1 address $final_mac
@@ -101,7 +118,7 @@ case $ROLE in
     echo "Role is set as Access Point"
     /bin/bash ./run_bmv2_docker.sh
     sleep 3
-    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
+    # IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
     # echo -e "IP $IP in HEX: $IP_HEX"
     # Genereate the MAC address
     oldMAC=00:00:00:00:00:00
@@ -154,7 +171,7 @@ case $ROLE in
         # sudo ip link set dev wlan0 up
     fi
     sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
-    sudo python ./node_manager/node_manager.py
+    sudo python ./node_manager/node_manager.py --log-level $LOGLEVEL
     ;;
 
     *)

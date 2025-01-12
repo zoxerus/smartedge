@@ -16,6 +16,16 @@ import threading
 import lib.bmv2_thrift_lib as bmv2
 import lib.database_comms as db_comms
 
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument("-l", "--log-level", default=10, help="logging level")
+args = parser.parse_args()
+
+
+
+
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -26,10 +36,10 @@ logger = logging.getLogger('coordinator_logger')
 # this part handles logging to console and to a file for debugging purposes
 log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
 log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-log_file_handler.setLevel(logging.ERROR)
+log_file_handler.setLevel(args.log_level)
 log_file_handler.setFormatter(log_formatter)
 log_console_handler = logging.StreamHandler(sys.stdout)
-log_console_handler.setLevel(logging.ERROR)
+log_console_handler.setLevel(args.log_level)
 log_console_handler.setFormatter(log_formatter)
 # logger.setLevel(logging.DEBUG)    
 logger.addHandler(log_file_handler)
@@ -134,7 +144,7 @@ class Swarm_Node_Handler:
     
         ap_ip = get_ap_ip_from_ap_id(node_swarm_ap)
         if (ap_ip == None):
-            print(f'Error: could not find IP of access point {node_swarm_ap}')
+            logger.error(f'Error: could not find IP of access point {node_swarm_ap}')
             return
     
         db_comms.update_db_with_joined_node(node_uuid, node_swarm_id)

@@ -19,6 +19,15 @@ import lib.database_comms as db
 import lib.bmv2_thrift_lib as bmv2
 import os
 
+
+
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument("-l", "--log-level", default=10, help="logging level")
+args = parser.parse_args()
+
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 # this part handles logging to console and to a file for debugging purposes
@@ -28,12 +37,12 @@ os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger('ap_logger')
 client_monitor_log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
 client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-client_monitor_log_file_handler.setLevel(logging.DEBUG)
+client_monitor_log_file_handler.setLevel(args.log_level)
 client_monitor_log_file_handler.setFormatter(client_monitor_log_formatter)
 client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
-client_monitor_log_console_handler.setLevel(logging.DEBUG)
+client_monitor_log_console_handler.setLevel(args.log_level)
 client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
-logger.setLevel(logging.DEBUG)    
+# logger.setLevel(logging.DEBUG)    
 logger.addHandler(client_monitor_log_file_handler)
 logger.addHandler(client_monitor_log_console_handler)
 db.db_logger = logger
