@@ -6,8 +6,18 @@ sys.path.append('../..')
 
 import lib.db.cassandra_db as cassandra_db
 import lib.database_comms as db
+import logging
+logger = logging.getLogger('ap_logger')
+logger = logging.getLogger('ap_logger')
+client_monitor_log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
+client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
+client_monitor_log_console_handler.setLevel(logging.DEBUG)
+client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
+logger.setLevel(logging.DEBUG)    
 
-db_in_use = db.STR_DATABASE_TYPE_CASSANDRA
+logger.addHandler(client_monitor_log_console_handler)
+db.db_logger = logger
+
 
 
 def connect_to_database(host, port):
@@ -24,10 +34,7 @@ def connect_to_database(host, port):
 print('\n\n\n')
 database_session = connect_to_database('0.0.0.0', 9042)
 
-database_session.execute(cassandra_db.QUERY_DATABASE_CREATE_TABLE_DEFAULT_SWARM)
 
-db.insert_into_thing_directory_with_node_info(database_typ=db_in_use, session=database_session,
-                                                node_uuid='SN:01', current_ap='AP:01',swarm_id=0)
+db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
+db.DATABASE_SESSION = database_session
 
-
-db.update_tdd_with_new_node_status(database_type=db_in_use, session=database_session, node_uuid='SN:01', node_current_ap='AP:02', node_current_swarm=1)
