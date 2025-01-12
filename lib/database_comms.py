@@ -101,7 +101,7 @@ def insert_node_into_swarm_database(host_id, this_ap_id, node_vip, node_vmac, no
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_PHYSICAL_MAC}
         )
         VALUES ({host_id}, '{this_ap_id}', '{db_defines.SWARM_STATUS.PENDING.value}', toTimeStamp(now() ),
-        '{node_vip}', '{node_vmac}', '{node_phy_mac}') IF NOT EXISTS;
+        '{node_vip}', '{node_vmac}', '{node_phy_mac}') ;
         """
         result =  DATABASE_SESSION.execute(query)
         db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
