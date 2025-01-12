@@ -103,7 +103,7 @@ def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id):
             {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}"""
         result = DATABASE_SESSION.execute(query)
         print('got results: ', result)
-        # db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
         id_list = []
 
         for row in result:
