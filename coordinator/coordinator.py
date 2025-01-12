@@ -19,7 +19,7 @@ import lib.database_comms as db_comms
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
-parser.add_argument("-l", "--log-level", default=10, help="logging level")
+parser.add_argument("-l", "--log-level",type=int, default=10, help="logging level")
 args = parser.parse_args()
 
 

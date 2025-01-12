@@ -111,7 +111,7 @@ case $ROLE in
 
     # sudo ip link set dev eth0.1 address $final_mac
     # sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev eth0.1
-    sudo python ./coordinator/coordinator.py
+    sudo python ./coordinator/coordinator.py --log-level $LOGLEVEL
     ;;
 # Access Point: 
     ap)
@@ -150,7 +150,7 @@ case $ROLE in
     # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
     # final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
     # sudo ip link set dev wlan0 address $final_mac
-    sudo python ./ap_manager/ap_manager.py
+    sudo python ./ap_manager/ap_manager.py --log-level $LOGLEVEL
     ;;
 # Smart Node
     sn)
