@@ -296,7 +296,7 @@ def handle_new_connected_station(station_physical_mac_address):
     logger.debug( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
     
     host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
-                max_host_id=cfg.this_swarm_dhcp_end)
+                max_host_id=cfg.this_swarm_dhcp_end, node_physical_mac=station_physical_mac_address)
     
     logger.debug(f"Assigning Host ID: {host_id}")
     
