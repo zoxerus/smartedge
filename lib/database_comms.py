@@ -107,8 +107,11 @@ def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id):
         for row in result:
             id_list.append(row[0])
         if (id_list == []):
+            db_logger.debug(f"getting next host id: id_list is empty: {id_list} returning {first_host_id}")
             return first_host_id
-        return min(set(range(first_host_id, max_host_id + 1 )) - set(id_list))
+        result = min(set(range(first_host_id, max_host_id + 1 )) - set(id_list)) 
+        db_logger.debug(f"getting next host id: {result}")
+        return result 
 
 
 # GET NODE INFO FROM TDD
