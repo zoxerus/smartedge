@@ -86,7 +86,7 @@ case $ROLE in
     # final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
     sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb address $oldMAC
 
     sudo ip address add 10.0.1.254/24 dev smartedge-bb
@@ -124,7 +124,7 @@ case $ROLE in
     fi
     sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
     sudo ip link set dev smartedge-bb address $final_mac
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
     # sudo ip link set dev eth0.1 address $final_mac
 
