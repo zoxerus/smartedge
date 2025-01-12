@@ -21,14 +21,16 @@ os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger(__name__)
 # this part handles logging to console and to a file for debugging purposes
 log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] %(filename)s : %(message)s \n")
-log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-log_file_handler.setLevel(args.log_level)
-log_file_handler.setFormatter(log_formatter)
+
+# log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
+# log_file_handler.setLevel(args.log_level)
+# log_file_handler.setFormatter(log_formatter)
+
 log_console_handler = logging.StreamHandler(sys.stdout)  # (sys.stdout)
 log_console_handler.setLevel(args.log_level)
 log_console_handler.setFormatter(log_formatter)
 # logger.setLevel(logging.DEBUG)
-logger.addHandler(log_file_handler)
+# logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
 
 
