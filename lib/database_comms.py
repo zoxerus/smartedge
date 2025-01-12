@@ -105,6 +105,7 @@ def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id):
         db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.all()}")
         id_list = []
         for row in result:
+            db_logger.debug(f"received Row from DB: {row}")
             id_list.append(row[0])
         if (id_list == []):
             db_logger.debug(f"getting next host id: id_list is empty: {id_list} returning {first_host_id}")
