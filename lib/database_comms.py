@@ -24,7 +24,7 @@ def init_database(host, port):
                         protocol_version=5
         )
         session = cluster.connect()
-        # session.execute(f'DROP TABLE IF EXISTS {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}')
+        session.execute(f'DROP TABLE IF EXISTS {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE_ACTIVE_NODES}')
         # CREATE A NAME SPACE IN THE DATABSE FOR STORING SWARM INFO
         query = cassandra_db.QUERY_DATABASE_CREATE_KEYSPACE
         result = session.execute( query )

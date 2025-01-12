@@ -141,7 +141,8 @@ def handle_tcp_communication():
                             ap_ssid = line.split()[0]
                     cli_command = f'nmcli connection down id {ap_ssid}'
                     subprocess.run(cli_command.split(), text=True)
-
+                    cli_command = f'nmcli connection delete id {ap_ssid}'
+                    subprocess.run(cli_command.split(), text=True)
                 
 
 
