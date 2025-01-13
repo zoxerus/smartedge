@@ -16,20 +16,20 @@ default_wlan_device = 'wlan0'
 
 # here configure the subnet range that need to be allocated to the swarm
 # here we assume a /24 subnet mask
-this_swarm_subnet='10.0.1.0'      ## this is the subnet to use for the swarm
+this_swarm_subnet='10.1.0.0'      ## this is the subnet to use for the swarm
 this_swarm_subnet_mask='/24'
 this_swarm_dhcp_start = 1         # this is the first IP to be assigned to the swarm node e.g: 10.0.1.1
 this_swarm_dhcp_end  = 253        # last IP to be assigned e.g: 10.0.1.253, we leave the last IP for the coordinator
 
 ## This is the IP of the database, in my implementation the DB is running on the same node as the coordinator
 ## It uses the physical IP of the eth0 interface of the coordinator for consistency, and ease of routing
-database_hostname = '10.30.2.117'  
+database_hostname = '10.0.0.5'  
 database_port = CASSANDRA_PORT
 
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
 # it is sent to the swarm node when it connects to the AP
-coordinator_vip='10.0.1.254'
+coordinator_vip='10.1.0.254'
 
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
@@ -45,8 +45,8 @@ node_manager_tcp_port = 29997
 # it is a different subnet from the one used by the swarm
 ap_list = {
     # ID of AP        IP of eth0
-    'AP:00:00:03':  ['10.30.2.194'],
-    'AP:00:00:04':  ['10.30.2.142']  
+    'AP:00:00:03':  ['10.0.0.3'],
+    'AP:00:00:04':  ['10.0.0.4']  
     }
 
 ## currently unused
