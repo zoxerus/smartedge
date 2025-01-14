@@ -45,7 +45,7 @@ client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
 client_monitor_log_console_handler.setLevel(args.log_level)
 client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
 
-# logger.setLevel(logging.DEBUG)    
+logger.setLevel(args.log_level)    
 # logger.addHandler(client_monitor_log_file_handler)
 logger.addHandler(client_monitor_log_console_handler)
 db.db_logger = logger

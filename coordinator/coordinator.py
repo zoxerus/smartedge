@@ -43,7 +43,7 @@ log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelna
 log_console_handler = logging.StreamHandler(sys.stdout)
 log_console_handler.setLevel(args.log_level)
 log_console_handler.setFormatter(log_formatter)
-# logger.setLevel(logging.DEBUG)    
+logger.setLevel(args.log_level)    
 # logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
 
