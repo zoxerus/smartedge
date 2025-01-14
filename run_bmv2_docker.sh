@@ -15,7 +15,7 @@ BMV2_CONTAINER=bmv2smartedge
 if [ "$(sudo docker container inspect -f '{{.State.Status}}' $BMV2_CONTAINER )" != "running" ]; then
     echo "Starting Container $BMV2_CONTAINER"
     sudo docker run --privileged --rm --net=host --volume $(pwd):$(pwd) --workdir $(pwd) -i -t --name $BMV2_CONTAINER -d $BMV2_IMAGE
-    # sudo docker exec -d bmv2smartedge  pip install thrift
+    sudo docker exec -d bmv2smartedge  pip install thrift
     if [[ $1 != 'co' ]]; then
         echo -e "AP bmv2"
         sudo docker exec -d $BMV2_CONTAINER /bin/bash ./p4app/compile.sh
