@@ -32,7 +32,7 @@ coordinator_physical_mac = '02:00:00:00:00:06'
 
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
-coordinator_vip='10.0.1.1'
+coordinator_vip='10.0.1.254'
 
 
 
@@ -50,6 +50,6 @@ default_thrift_port = 9090
 # this list of IPs and MACs are the ones configured on the smartedge-bb on each access point
 ap_list = {
     # ID of AP       MAC of smartedge-bb    IP of smartedge-bb
-    'AP:00:00:03': ['10.1.0.3'],
-    'AP:00:00:04': ['10.1.0.4']
+    'AP:00:00:03': ['10.0.0.3'],
+    'AP:00:00:04': ['10.0.0.4']
     }
