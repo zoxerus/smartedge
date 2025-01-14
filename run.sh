@@ -23,7 +23,7 @@ while IFS= read -r line; do
 done < ./lib/global_config.py
 
 # IP Configurations
-BACKBONE_SUBNET=10.1.0.0
+BACKBONE_SUBNET=10.0.1.0
 BACKBONE_MASK=/24
 
 # This function prints the next IP
@@ -52,7 +52,7 @@ export LOGLEVEL=$3
 
 # generate the IP addresses for the node
 
-# BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
+BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
 # SWARM_IP=$(nextip $SWARM_SUBNET $NUMID)
 
 
@@ -104,7 +104,7 @@ case $ROLE in
 
     sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
     sudo ip address flush smartedge-bb
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb address $final_mac
     sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
