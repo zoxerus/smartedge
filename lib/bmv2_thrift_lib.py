@@ -10,7 +10,7 @@ SWITCH_RESPONSE_LAST_LINE_INDEX = -2
 P4_CONTROL_METHOD_THRIFT_CLI = 'THRIFT_CLI'
 P4_CONTROL_METHOD_P4RT_GRPC = 'P4RT_GRPC'
 
-BMV2_DOCKER_CONTAINER_NAME = 'bmv2se'
+BMV2_DOCKER_CONTAINER_NAME = 'bmv2smartedge'
 
 
 bmv2_logger = None
@@ -65,13 +65,13 @@ def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_key
 def get_entry_handle(table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     command = f'table_dump_entry_from_key {table_name} {key}'
     response = send_cli_command_to_bmv2(command, thrift_ip, thrift_port)
-    bmv2_logger.debug(f'getting entry handle from bmv2 for: {key}\n {response}')
+    bmv2_logger.debug(f'Getting entry handle from bmv2 for: {key}\n {response}')
     for line in response.splitlines():
         if 'Dumping entry' in line:
             handle = int( re.findall(r'0x[0-9A-F]+', line, re.I)[0] , 16 )
-            bmv2_logger.debug(f'handle is: {handle}')
+            bmv2_logger.debug(f'Found handle for key: {key} is: {handle}')
             return handle
-    bmv2_logger.debug(f'could not find entry handle')
+    bmv2_logger.debug(f'Could not find entry handle for key: {key}')
     return None
 
 
@@ -83,4 +83,4 @@ def delete_forwarding_entry_from_bmv2(
             cli_command = f'table_delete {table_name} {handle}'
             send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port)
             return
-        bmv2_logger.error(f'Entry Handle is None for table: {table_name}, and key: {key}')
+        bmv2_logger.debug(f'Entry Handle is None for table: {table_name}, and key: {key}')

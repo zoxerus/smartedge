@@ -244,7 +244,7 @@ def get_ip_from_arp_by_physical_mac(physical_mac):
         for line in result.stdout.strip().splitlines():
             if physical_mac in line and DEFAULT_WLAN_DEVICE_NAME in line:
                 ip = line.split()[0]
-                logger.error(f'\nIP {ip} was found in ARP for {physical_mac} after {time.time() - t0}')                
+                logger.error(f'\nIP {ip} was found in ARP for {physical_mac} after {time.time() - t0} Seconds')                
                 return ip
     logger.error(f'\nIP not found in ARP for {physical_mac}')
 
