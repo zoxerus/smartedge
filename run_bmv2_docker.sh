@@ -10,6 +10,7 @@ sudo docker run --privileged --rm --net=host --volume $(pwd):$(pwd) --workdir $(
 sudo docker exec -d bmv2smartedge  pip install thrift
 if [[ $1 != 'co' ]]; then
     echo -e "AP bmv2"
+    
     sudo docker exec -d bmv2smartedge ./p4app/compile.sh
     sudo docker exec -d bmv2smartedge  simple_switch ./p4app/ap.json
 fi
