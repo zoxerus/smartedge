@@ -183,6 +183,7 @@ def swarm_coordinator():
         serversocket.listen(COORDINATOR_MAX_TCP_CONNNECTIONS)
         print('Coordinator Script is Running')
         while True:
+            print('Debugging: Waiting for new Connection')
             (node_socket, address) = serversocket.accept()
             print(f'received connection request from {address}')
             threading.Thread(target=handle_swarm_node, args=(node_socket, address, ), daemon= True ).start()
