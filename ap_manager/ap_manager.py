@@ -102,6 +102,10 @@ THIS_SWARM_SUBNET=ipaddress.ip_address( cfg.this_swarm_subnet )
 created_host_ids = set([])
 
 
+SWARM_P4_MC_NODE = 1100
+SWARM_P4_MC_GROUP = 1000
+
+
 # a list to keep track of connected stations to current AP
 connected_stations = {}
 
@@ -150,29 +154,25 @@ if THIS_AP_WLAN_MAC == None:
     logger.error("Could not Connect to backbone, check eth device name in the config file")
     exit()
                          
-def initialize_program():
-    # client_monitor_log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s]:\n\t %(message)s \n\n")
-    # client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-    # client_monitor_log_file_handler.setLevel(logging.INFO)
-    # client_monitor_log_file_handler.setFormatter(client_monitor_log_formatter)
-    # client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
-    # client_monitor_log_console_handler.setLevel(logging.INFO)
-    # client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
-    # logger.setLevel(logging.INFO)    
-    # logger.addHandler(client_monitor_log_file_handler)
-    # logger.addHandler(client_monitor_log_console_handler)
-
-    # db.db_logger = logger
-    # bmv2.bmv2_logger = logger
-    # logger.debug(f'running in: {dir_path}')
-    
-    
+def initialize_program():    
     # remvoe all configureation from bmv2, start fresh
     bmv2.send_cli_command_to_bmv2(cli_command="reset_state")
 
     # attach the backbone interface to the bmv2
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {cfg.swarm_backbone_switch_port}")
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {cfg.default_backbone_device} {cfg.swarm_backbone_switch_port}")
+    
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                                            table_name='MyIngress.tb_ipv4_lpm',
+    action_name='MyIngress.ac_ipv4_forward', match_keys=f'{cfg.coordinator_vip}/32' , 
+    action_params= f'{cfg.swarm_backbone_switch_port}')
+    
+    # handle broadcast
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_create {SWARM_P4_MC_NODE} {cfg.swarm_backbone_switch_ports}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast FF:FF:FF:FF:FF:FF => {SWARM_P4_MC_GROUP}")
+    
     logger.debug('Program Initialized')
 
 # a handler to clean exit the programs

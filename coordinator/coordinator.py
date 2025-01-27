@@ -126,7 +126,7 @@ def extract_numbers(lst):
 
 
 # this updates the list of broadcast ports in bmv2
-def add_bmv2_swarm_broadcast_port_to_ap(ap_ip,thrift_port, switch_port ):
+def add_bmv2_swarm_broadcast_port_to_ap(ap_ip, thrift_port, switch_port ):
         res = bmv2.send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port)
         res_lines = res.splitlines()
         i = 0
@@ -181,32 +181,38 @@ class Swarm_Node_Handler:
     
         db_comms.update_db_with_joined_node(node_uuid, node_swarm_id)
                     
-        # add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= node_swarm_id)
+        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= node_swarm_id)
 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_swarm_ip}/32' , 
             action_params= f'{str(node_swarm_id)}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
     
+        
+
+    
+        
+        
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                                     table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
                                                     match_keys= f'{node_swarm_mac}', action_params= str(node_swarm_id),
                                                     thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
         
-        # bmv2_thrift.delete_forwarding_entry_from_bmv2(
-        #     communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {global_config.coordinator_vip}',
-        #     thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
+        bmv2.delete_forwarding_entry_from_bmv2(
+            communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {global_config.coordinator_vip}',
+            thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
 
-        # bmv2_thrift.delete_forwarding_entry_from_bmv2(
-        #     communication_protocol= bmv2_thrift.P4_CONTROL_METHOD_THRIFT_CLI, table_name= 'MyIngress.tb_swarm_control', 
-        #     key= f'{global_config.swarm_backbone_switch_port} {node_swarm_ip}', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
+        bmv2.delete_forwarding_entry_from_bmv2(
+            communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name= 'MyIngress.tb_swarm_control', 
+            key= f'{global_config.swarm_backbone_switch_port} {node_swarm_ip}', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
         
         
         # insert table entries in the rest of the APs
+        node_ap_ip = global_config.ap_list[node_swarm_ap][0]
         for key in global_config.ap_list.keys():
             if key != node_swarm_ap:
                 ap_ip = global_config.ap_list[key][0]
-                ap_mac = int_to_mac( int(ipaddress(ap_ip)) )
+                ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{node_swarm_ip}/32' , 
