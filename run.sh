@@ -1,32 +1,21 @@
+#!/bin/bash
+
 # Set the working directory to where the script path is stored
 # This makes the script executable from anywhere
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}";
 cd "$( dirname -- "$SCRIPT_PATH"; )";
 
+### Function Definitions
+### this function extracts a string between quotations from the provided input
+### used to read the configs from the global_config.py file
 extract_quoted_strings() {
   local input="$1"
   # Use grep to extract quoted strings, then remove the quotes using sed
   echo "$input" | grep -Eo '"[^"]*"|'\''[^'\'']*'\''' | sed -E 's/^["'\''"]|["'\''"]$//g'
 }
 
- 
-while IFS= read -r line; do 
-    if [[ "$line" == *"this_swarm_subnet="* ]] then 
-        SWARM_SUBNET=$(extract_quoted_strings "$line"); 
-        echo "This Swarm Subnet $SWARM_SUBNET"; 
-    fi  
-    if [[ "$line" == *"this_swarm_subnet_mask="* ]] then 
-        SWARM_SUBNET_MASK=$(extract_quoted_strings "$line"); 
-        echo "This Swarm Subnet MASK $SWARM_SUBNET_MASK "; 
-    fi 
-    
-done < ./lib/global_config.py
 
-# IP Configurations
-BACKBONE_SUBNET=10.0.1.0
-BACKBONE_MASK=/24
-
-# This function prints the next IP
+# This function is used to generate swarm IPs
 nextip(){
     IP=$1
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $IP | sed -e 's/\./ /g'`)
@@ -36,24 +25,51 @@ nextip(){
     echo "$NEXT_IP"
 }
 
+### This while loop looks into the global_config.py file and extracts the relevant configurations
+while IFS= read -r line; do 
+    if [[ "$line" == *"this_swarm_subnet="* ]] then 
+        SWARM_SUBNET=$(extract_quoted_strings "$line"); 
+        echo "This Swarm Subnet $SWARM_SUBNET"; 
+
+    elif [[ "$line" == *"this_swarm_subnet_mask="* ]] then 
+        SWARM_SUBNET_MASK=$(extract_quoted_strings "$line"); 
+        echo "This Swarm Subnet MASK $SWARM_SUBNET_MASK "; 
+
+    elif [[ "$line" == *"backbone_subnet="* ]] then 
+        BACKBONE_SUBNET=$(extract_quoted_strings "$line"); 
+        echo "Backbone Subnet $SWARM_SUBNET_MASK "; 
+
+    elif [[ "$line" == *"backbone_subnetmask="* ]] then 
+        BACKBONE_MASK=$(extract_quoted_strings "$line"); 
+        echo "Backbone Subnet MASK $SWARM_SUBNET_MASK "; 
+    fi 
+
+done < ./lib/global_config.py
+
 
 # Check if number of parameters passed to the script is equal to 2
-if [ "$#" != '3' ] || [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
+if [ "$#" != '2' ] || [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
     echo -e "\e[32mError:\e[0m"
-    echo -e "Script must be sourced with parameters: \nparam1 Script Type: [ap, co, nd] \nparam2 a numeric id\nparam3 Log LeveL: [0,10,20,30,40,50]"
+    echo -e "Script must be sourced with parameters: \nparam1 Script Type: [ap, co, nd] \nparam2 Log LeveL: [10,20,30,40,50] where 10 is for Debug, 20 for info, 30 for warning, 40 for Error, and 50 is for Critical"
     echo -e "for example:\nsource ./run ap 1\n"
     return
 fi
 
 # read the script Role from first parameters and the numeric ID of the node from the second parameter
 export ROLE=$1
-export NUMID=$2
-export LOGLEVEL=$3
+# export NUMID=$2
+export LOGLEVEL=$2
+
+
+# Get Node ID from hostname
+HOST_NAME=$(cat /etc/hostname)
+NUMID=$(echo "$HOST_NAME" | grep -oE '[0-9]+' | head -n 1)
+
+
 
 # generate the IP addresses for the node
 
-BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
-# SWARM_IP=$(nextip $SWARM_SUBNET $NUMID)
+
 
 
 l0_ip=$(nextip 127.0.0.1 $NUMID)
@@ -71,9 +87,9 @@ if [ $INVENV -eq "0" ]; then
         echo -e "Creating a new Virtual Environment"
         python -m venv .venv
         . ./.venv/bin/activate
-        echo -e "Installing Python Modules"
-        pip install aenum cassandra-driver psutil
+    echo -e "Installing Python Modules"
     fi
+    pip install aenum cassandra-driver psutil
     source ~/.bashrc
     alias python='$VIRTUAL_ENV/bin/python'
     alias sudo='sudo '
@@ -91,43 +107,42 @@ case $ROLE in
     /bin/bash ./run_bmv2_docker.sh co
     sleep 5
     
-    
-    # echo -e "IP $IP in HEX: $IP_HEX"
-    # Genereate the MAC address
+    # Genereate the MAC address for the Coordinator
     SWARM_IP=$(nextip $SWARM_SUBNET 254)
+    # BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
     oldMAC=00:00:00:00:00:00
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
     rawOldMac=$(echo $oldMAC | tr -d ':')
     rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
-    # # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
+
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
     sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
     sudo ip address flush smartedge-bb
-    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
-    sudo ip link set dev smartedge-bb address $final_mac
+    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
+    sudo ip link set dev smartedge-bb address $final_mac
     sudo ip link set dev smartedge-bb up
 
-    # sudo ip link set dev eth0.1 address $final_mac
-    # sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev eth0.1
+    # Run the python script for the coordinator
     sudo python ./coordinator/coordinator.py --log-level $LOGLEVEL
     ;;
 # Access Point: 
     ap)
     echo "Role is set as Access Point"
     /bin/bash ./run_bmv2_docker.sh
-    sleep 3
-    # IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
-    # echo -e "IP $IP in HEX: $IP_HEX"
-    # Genereate the MAC address
+    sleep 5
+
+    # Genereate the MAC and IP address for the AP
+    BACKBONE_IP=$(nextip 10.0.0.0 $NUMID)
+    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
     rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
-    # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
     sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
+    # Start the hotspot
     if  nmcli connection show | grep -q 'SmartEdgeHotspot'; then
         echo -e "Connection SmartEdgeHotspot exists: starting wifi hotspot"
         sudo nmcli con up SmartEdgeHotspot
@@ -139,17 +154,12 @@ case $ROLE in
         sudo nmcli con modify SmartEdgeHotspot wifi-sec.psk "123456123"
         sudo nmcli con up SmartEdgeHotspot
     fi
+
     sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
     sudo ip link set dev smartedge-bb address $final_mac
-    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
-    # sudo ip link set dev eth0.1 address $final_mac
 
-    # oldMAC=16:00:00:00:00:00
-    # rawOldMac=$(echo $oldMAC | tr -d ':')
-    # rawNewMac=$(( 0x$rawOldMac + $NUMID ))
-    # final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
-    # sudo ip link set dev wlan0 address $final_mac
     sudo python ./ap_manager/ap_manager.py --log-level $LOGLEVEL
     ;;
 # Smart Node

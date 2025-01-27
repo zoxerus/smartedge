@@ -1,8 +1,28 @@
 # This tells python to look for files in parent directory
 import sys
+import subprocess
+
+
 # setting path
 sys.path.append('..')
 sys.path.append('.')
+
+import importlib.util
+def check_and_install(*args):
+    for package_name in args:
+        # Check if the package is installed
+        if importlib.util.find_spec(package_name) is None:
+            print(f"'{package_name}' is not installed. Installing...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+                print(f"'{package_name}' has been installed successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to install '{package_name}': {e}")
+        else:
+            print(f"'{package_name}' is already installed.")
+
+
+check_and_install('aenum', 'cassandra-driver', 'psutil')
 
 import lib.global_config as global_config
 import ipaddress
@@ -11,12 +31,17 @@ import re
 import os
 import logging
 import ipaddress
-import subprocess
+
 import threading
 import lib.bmv2_thrift_lib as bmv2
 import lib.database_comms as db_comms
 
 from argparse import ArgumentParser
+
+
+
+
+
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--log-level",type=int, default=10, help="logging level")
