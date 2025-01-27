@@ -39,7 +39,12 @@ import lib.database_comms as db_comms
 from argparse import ArgumentParser
 
 
-
+def int_to_mac(macint):
+    if type(macint) != int:
+        raise ValueError('invalid integer')
+    return ':'.join(['{}{}'.format(a, b)
+                     for a, b
+                     in zip(*[iter('{:012x}'.format(macint ))]*2)])  # + 2199023255552
 
 
 
@@ -180,7 +185,7 @@ class Swarm_Node_Handler:
 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
-            action_name='MyIngress.ac_ipv4_forward', match_keys=f'{node_swarm_ip}/32' , 
+            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_swarm_ip}/32' , 
             action_params= f'{str(node_swarm_id)}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
     
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
@@ -200,10 +205,12 @@ class Swarm_Node_Handler:
         # insert table entries in the rest of the APs
         for key in global_config.ap_list.keys():
             if key != node_swarm_ap:
+                ap_ip = global_config.ap_list[key][0]
+                ap_mac = int_to_mac( int(ipaddress(ap_ip)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
-                        action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_swarm_ip}/32' , 
-                        action_params= f'{global_config.swarm_backbone_switch_port}', thrift_ip= global_config.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT )
+                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{node_swarm_ip}/32' , 
+                        action_params= f'{global_config.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
                 
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                         table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 

@@ -6,6 +6,25 @@ sys.path.append('..')
 sys.path.append('../..')
 
 import subprocess
+
+import importlib.util
+def check_and_install(*args):
+    for package_name in args:
+        # Check if the package is installed
+        if importlib.util.find_spec(package_name) is None:
+            print(f"'{package_name}' is not installed. Installing...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+                print(f"'{package_name}' has been installed successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to install '{package_name}': {e}")
+        else:
+            print(f"'{package_name}' is already installed.")
+
+
+check_and_install('aenum', 'cassandra-driver', 'psutil')
+
+
 import logging
 import threading
 import socket
