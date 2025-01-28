@@ -265,6 +265,7 @@ control MyIngress(inout headers hdr,
     }
 
     action ac_l2_broadcast(bit<16> mcast_grp ){
+        mcast_counter.count();
         standard_metadata.mcast_grp = mcast_grp;
     }
 
