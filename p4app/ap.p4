@@ -189,14 +189,14 @@ control MyIngress(inout headers hdr,
 
 
 
-    -------------------------------------------------------------//
-    --------- M U L T I C A S T  H A N D L I N G ----------------//
+   // -------------------------------------------------------------//
+   // --------- M U L T I C A S T  H A N D L I N G ----------------//
 
     action ac_set_mcast_grp (bit<16> mcast_grp) {
 
         standard_metadata.mcast_grp = mcast_grp;
         // See Section 6.4 of RFC 1112
-        hdr.ethernet.dstMac = 0xffffffffffff;
+        // hdr.ethernet.dstMac = 0xffffffffffff;
 
         // The P4_16 |-| operator is a saturating operation, meaning
         // that since the operands are unsigned integers, the result
@@ -270,7 +270,7 @@ control MyIngress(inout headers hdr,
 
     table tb_l2_forward {
         key = {
-            hdr.ethernet.dstMac             :   exact;
+            hdr.ethernet.dstMac             :   ternary;
         } 
         actions = {
             ac_l2_forward;

@@ -171,7 +171,7 @@ def initialize_program():
     bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
     bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_create {SWARM_P4_MC_NODE} {cfg.swarm_backbone_switch_port}")
     bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast FF:FF:FF:FF:FF:FF => {SWARM_P4_MC_GROUP}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast 100000000000&&&100000000000 => {SWARM_P4_MC_GROUP}")
     
     logger.debug('Program Initialized')
 
@@ -410,9 +410,9 @@ def handle_disconnected_station(station_physical_mac_address):
                                           table_name='MyIngress.tb_ipv4_lpm', key=f'{station_virtual_ip_address}/32',
                                           thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
         
-        bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                          table_name='MyIngress.tb_l2_forward', key=station_virtual_mac_address,
-                                          thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
+        # bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
+        #                                   table_name='MyIngress.tb_l2_forward', key=station_virtual_mac_address,
+        #                                   thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
 
     
     # delete the corresponding switch port
