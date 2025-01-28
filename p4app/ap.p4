@@ -353,6 +353,9 @@ control MyIngress(inout headers hdr,
             standard_metadata.egress_spec = standard_metadata.ingress_port;
             exit;
         } 
+        
+        if (tb_l2_forward.apply().hit)  exit;
+
         if (hdr.ipv4.isValid()) {
             if(tb_swarm_control.apply().hit){
                 exit;
@@ -364,9 +367,6 @@ control MyIngress(inout headers hdr,
             // }
             else if( !tb_ipv4_lpm.apply().hit){
                 tb_ipv4_mc_route_lookup.apply();
-            }
-            else {
-                tb_l2_forward.apply();
             }
         }
  
