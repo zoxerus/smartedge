@@ -159,8 +159,8 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
      
-    // counter(32w1, CounterType.packets) total_counter;
-    // counter(32w1, CounterType.packets) fwd_counter;
+    counter(32w1, CounterType.packets) mcast_counter;
+    // counter(32w1, CounterType.packets) unicast_counter;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -280,6 +280,7 @@ control MyIngress(inout headers hdr,
         }
         size = 1024;
         default_action = NoAction();
+        counters = mcast_counter;
     }   
     
 
