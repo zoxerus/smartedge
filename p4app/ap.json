@@ -247,14 +247,14 @@
     {
       "name" : "MyIngress.mcast_counter",
       "id" : 0,
-      "is_direct" : true,
-      "binding" : "MyIngress.tb_l2_forward",
       "source_info" : {
         "filename" : "./ap.p4",
         "line" : 162,
-        "column" : 42,
+        "column" : 37,
         "source_fragment" : "mcast_counter"
-      }
+      },
+      "size" : 1,
+      "is_direct" : false
     }
   ],
   "register_arrays" : [],
@@ -888,6 +888,25 @@
         }
       ],
       "primitives" : [
+        {
+          "op" : "count",
+          "parameters" : [
+            {
+              "type" : "counter_array",
+              "value" : "MyIngress.mcast_counter"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "./ap.p4",
+            "line" : 268,
+            "column" : 8,
+            "source_fragment" : "mcast_counter.count(0)"
+          }
+        },
         {
           "op" : "assign",
           "parameters" : [

@@ -159,7 +159,7 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
      
-    direct_counter ( CounterType.packets) mcast_counter;
+    counter (1, CounterType.packets) mcast_counter;
     // counter(32w1, CounterType.packets) unicast_counter;
 
     action drop() {
@@ -265,7 +265,7 @@ control MyIngress(inout headers hdr,
     }
 
     action ac_l2_broadcast(bit<16> mcast_grp ){
-        // mcast_counter.count();
+        mcast_counter.count(0);
         standard_metadata.mcast_grp = mcast_grp;
     }
 
