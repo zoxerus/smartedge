@@ -165,6 +165,10 @@ case $ROLE in
 # Smart Node
     sn)
     echo "Role is set as Smart Node"
+    
+    ip link add veth0 type veth peer name veth1
+
+    
     # Genereate the MAC address
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
