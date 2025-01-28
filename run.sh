@@ -165,8 +165,8 @@ case $ROLE in
 # Smart Node
     sn)
     echo "Role is set as Smart Node"
-    
-    ip link add veth0 type veth peer name veth1
+
+    sudo ip link add veth0 type veth peer name veth1
 
     
     # Genereate the MAC address
