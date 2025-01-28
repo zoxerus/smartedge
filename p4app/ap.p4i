@@ -1042,8 +1042,8 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    // counter(32w1, CounterType.packets) total_counter;
-    // counter(32w1, CounterType.packets) fwd_counter;
+    direct_counter ( CounterType.packets) mcast_counter;
+    // counter(32w1, CounterType.packets) unicast_counter;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -1148,6 +1148,7 @@ control MyIngress(inout headers hdr,
     }
 
     action ac_l2_broadcast(bit<16> mcast_grp ){
+        // mcast_counter.count();
         standard_metadata.mcast_grp = mcast_grp;
     }
 
@@ -1163,6 +1164,7 @@ control MyIngress(inout headers hdr,
         }
         size = 1024;
         default_action = NoAction();
+        counters = mcast_counter;
     }
 
 
@@ -1234,6 +1236,9 @@ control MyIngress(inout headers hdr,
             standard_metadata.egress_spec = standard_metadata.ingress_port;
             exit;
         }
+
+        if (tb_l2_forward.apply().hit) exit;
+
         if (hdr.ipv4.isValid()) {
             if(tb_swarm_control.apply().hit){
                 exit;
@@ -1246,9 +1251,6 @@ control MyIngress(inout headers hdr,
             else if( !tb_ipv4_lpm.apply().hit){
                 tb_ipv4_mc_route_lookup.apply();
             }
-        }
-        else if (hdr.ethernet.isValid()){
-            tb_l2_forward.apply();
         }
 
 
