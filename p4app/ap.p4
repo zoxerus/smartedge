@@ -363,9 +363,9 @@ control MyIngress(inout headers hdr,
             else if( !tb_ipv4_lpm.apply().hit){
                 tb_ipv4_mc_route_lookup.apply();
             }
-        }
-        else if (hdr.ethernet.isValid()){
-            tb_l2_forward.apply();
+            else {
+                tb_l2_forward.apply();
+            }
         }
  
 
