@@ -213,7 +213,7 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
 
     result = subprocess.run(add_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if (result.stderr):
-        logger.error(f'\nCould not create vxlan{c}:\n\t {result.stderr}')
+        logger.error(f'\nCould not create vxlan{vxlan_id}:\n\t {result.stderr}')
         return -1
     logger.debug(f'\nCreated vxlan{vxlan_id}:\n\t {result.stdout}')
     created_host_ids.add(vxlan_id)
