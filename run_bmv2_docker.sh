@@ -12,6 +12,7 @@ if [ "$(sudo docker container inspect -f '{{.State.Status}}' $BMV2_CONTAINER )" 
     if [[ $1 != 'co' ]]; then
         echo -e "AP bmv2"
         sudo docker exec -d $BMV2_CONTAINER /bin/bash ./p4app/compile.sh
+        sleep 3
         sudo docker exec -d $BMV2_CONTAINER simple_switch ./p4app/ap.json
     fi
 fi
