@@ -340,7 +340,9 @@ def handle_new_connected_station(station_physical_mac_address):
                 f'assigned vIP: {station_vip} and vMAC: {station_vmac}')
     
     vxlan_id = create_vxlan_by_host_id( vxlan_id= host_id, remote= station_physical_ip_address )
-       
+    if vxlan_id == -1:
+        
+        return
     dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
     bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
     
