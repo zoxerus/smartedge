@@ -26,7 +26,9 @@ backbone_subnetmask='/24'
 
 ## This is the IP of the database, in my implementation the DB is running on the same node as the coordinator
 ## It uses the physical IP of the eth0 interface of the coordinator for consistency, and ease of routing
-database_hostname = '10.0.0.6'  
+
+#TODO: configure this ip, physical IP where the database is running
+database_hostname = '10.0.0.6'
 database_port = CASSANDRA_PORT
 
 # this IP is used to reach the coordinator by the swarm nodes
@@ -46,6 +48,8 @@ node_manager_tcp_port = 29997
 # list of access points in the network, used to propagate configuration changes
 # this list of IPs are the ones configured on the smartedge-bb on each access point
 # it is a different subnet from the one used by the swarm
+
+#TODO: Configure this IP list, physical IPs of access points
 ap_list = {
     # ID of AP        IP of eth0
     'AP:00:00:03':  ['10.0.0.3'],
