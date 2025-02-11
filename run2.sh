@@ -6,7 +6,8 @@ SCRIPT_PATH="${BASH_SOURCE[0]:-$0}";
 cd "$( dirname -- "$SCRIPT_PATH"; )";
 
 
- ln -s $(which python3) /usr/bin/python
+
+SE_BB_VXLAN_ID=10000
 
 ### Function Definitions
 ### this function extracts a string between quotations from the provided input
@@ -77,37 +78,37 @@ NUMID=$(echo "$HOST_NAME" | grep -oE '[0-9]+' | head -n 1)
 
 l0_ip=$(nextip 127.0.0.1 $NUMID)
 
-# [[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
+[[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
 
-# if [ $INVENV -eq "0" ]; then
-#     echo -e "Virtual Environment not sourced"
-#     if [ -d ".venv"  ]; then
-#         echo "sourcing from .venv"
+if [ $INVENV -eq "0" ]; then
+    echo -e "Virtual Environment not sourced"
+    if [ -d ".venv"  ]; then
+        echo "sourcing from .venv"
 
-#         . ./.venv/bin/activate
+        . ./.venv/bin/activate
         
-#     else 
-#         echo -e "Creating a new Virtual Environment"
-#         python -m venv .venv
-#         . ./.venv/bin/activate
-#     echo -e "Installing Python Modules"
-#     fi
-#     pip install aenum cassandra-driver psutil
-#     source ~/.bashrc
-#     alias python='$VIRTUAL_ENV/bin/python'
-#     alias sudo='sudo '
-# else
-#     alias python='$VIRTUAL_ENV/bin/python'
-#     alias sudo='sudo '
-# fi 
+    else 
+        echo -e "Creating a new Virtual Environment"
+        python -m venv .venv
+        . ./.venv/bin/activate
+    echo -e "Installing Python Modules"
+    fi
+    pip install aenum cassandra-driver psutil
+    source ~/.bashrc
+    alias python='$VIRTUAL_ENV/bin/python'
+    alias sudo='sudo '
+else
+    alias python='$VIRTUAL_ENV/bin/python'
+    alias sudo='sudo '
+fi 
 
 
 case $ROLE in
 # Coordinator:
     co)
     echo "Role is set to Coordinator"
-    # /bin/bash ./run_cassandra_docker.sh
-    # /bin/bash ./run_bmv2_docker.sh co
+    /bin/bash ./run_cassandra_docker.sh
+    /bin/bash ./run_bmv2_docker.sh co
     sleep 5
     
     # Genereate the MAC address for the Coordinator
@@ -120,7 +121,7 @@ case $ROLE in
 
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
-    sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
+    sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
     sudo ip address flush smartedge-bb
     # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
@@ -128,12 +129,12 @@ case $ROLE in
     sudo ip link set dev smartedge-bb up
 
     # Run the python script for the coordinator
-    ./coordinator/coordinator.py --log-level $LOGLEVEL
+    sudo python ./coordinator/coordinator.py --log-level $LOGLEVEL
     ;;
 # Access Point: 
     ap)
     echo "Role is set as Access Point"
-    # /bin/bash ./run_bmv2_docker.sh
+    /bin/bash ./run_bmv2_docker.sh
     sleep 5
 
     # Genereate the MAC and IP address for the AP
@@ -158,7 +159,7 @@ case $ROLE in
         sudo nmcli con up SmartEdgeHotspot
     fi
 
-    sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
+    sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
     sudo ip link set dev smartedge-bb address $final_mac
     
     # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb

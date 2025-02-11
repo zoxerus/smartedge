@@ -14,12 +14,18 @@ swarm_backbone_switch_port = 510
 default_backbone_device = 'smartedge-bb'
 default_wlan_device = 'wlan0'
 
+
+ap_wait_time_for_disconnected_station_in_seconds=5
+
 # here configure the subnet range that need to be allocated to the swarm
 # here we assume a /24 subnet mask
 this_swarm_subnet='192.168.10.0'      ## this is the subnet to use for the swarm
 this_swarm_subnet_mask='/24'
 this_swarm_dhcp_start = 1         # this is the first IP to be assigned to the swarm node e.g: 10.0.1.1
 this_swarm_dhcp_end  = 253        # last IP to be assigned e.g: 10.0.1.253, we leave the last IP for the coordinator
+
+
+default_subnet= "192.168.0.0"
 
 backbone_subnet='10.0.0.0'
 backbone_subnetmask='/24'
@@ -35,7 +41,7 @@ database_port = CASSANDRA_PORT
 # this IP is also configured on the smartedge-bb interface of the coordinator
 # it is sent to the swarm node when it connects to the AP
 coordinator_vip='192.168.10.254'
-
+coordinator_phyip='10.0.0.6'
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
 coordinator_tcp_port = 29997

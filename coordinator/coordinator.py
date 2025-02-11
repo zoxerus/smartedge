@@ -1,28 +1,13 @@
+#!/usr/bin/python3
 # This tells python to look for files in parent directory
 import sys
 import subprocess
+import queue
 
 
 # setting path
 sys.path.append('..')
 sys.path.append('.')
-
-import importlib.util
-def check_and_install(*args):
-    for package_name in args:
-        # Check if the package is installed
-        if importlib.util.find_spec(package_name) is None:
-            print(f"'{package_name}' is not installed. Installing...")
-            try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
-                print(f"'{package_name}' has been installed successfully.")
-            except subprocess.CalledProcessError as e:
-                print(f"Failed to install '{package_name}': {e}")
-        else:
-            print(f"'{package_name}' is already installed.")
-
-
-check_and_install('aenum', 'cassandra-driver', 'psutil')
 
 import lib.global_config as global_config
 import ipaddress
@@ -82,7 +67,7 @@ logger.debug(f'running in: {dir_path}')
 db_comms.db_logger = logger
 bmv2.bmv2_logger = logger
 
-
+thread_q = queue.Queue()
 
 def int_to_mac(macint):
     if type(macint) != int:
@@ -150,72 +135,106 @@ def get_ap_ip_from_ap_id(ap_id):
 
 class Swarm_Node_Handler:
     def __init__(self, message, node_socket: socket.socket):
+        print(f'\nNew Request: {message} ')
         self.message_as_word_array = message.split()
         self.node_socket = node_socket
+       
+        
+    def decode_join_message(self):
+        self.req_id = self.message_as_word_array[1]
+        self.node_uuid = self.message_as_word_array[2]
+        self.node_swarm_id = self.message_as_word_array[3]
+        self.node_swarm_ip = self.message_as_word_array[4]
+        self.node_swarm_mac = self.message_as_word_array[5]
+        self.node_swarm_ap = self.message_as_word_array[6]
+
+        
+    def user_input_respond_to_node_request(self):
+        user_input = -1
+        while True:
+            try:
+                user_input = int( input("Enter 1 to Accept the request, 0 for Reject: ") )
+            except Exception as e:
+                print("Input Error")
+                print(e)
+                continue
+            if (user_input == 1 or user_input == 0):
+                return user_input
+            else:
+                print('Wrong Input')
+                
         
     def handle_message(self):
         match self.message_as_word_array[0]:
             case 'Join_Request':
-                self.handle_new_station_message()
-                
-            case 'node_left_ap':
+                self.decode_join_message()
+                ret_val = self.user_input_respond_to_node_request()
+                if ret_val == 1:
+                    self.accept_join_request()
+                else:
+                    self.reject_join_request()
+                    
+            case 'Node_Left_AP':
                 pass
-            case _:
-                pass    
             
-    def handle_new_station_message(self):
-
-        print('\nNew Join Request from: ', end='')
-        req_id = self.message_as_word_array[1]
-        node_uuid = self.message_as_word_array[2]
-        node_swarm_id = self.message_as_word_array[3]
-        node_swarm_ip = self.message_as_word_array[4]
-        node_swarm_mac = self.message_as_word_array[5]
-        node_swarm_ap = self.message_as_word_array[6]
-        print(node_uuid + ' on ' + node_swarm_ap)        
-    
-        ap_ip = get_ap_ip_from_ap_id(node_swarm_ap)
+            case 'Leave_Request':
+                ret_val = self.user_input_respond_to_node_request()
+                if ret_val == 1:
+                    self.node_socket.send( bytes( f'Accepted: {self.message}'.encode() ) )
+                    db_comms.delete_node_from_swarm_database(self.node_swarm_id)
+                else:
+                    self.node_socket.send( bytes( f'Rejected: {self.message}'.encode() ) )
+                    
+            case _:
+                pass
+            
+    def reject_join_request(self):
+        db_comms.delete_node_from_swarm_database(self.node_swarm_id)
+        self.node_socket.send( bytes( f'Rejected: {self.req_id}'.encode() ) )
+        print(f'Rejected node {self.node_uuid} with request {self.req_id}')
+        
+        
+        
+    def accept_join_request(self):
+        # TODO: make this automatic
+        # first we get the ip of the access point from the ap list
+        ap_ip = get_ap_ip_from_ap_id(self.node_swarm_ap)
         if (ap_ip == None):
-            logger.error(f'Error: could not find IP of access point {node_swarm_ap}')
+            logger.error(f'Error: could not find IP of access point {self.node_swarm_ap}')
             return
     
-        db_comms.update_db_with_joined_node(node_uuid, node_swarm_id)
+        db_comms.update_db_with_joined_node(self.node_uuid, self.node_swarm_id)
                     
-        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= node_swarm_id)
+        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_swarm_id)
 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
-            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_swarm_ip}/32' , 
-            action_params= f'{str(node_swarm_id)}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
-    
-        
-
-    
-        
-        
+            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{self.node_swarm_ip}/32' , 
+            action_params= f'{str(self.node_swarm_id)}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
+     
         # entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
         #                                             table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
         #                                             match_keys= f'{node_swarm_mac}', action_params= str(node_swarm_id),
         #                                             thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
         
-        bmv2.delete_forwarding_entry_from_bmv2(
-            communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {global_config.coordinator_vip}',
-            thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
+        # bmv2.delete_forwarding_entry_from_bmv2(
+        #     communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {global_config.coordinator_vip}',
+        #     thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
 
-        bmv2.delete_forwarding_entry_from_bmv2(
-            communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name= 'MyIngress.tb_swarm_control', 
-            key= f'{global_config.swarm_backbone_switch_port} {node_swarm_ip}', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
+        # bmv2.delete_forwarding_entry_from_bmv2(
+        #     communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name= 'MyIngress.tb_swarm_control', 
+        #     key= f'{global_config.swarm_backbone_switch_port} {self.node_swarm_ip}', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
         
         
         # insert table entries in the rest of the APs
-        node_ap_ip = global_config.ap_list[node_swarm_ap][0]
+        node_ap_ip = global_config.ap_list[self.node_swarm_ap][0]
         for key in global_config.ap_list.keys():
-            if key != node_swarm_ap:
+            if key != self.node_swarm_ap:
                 ap_ip = global_config.ap_list[key][0]
                 ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
-                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{node_swarm_ip}/32' , 
+                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{self.node_swarm_ip}/32' , 
                         action_params= f'{global_config.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
                 
                 # entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
@@ -224,7 +243,10 @@ class Swarm_Node_Handler:
                 #                         thrift_ip= global_config.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT)
                     
                                 
-        self.node_socket.send( bytes( f'{req_id} accepted'.encode() ) )
+        self.node_socket.send( bytes( f'Accepted: {self.req_id}'.encode() ) )
+        print(f'Accepted node {self.node_uuid} with request {self.req_id}')
+         
+
 
 # a function to configure the keep alive of the tcp connection
 def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
@@ -239,8 +261,7 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
-
-
+            
 def handle_swarm_node(node_socket, address):
     try:
         message = node_socket.recv(1024).decode()
@@ -250,7 +271,8 @@ def handle_swarm_node(node_socket, address):
         message_handler.handle_message()
     except Exception as e:
         print(e)
-
+        
+ 
 
 # receives TCP connections from swarm nodes
 def swarm_coordinator():
@@ -263,7 +285,12 @@ def swarm_coordinator():
         while True:
             (node_socket, address) = serversocket.accept()
             print(f'received connection request from {address}')
-            threading.Thread(target=handle_swarm_node, args=(node_socket, address, ), daemon= True ).start()
+            handle_swarm_node(node_socket=node_socket, address=address)
+            # threading.Thread(target=handle_swarm_node, args=(node_socket, address, ), daemon= True ).start()
+
+
+
+
 
 def set_arps():
     for host_id in range(global_config.this_swarm_dhcp_start, global_config.this_swarm_dhcp_end + 1):
@@ -277,8 +304,7 @@ def main():
     logger.debug('Coordinator Starting')
     print('Starting Coordinator')
     swarm_coordinator()
-    # threading.Thread(target=ap_server).start()
-    # threading.Thread(target=swarm_coordinator, daemon= True).start()
+
     return 0 
 
 if __name__ == "__main__":

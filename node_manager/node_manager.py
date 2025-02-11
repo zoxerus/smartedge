@@ -77,12 +77,15 @@ STR_COORDINATOR_TCP_PORT = 'coordinator_tcp_port'
 STR_AP_ID = 'ap_id'
 STR_AP_IP = 'ap_ip'
 STR_AP_MAC = 'ap_mac'
+STR_SWARM_ID = 'swarm_id'
+
 
 join_queue = queue.Queue()
 
 swarmNode_config = {
     STR_VXLAN_ID : None,
     STR_VETH1_VIP: '',
+    STR_SWARM_ID: '',
     STR_VETH1_VMAC: '',
     STR_COORDINATOR_VIP: '',
     STR_COORDINATOR_TCP_PORT: '',
@@ -113,11 +116,44 @@ def get_ap_physical_ip_by_ifname(ifname):
             mac = line.split()[5]
             print(f'AP MAC {mac}')
             return get_ip_from_arp_by_physical_mac(mac)
-                
+        
+        
+# a function to configure the keep alive of the tcp connection
+def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
+    """Set TCP keepalive on an open socket.
+
+    It activates after 1 second (after_idle_sec) of idleness,
+    then sends a keepalive ping once every 3 seconds (interval_sec),
+    and closes the connection after 5 failed ping (max_fails), or 15 seconds
+    """
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, after_idle_sec)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
+
+def set_swarm_node_config(comm_buffer_as_word_array):
+    if comm_buffer_as_word_array[0] == 'setConfig_00':
+        swarmNode_config[STR_VETH1_VIP] = comm_buffer_as_word_array[1]
+        swarmNode_config[STR_VXLAN_ID] = comm_buffer_as_word_array[2]
+        swarmNode_config[STR_SWARM_ID] = comm_buffer_as_word_array[3]
+        swarmNode_config[STR_COORDINATOR_VIP] = comm_buffer_as_word_array[4]
+        swarmNode_config[STR_COORDINATOR_TCP_PORT] = comm_buffer_as_word_array[5]
+        swarmNode_config[STR_AP_ID] = comm_buffer_as_word_array[6]
+        
+    elif comm_buffer_as_word_array[0] == 'setConfig_01':
+        swarmNode_config[STR_VETH1_VIP] = comm_buffer_as_word_array[1]
+        swarmNode_config[STR_VETH1_VMAC] = comm_buffer_as_word_array[2]
+        swarmNode_config[STR_VXLAN_ID] = comm_buffer_as_word_array[3]
+        swarmNode_config[STR_SWARM_ID] = comm_buffer_as_word_array[4]
+        swarmNode_config[STR_COORDINATOR_VIP] = comm_buffer_as_word_array[5]
+        swarmNode_config[STR_COORDINATOR_TCP_PORT] = comm_buffer_as_word_array[6]
+        swarmNode_config[STR_AP_ID] = comm_buffer_as_word_array[7]
 
 def handle_tcp_communication():
+    global last_request_id
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_manager_socket:
         try:
+            set_keepalive_linux(sock= node_manager_socket, after_idle_sec=1, interval_sec=3, max_fails= 5)
             node_manager_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             node_manager_socket.bind( ('0.0.0.0', 29997) )
         except Exception as e:
@@ -128,16 +164,30 @@ def handle_tcp_communication():
             comm_buffer = ap_socket.recv(1024).decode()
             print('received: ', comm_buffer)
             comm_buffer_as_word_array = comm_buffer.split()
-            if comm_buffer_as_word_array[0] == 'setConfig':
-                swarmNode_config[STR_VXLAN_ID] = comm_buffer_as_word_array[1]
-                swarmNode_config[STR_VETH1_VIP] = comm_buffer_as_word_array[2]
-                swarmNode_config[STR_VETH1_VMAC] = comm_buffer_as_word_array[3]
-                swarmNode_config[STR_COORDINATOR_VIP] = comm_buffer_as_word_array[4]
-                swarmNode_config[STR_COORDINATOR_TCP_PORT] = int(comm_buffer_as_word_array[5])
-                swarmNode_config[STR_AP_ID] = comm_buffer_as_word_array[6]
-                swarmNode_config[STR_AP_IP] = ap_address[0]
-                try:
-                    install_swarmNode_config()
+            
+            if comm_buffer_as_word_array[0] == 'setConfig_00':
+                set_swarm_node_config()
+                                
+                install_swarmNode_config()
+                coordinator_socket.sendall(bytes( "OK!".encode() ))
+                
+                while True:
+                    user_input = input("Enter 1 to send a join request")
+                    if user_input == '1':
+                        break
+                try:                        
+                    join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {ap_uuid}"
+                    last_request_id = last_request_id + 1
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
+                        print(f'connecting to {swarmNode_config[STR_COORDINATOR_VIP]}:{swarmNode_config[STR_COORDINATOR_TCP_PORT]}')
+                        coordinator_socket.settimeout(10)
+                        coordinator_socket.connect((swarmNode_config[STR_COORDINATOR_VIP], swarmNode_config[STR_COORDINATOR_TCP_PORT] ))
+                        coordinator_socket.sendall(bytes( join_request_data.encode() ))
+                        print(f'sent {join_request_data} to coordinator')
+                        response = coordinator_socket.recv(1024).decode()
+                        if (response.split()[0] == 'Accepted:'):
+                            pass                       
+                        
                 except Exception as e:
                     print(f'Error installing config: {e} Leaving Access Point' )
                     cli_command = f'nmcli connection show --active'
@@ -150,8 +200,11 @@ def handle_tcp_communication():
                     subprocess.run(cli_command.split(), text=True)
                     cli_command = f'nmcli connection delete id {ap_ssid}'
                     subprocess.run(cli_command.split(), text=True)
-                
-
+                    
+            elif comm_buffer_as_word_array[0] == 'setConfig_01':
+                set_swarm_node_config(comm_buffer_as_word_array)
+                install_swarmNode_config()
+                coordinator_socket.sendall(bytes( "OK!".encode() ))
 
 def install_swarmNode_config():
     global swarmNode_config, join_queue, last_request_id
@@ -159,13 +212,13 @@ def install_swarmNode_config():
     vxlan_id = swarmNode_config[STR_VXLAN_ID]
     swarm_veth1_vip = swarmNode_config[STR_VETH1_VIP]
     swarm_veth1_vmac = swarmNode_config[STR_VETH1_VMAC]
-    
+        
     commands = [ # add the vxlan interface to the AP
                 f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {swarmNode_config[STR_AP_IP]} dstport 4789',
                 # bring the vxlan up
                     f'ip link set dev vxlan{vxlan_id} up',    
                 # add the veth interface pair, will be ignored if name is duplicate
-                    # f'ip link add veth0 type veth peer name veth1',
+                    f'ip link add veth0 type veth peer name veth1',
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
                     f'ifconfig veth1 hw ether {swarm_veth1_vmac} ',
                     f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.255.0 up',
@@ -176,12 +229,14 @@ def install_swarmNode_config():
     
     for command in commands:
         logger.debug('executing: ' + command)
-        subprocess.run(command.split(), text=True)
+        process_ret = subprocess.run(command, text=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        if (process_ret.stderr):
+            logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
         
     get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
     get_if2_index_command = f'cat /sys/class/net/vxlan{vxlan_id}/ifindex'
-    if1_index = subprocess.run(get_if1_index_command.split(), text=True , stdout=subprocess.PIPE)
-    if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE)   
+    if1_index = subprocess.run(get_if1_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)   
     
     commands = [
         'nikss-ctl pipeline unload id 0',        
@@ -193,17 +248,19 @@ def install_swarmNode_config():
     ]
     
     for command in commands:
-        print('executing: ' + command)
-        res = subprocess.run(command.split(), text=True)
+        logger.debug('executing: ' + command)
+        process_ret = subprocess.run(command, text=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        if (process_ret.stderr):
+            logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
     
-    join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {swarmNode_config[STR_VXLAN_ID]} {swarmNode_config[STR_VETH1_VIP]} {swarmNode_config[STR_VETH1_VMAC]} {swarmNode_config[STR_AP_ID]}"
-    last_request_id = last_request_id + 1
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
-        print(f'connecting to {swarmNode_config[STR_COORDINATOR_VIP]}:{swarmNode_config[STR_COORDINATOR_TCP_PORT]}')
-        coordinator_socket.settimeout(10)
-        coordinator_socket.connect((swarmNode_config[STR_COORDINATOR_VIP], swarmNode_config[STR_COORDINATOR_TCP_PORT] ))
-        coordinator_socket.sendall(bytes( join_request_data.encode() ))
-        print(f'sent {join_request_data} to coordinator')
+    # join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {swarmNode_config[STR_VXLAN_ID]} {swarmNode_config[STR_VETH1_VIP]} {swarmNode_config[STR_VETH1_VMAC]} {swarmNode_config[STR_AP_ID]}"
+    # last_request_id = last_request_id + 1
+    # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
+    #     print(f'connecting to {swarmNode_config[STR_COORDINATOR_VIP]}:{swarmNode_config[STR_COORDINATOR_TCP_PORT]}')
+    #     coordinator_socket.settimeout(10)
+    #     coordinator_socket.connect((swarmNode_config[STR_COORDINATOR_VIP], swarmNode_config[STR_COORDINATOR_TCP_PORT] ))
+    #     coordinator_socket.sendall(bytes( join_request_data.encode() ))
+    #     print(f'sent {join_request_data} to coordinator')
 
 def exit_handler():
     logger.info('Handling exit')
@@ -247,7 +304,9 @@ def monitor_wifi_status():
         logger.debug( '\noutput_line: ' + output_line )
         if output_line_as_word_array[1] == 'disconnected':
             print('disconnected from wifi')
-            handle_disconnection()
+            # handle_disconnection()
+            
+            
         # if output_line_as_word_array[1] == 'connected':
         #     ACCESS_POINT_IP = get_ap_physical_ip_by_ifname('wlan0')
         #     print(ACCESS_POINT_IP)
