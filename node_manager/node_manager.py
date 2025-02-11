@@ -176,7 +176,7 @@ def handle_tcp_communication():
                     if user_input == '1':
                         break
                 try:                        
-                    join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {ap_uuid}"
+                    join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {swarmNode_config[STR_AP_ID]}"
                     last_request_id = last_request_id + 1
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
                         print(f'connecting to {swarmNode_config[STR_COORDINATOR_VIP]}:{swarmNode_config[STR_COORDINATOR_TCP_PORT]}')
