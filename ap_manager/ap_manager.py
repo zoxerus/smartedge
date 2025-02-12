@@ -279,7 +279,7 @@ def get_next_available_vxlan_id():
     return result 
 
 
-async def handle_new_connected_station(station_physical_mac_address):
+def handle_new_connected_station(station_physical_mac_address):
     logger.debug(f"handling newly connected staion {station_physical_mac_address}")
     
     
@@ -307,6 +307,8 @@ async def handle_new_connected_station(station_physical_mac_address):
     
     # # in case the node is not present in the ART
     if (node_db_result == None or node_db_result.node_current_swarm == 0):
+        logger.debug(f'node_db_result == None or node_db_result.node_current_swarm == 0 for {SN_UUID}')
+        
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         vxlan_id = -1
@@ -378,6 +380,7 @@ async def handle_new_connected_station(station_physical_mac_address):
 
         
     else :
+        logger.debug(f'node {SN_UUID} is part of swarm {node_db_result.node_current_swarm}')
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $5}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if (proc_ret.stdout == '' ):
@@ -527,8 +530,8 @@ def monitor_stations():
         if output_line_as_word_array[INDEX_IW_EVENT_ACTION] == IW_TOOL_JOINED_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
             logger.debug( '\nNew Station MAC: ' + station_physical_mac_address )
-            
-            asyncio.run( handle_new_connected_station(station_physical_mac_address=station_physical_mac_address) )
+            handle_new_connected_station(station_physical_mac_address=station_physical_mac_address)
+            # asyncio.run( handle_new_connected_station(station_physical_mac_address=station_physical_mac_address) )
 
         elif output_line_as_word_array[INDEX_IW_EVENT_ACTION] ==   IW_TOOL_LEFT_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
