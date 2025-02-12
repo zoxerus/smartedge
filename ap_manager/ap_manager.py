@@ -296,7 +296,7 @@ def handle_new_connected_station(station_physical_mac_address):
     SN_UUID = 'SN:' + station_physical_mac_address[9:]
     
     # # Then we search the ART  to see if the node is present in there
-    node_db_result = db.get_node_info_from_art(session=database_session, node_uuid=SN_UUID)
+    node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
     
     
     # # in case the node is not present in the ART
