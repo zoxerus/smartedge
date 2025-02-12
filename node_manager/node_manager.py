@@ -157,6 +157,7 @@ def handle_tcp_communication():
             logger.debug(f'config_data: {config_data}')
             gb_swarmNode_config = config_data
             
+            ACCESS_POINT_IP = ap_address
             
             logger.debug(f'Handling Join Type { config_data[STRs.TYPE] } and the thing {STRs.JOIN_REQUEST_00.value}')   
                                          
@@ -215,7 +216,7 @@ def handle_tcp_communication():
                 logger.error(f'Unkown Message Type {config_data[STRs.TYPE]}')
 
 def install_swarmNode_config(swarmNode_config):
-    global last_request_id, join_queue
+    global last_request_id, join_queue, ACCESS_POINT_IP
     
     vxlan_id = swarmNode_config[STRs.VXLAN_ID]
     swarm_veth1_vip = swarmNode_config[STRs.VETH1_VIP]
@@ -225,7 +226,7 @@ def install_swarmNode_config(swarmNode_config):
 
         
     commands = [ # add the vxlan interface to the AP
-                f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {swarmNode_config[STRs.AP_IP]} dstport 4789',
+                f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
                 # bring the vxlan up
                     f'ip link set dev vxlan{vxlan_id} up',    
                 # add the veth interface pair, will be ignored if name is duplicate
