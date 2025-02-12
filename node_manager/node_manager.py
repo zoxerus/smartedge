@@ -249,15 +249,6 @@ def install_swarmNode_config():
         if (process_ret.stderr):
             logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
     
-    # join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {swarmNode_config[STR_VXLAN_ID]} {swarmNode_config[STR_VETH1_VIP]} {swarmNode_config[STR_VETH1_VMAC]} {swarmNode_config[STR_AP_ID]}"
-    # last_request_id = last_request_id + 1
-    # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
-    #     print(f'connecting to {swarmNode_config[STR_COORDINATOR_VIP]}:{swarmNode_config[STR_COORDINATOR_TCP_PORT]}')
-    #     coordinator_socket.settimeout(10)
-    #     coordinator_socket.connect((swarmNode_config[STR_COORDINATOR_VIP], swarmNode_config[STR_COORDINATOR_TCP_PORT] ))
-    #     coordinator_socket.sendall(bytes( join_request_data.encode() ))
-    #     print(f'sent {join_request_data} to coordinator')
-
 def exit_handler():
     logger.info('Handling exit')
     handle_disconnection()
@@ -282,9 +273,7 @@ def handle_disconnection():
     except Exception as e:
         print(e)    
 
-def monitor_wifi_status():
-    global ACCESS_POINT_IP
-  
+def monitor_wifi_status(): 
     # this command is run in the shell to monitor wireless events using the iw tool
     monitoring_command = 'nmcli device monitor wlan0'
 
@@ -299,15 +288,8 @@ def monitor_wifi_status():
         output_line_as_word_array = output_line.split()
         logger.debug( '\noutput_line: ' + output_line )
         if output_line_as_word_array[1] == 'disconnected':
-            print('disconnected from wifi')
+            logger.debug('Disconnected from WiFi')
             # handle_disconnection()
-            
-            
-        # if output_line_as_word_array[1] == 'connected':
-        #     ACCESS_POINT_IP = get_ap_physical_ip_by_ifname('wlan0')
-        #     print(ACCESS_POINT_IP)
-        #     print('Connected To wifi')            
-        #     handle_connection(node_manager_socket)
 
   
 def main():

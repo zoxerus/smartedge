@@ -343,7 +343,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         }
         
         swarmNode_config_message = json.dumps(swarmNode_config)
-        result = send_swarmNode_config(swarmNode_config_message, station_physical_ip_address )
+        result = send_swarmNode_config(swarmNode_config_message, (station_physical_ip_address, cfg.node_manager_tcp_port) )
         if (result == -1): # Node faild to configure itself
             logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
             return
