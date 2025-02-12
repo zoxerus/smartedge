@@ -158,9 +158,12 @@ def handle_tcp_communication():
             gb_swarmNode_config = config_data
             logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] }')                                
             if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00:
-                install_swarmNode_config(config_data)
-                ap_socket.sendall(bytes( "OK!".encode() ))
-                
+                try:
+                    install_swarmNode_config(config_data)
+                    ap_socket.sendall(bytes( "OK!".encode() ))
+                except Exception as e:
+                    logger.error(repr(e))
+                    
                 while True:
                     user_input = input("Enter 1 to send a join request")
                     if user_input == '1':
@@ -210,8 +213,10 @@ def install_swarmNode_config(swarmNode_config):
     
     vxlan_id = swarmNode_config[STRs.VXLAN_ID]
     swarm_veth1_vip = swarmNode_config[STRs.VETH1_VIP]
+    swarm_veth1_vmac = ''
     if (STRs.VETH1_VMAC) in swarmNode_config.keys():
         swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC]
+
         
     commands = [ # add the vxlan interface to the AP
                 f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {swarmNode_config[STRs.AP_IP]} dstport 4789',
@@ -291,7 +296,7 @@ def monitor_wifi_status():
             continue
         previous_line = output_line
         output_line_as_word_array = output_line.split()
-        logger.debug( '\noutput_line: ' + output_line )
+        # logger.debug( '\noutput_line: ' + output_line )
         if output_line_as_word_array[1] == 'disconnected':
             logger.debug('Disconnected from WiFi')
             # handle_disconnection()
