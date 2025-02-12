@@ -158,7 +158,7 @@ def handle_tcp_communication():
             gb_swarmNode_config = config_data
             
             
-            logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] } and the thing {STRs.JOIN_REQUEST_00}')   
+            logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] } and the thing {STRs.JOIN_REQUEST_00.value}')   
                                          
             if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00.value:
                 logger.debug(f'Handling Join Type {STRs.JOIN_REQUEST_00.name}')
