@@ -357,7 +357,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         #         return
             
             
-        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id)
+        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id, node_ip=node_s0_ip)
         
         # TODO: verify if bmv2 is updated correctly 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
@@ -400,10 +400,10 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         swarmNode_config = {
             CMKs.TYPE: STRs.JOIN_REQUEST_01,
-            STRs.VETH1_VIP: node_s0_ip,
+            STRs.VETH1_VIP: station_vip,
             STRs.VETH1_VMAC: station_vmac,
             STRs.VXLAN_ID: vxlan_id,
-            STRs.COORDINATOR_VIP: cfg.coordinator_phyip,
+            STRs.COORDINATOR_VIP: cfg.coordinator_vip,
             STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port,
             STRs.AP_ID: THIS_AP_UUID
         }
@@ -423,7 +423,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
         #         return
         # TODO: update the bmv2 
-        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id)
+        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id, node_ip=node_s0_ip)
         db.insert_node_into_swarm_database(this_ap_id= THIS_AP_UUID,
                                         host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
                                         node_phy_mac=station_physical_mac_address)
