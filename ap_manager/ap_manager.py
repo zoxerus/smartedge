@@ -336,10 +336,13 @@ async def handle_new_connected_station(station_physical_mac_address):
         node_s0_ip = str(DEFAULT_SUBNET).split('.')[:3]
         node_s0_ip.append(station_physical_ip_address.split('.')[3])
         node_s0_ip = '.'.join(node_s0_ip)      
-
+        
+        node_s0_mac = int_to_mac(int( ipaddress.ip_address(node_s0_ip) ))
+        
         swarmNode_config = {
             STRs.TYPE: STRs.JOIN_REQUEST_00.value,
             STRs.VETH1_VIP: node_s0_ip,
+            STRs.VETH1_VMAC: node_s0_mac,
             STRs.VXLAN_ID: vxlan_id,
             STRs.SWARM_ID: 0,
             STRs.COORDINATOR_VIP: cfg.coordinator_phyip,

@@ -220,9 +220,7 @@ def install_swarmNode_config(swarmNode_config):
     
     vxlan_id = swarmNode_config[STRs.VXLAN_ID]
     swarm_veth1_vip = swarmNode_config[STRs.VETH1_VIP]
-    swarm_veth1_vmac = ''
-    if (STRs.VETH1_VMAC) in swarmNode_config.keys():
-        swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC]
+    swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC]
 
         
     commands = [ # add the vxlan interface to the AP
