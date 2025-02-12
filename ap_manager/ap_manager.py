@@ -329,7 +329,6 @@ async def handle_new_connected_station(station_physical_mac_address):
         node_s0_ip.append(station_physical_ip_address.split('.')[3])
         node_s0_ip = '.'.join(node_s0_ip)
         
-        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
         logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations}")
         
 
@@ -348,6 +347,8 @@ async def handle_new_connected_station(station_physical_mac_address):
         if (result == -1): # Node faild to configure itself
             logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
             return
+        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
+
         
         # with concurrent.futures.ThreadPoolExecutor() as executor:
         #     future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
