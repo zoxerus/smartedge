@@ -259,9 +259,11 @@ def install_swarmNode_config(swarmNode_config):
     
     for command in commands:
         logger.debug('executing: ' + command)
-        process_ret = subprocess.run(command, text=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        process_ret = subprocess.run(command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         if (process_ret.stderr):
             logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
+        else: 
+            logger.debug(f'executed command {command} and got output: {process_ret.stdout}')
     
 def exit_handler():
     logger.info('Handling exit')
