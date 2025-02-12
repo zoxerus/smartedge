@@ -68,7 +68,7 @@ for snic in psutil.net_if_addrs()[loopback_if]:
 if THIS_NODE_UUID == None:
     logger.error("Could not Assign UUID to Node")
     exit()
-print("AP ID:", THIS_NODE_UUID)
+print("UUID:", THIS_NODE_UUID)
 
 
 if THIS_NODE_UUID == None:

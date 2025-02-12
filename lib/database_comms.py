@@ -61,10 +61,11 @@ def connect_to_database(host, port):
 def execute_query(query):
     try:
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
+        data = [dict(row) for row in result]
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{data}")
         return result.one()
     except Exception as e:
-        db_logger.debug(f"Error in query:\n\t {query}\n\tgot result:\n\t\t{result}")
+        db_logger.debug(f"Error in query:\n\t {query}\n\tgot result:\n\t\t{data}")
         return -1
 
 def get_node_swarm_mac_by_swarm_ip(node_swarm_ip):
@@ -85,8 +86,7 @@ def update_db_with_joined_node(node_uuid, node_swarm_id):
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.JOINED.value}'
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id} IF EXISTS;
         """
-        result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
+        result = execute_query(query)
         return result
     
     
@@ -96,8 +96,7 @@ def update_db_with_left_node(node_swarm_id):
         SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.LEFT.value}'
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id} IF EXISTS ;
         """
-        result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
+        result = execute_query(query)
         return result
 
 
@@ -113,8 +112,7 @@ def insert_node_into_swarm_database(host_id, this_ap_id, node_vip, node_vmac, no
         VALUES ({host_id}, '{this_ap_id}', '{db_defines.SWARM_STATUS.PENDING.value}', toTimeStamp(now() ),
         '{node_vip}', '{node_vmac}', '{node_phy_mac}') ;
         """
-        result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
+        result = execute_query(query)
         return result
 
 def reuse_node_swarm_id(node_physical_mac):
@@ -124,8 +122,7 @@ def reuse_node_swarm_id(node_physical_mac):
         {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_PHYSICAL_MAC} = '{node_physical_mac}' ALLOW FILTERING;
         """
-        result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
+        result = execute_query(query)
         return result
 
 # GET NEXT AVAILABLE HOST ID FROM SWARM TABLE
@@ -135,9 +132,7 @@ def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id, node
         if first_result.one() == None:   
             query = f""" SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} FROM 
                 {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}"""
-            result = DATABASE_SESSION.execute(query)
-        
-            db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
+            result = execute_query(query)
             id_list = []
             for row in result:
                 db_logger.debug(f"received Row from DB: {row}")
@@ -186,8 +181,7 @@ def insert_into_art(node_uuid, current_ap, swarm_id, ap_port, node_ip):
             toTimeStamp(now()) 
         ) IF NOT EXISTS;
             """
-        result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result}")
+        result = execute_query(query)
         return result
 
 
@@ -198,8 +192,7 @@ def delete_node_from_swarm_database(node_swarm_id):
             DELETE FROM {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE} 
             WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
             """
-        result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
+        result = execute_query(query)
         return result
         
         
@@ -215,6 +208,5 @@ def update_art_with_node_info(node_uuid, node_current_ap, node_current_swarm, no
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_IP} = '{node_current_ip}'
         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{node_uuid}';
         """
-        result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
+        result = execute_query(query)
         return result
