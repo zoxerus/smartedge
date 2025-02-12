@@ -160,7 +160,8 @@ def handle_tcp_communication():
             
             logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] } and the thing {STRs.JOIN_REQUEST_00}')   
                                          
-            if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00:
+            if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00.value:
+                logger.debug(f'Handling Join Type {STRs.JOIN_REQUEST_00.name}')
                 try:
                     install_swarmNode_config(config_data)
                     ap_socket.sendall(bytes( "OK!".encode() ))
