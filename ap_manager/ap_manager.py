@@ -253,7 +253,7 @@ def get_ip_from_arp_by_physical_mac(physical_mac):
                 ip = line.split()[0]
                 logger.error(f'\nIP {ip} was found in ARP for {physical_mac} after {time.time() - t0} Seconds')                
                 return ip
-    logger.error(f'\nIP not found in ARP for {physical_mac}')
+ 
 
 
 def assign_virtual_mac_and_ip_by_host_id(host_id):
@@ -288,7 +288,9 @@ def handle_new_connected_station(station_physical_mac_address):
     
     # get the IP of the node from its mac address from the ARP table
     station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
-    
+    if (station_physical_ip_address == None ):
+        logger.error(f'\nIP not found in ARP for {station_physical_mac_address}. Aborting the handling of the node')
+        return
     logger.debug( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
     
     # 2nd Step: Check if Node belong to a Swarm or Not
