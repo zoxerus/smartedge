@@ -21,21 +21,7 @@ import lib.global_config as cfg
 import lib.helper_functions as utils
 import lib.global_constants as cts
 
-
-CMKs = cts.Control_Message_Keys
 STRs = cts.String_Constants 
-
-
-print('i in CMKs')
-for i in CMKs:
-    print(i.name,':', i.value)
-print('i in STRs')
-for i in STRs:
-    print(i.name,':', i.value)
-
-
-
-
 
 
 from argparse import ArgumentParser
@@ -171,9 +157,9 @@ def handle_tcp_communication():
             gb_swarmNode_config = config_data
             
             
-            logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] } and the thing {STRs.JOIN_REQUEST_00.value}')   
+            logger.debug(f'Handling Join Type { config_data[STRs.TYPE] } and the thing {STRs.JOIN_REQUEST_00.value}')   
                                          
-            if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00.value:
+            if config_data[STRs.TYPE] == STRs.JOIN_REQUEST_00.value:
                 logger.debug(f'Handling Join Type {STRs.JOIN_REQUEST_00.name}')
                 try:
                     install_swarmNode_config(config_data)
@@ -187,10 +173,10 @@ def handle_tcp_communication():
                         break
                 try:                        
                     join_request_dic = {
-                        CMKs.TYPE:           STRs.JOIN_REQUEST,
-                        CMKs.REQUIST_ID:     last_request_id,
-                        CMKs.THIS_NODE_UUID: THIS_NODE_UUID,
-                        CMKs.THIS_NODE_APID: config_data[STRs.AP_ID]
+                        STRs.TYPE:           STRs.JOIN_REQUEST,
+                        STRs.REQUIST_ID:     last_request_id,
+                        STRs.THIS_NODE_UUID: THIS_NODE_UUID,
+                        STRs.THIS_NODE_APID: config_data[STRs.AP_ID]
                     }
                     last_request_id = last_request_id + 1
                     
@@ -221,11 +207,11 @@ def handle_tcp_communication():
                     cli_command = f'nmcli connection delete id {ap_ssid}'
                     subprocess.run(cli_command.split(), text=True)
                     
-            elif config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_01:
+            elif config_data[STRs.TYPE] == STRs.JOIN_REQUEST_01:
                 install_swarmNode_config()
                 coordinator_socket.sendall(bytes( "OK!".encode() ))
             else:
-                logger.error(f'Unkown Message Type {config_data[CMKs.TYPE]}')
+                logger.error(f'Unkown Message Type {config_data[STRs.TYPE]}')
 
 def install_swarmNode_config(swarmNode_config):
     global last_request_id, join_queue

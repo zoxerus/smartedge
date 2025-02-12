@@ -25,19 +25,7 @@ import concurrent.futures
 
 from argparse import ArgumentParser
 
-CMKs = cts.Control_Message_Keys
 STRs = cts.String_Constants
-
-print('i in CMKs')
-for i in CMKs:
-    print(i.name,':', i.value)
-
-print('i in STRs')
-for i in STRs:
-    print(i.name,':', i.value)
-
-
-
 
 
 parser = ArgumentParser()
@@ -350,7 +338,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         node_s0_ip = '.'.join(node_s0_ip)      
 
         swarmNode_config = {
-            CMKs.TYPE: STRs.JOIN_REQUEST_00,
+            STRs.TYPE: STRs.JOIN_REQUEST_00.value,
             STRs.VETH1_VIP: node_s0_ip,
             STRs.VXLAN_ID: vxlan_id,
             STRs.SWARM_ID: 0,
@@ -420,7 +408,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         
         swarmNode_config = {
-            CMKs.TYPE: STRs.JOIN_REQUEST_01,
+            STRs.TYPE: STRs.JOIN_REQUEST_01,
             STRs.VETH1_VIP: station_vip,
             STRs.VETH1_VMAC: station_vmac,
             STRs.VXLAN_ID: vxlan_id,

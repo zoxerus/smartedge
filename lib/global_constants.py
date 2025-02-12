@@ -1,6 +1,10 @@
 from enum import Enum, auto
 
 class String_Constants(str, Enum):
+    TYPE = auto()
+    REQUIST_ID = auto()
+    THIS_NODE_UUID = auto()
+    THIS_NODE_APID = auto()
     VXLAN_ID = auto()
     VETH1_VIP = auto()
     VETH1_VMAC = auto()
@@ -13,10 +17,3 @@ class String_Constants(str, Enum):
     JOIN_REQUEST_00 = auto()
     JOIN_REQUEST_01 = auto()
 
-class Control_Message_Keys(str, Enum):
-    TYPE = auto()
-    REQUIST_ID = auto()
-    THIS_NODE_UUID = auto()
-    THIS_NODE_APID = auto()
-    
-    
