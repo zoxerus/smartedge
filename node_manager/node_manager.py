@@ -207,6 +207,8 @@ def handle_tcp_communication():
             elif config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_01:
                 install_swarmNode_config()
                 coordinator_socket.sendall(bytes( "OK!".encode() ))
+            else:
+                logger.error(f'Unkown Message Type {config_data[CMKs.TYPE]}')
 
 def install_swarmNode_config(swarmNode_config):
     global last_request_id, join_queue
