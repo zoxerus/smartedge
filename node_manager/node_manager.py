@@ -138,7 +138,7 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
 def handle_tcp_communication():
-    global last_request_id, gb_swarmNode_config
+    global last_request_id, gb_swarmNode_config, ACCESS_POINT_IP
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_manager_socket:
         try:
             set_keepalive_linux(sock= node_manager_socket, after_idle_sec=1, interval_sec=3, max_fails= 5)
