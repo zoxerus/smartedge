@@ -154,6 +154,7 @@ def handle_tcp_communication():
             comm_buffer = ap_socket.recv(1024).decode()
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
+            logger.debug(f'config_data: {config_data}')
             gb_swarmNode_config = config_data
             
             
