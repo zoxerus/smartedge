@@ -33,18 +33,21 @@ args = parser.parse_args()
 
 PROGRAM_LOG_FILE_NAME = './logs/program.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('SN_Logger')
+
 # this part handles logging to console and to a file for debugging purposes
-log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] %(filename)s : %(message)s \n")
+log_formatter =  logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s] %(filename)s :\n\t %(message)s \n\n")
 
 # log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
 # log_file_handler.setLevel(args.log_level)
 # log_file_handler.setFormatter(log_formatter)
 
 log_console_handler = logging.StreamHandler(sys.stdout)  # (sys.stdout)
-log_console_handler.setLevel(args.log_level)
+# log_console_handler.setLevel(args.log_level)
 log_console_handler.setFormatter(log_formatter)
-# logger.setLevel(logging.DEBUG)
+
+
+logger.setLevel(args.log_level)
 # logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
 
