@@ -170,12 +170,12 @@ def handle_tcp_communication():
                     logger.error(repr(e))
                     
                 while True:
-                    user_input = input("Enter 1 to send a join request")
+                    user_input = input("Enter 1 to send a join request: ")
                     if user_input == '1':
                         break
                 try:                        
                     join_request_dic = {
-                        STRs.TYPE:           STRs.JOIN_REQUEST,
+                        STRs.TYPE:           STRs.JOIN_REQUEST.value,
                         STRs.REQUIST_ID:     last_request_id,
                         STRs.THIS_NODE_UUID: THIS_NODE_UUID,
                         STRs.THIS_NODE_APID: config_data[STRs.AP_ID]
@@ -183,6 +183,7 @@ def handle_tcp_communication():
                     last_request_id = last_request_id + 1
                     
                     join_request_json_string = json.dumps(join_request_dic)
+                    logger.debug(f'preparing join request: {join_request_json_string}')
                     
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
                         print(f'connecting to {config_data[STRs.COORDINATOR_VIP]}:{config_data[STRs.COORDINATOR_TCP_PORT]}')
@@ -197,7 +198,7 @@ def handle_tcp_communication():
                             pass                       
                         
                 except Exception as e:
-                    print(f'Error installing config: {e} Leaving Access Point' )
+                    print(f'Error installing config: {repr(e)} Leaving Access Point' )
                     cli_command = f'nmcli connection show --active'
                     res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
                     ap_ssid = ''
