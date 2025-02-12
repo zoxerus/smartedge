@@ -327,10 +327,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         node_s0_ip = str(DEFAULT_SUBNET).split('.')[:3]
         node_s0_ip.append(station_physical_ip_address.split('.')[3])
-        node_s0_ip = '.'.join(node_s0_ip)
-        
-        logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations}")
-        
+        node_s0_ip = '.'.join(node_s0_ip)      
 
         swarmNode_config = {
             CMKs.TYPE: STRs.JOIN_REQUEST_00,
@@ -343,11 +340,25 @@ async def handle_new_connected_station(station_physical_mac_address):
         }
         
         swarmNode_config_message = json.dumps(swarmNode_config)
-        result = send_swarmNode_config(swarmNode_config_message, (station_physical_ip_address, cfg.node_manager_tcp_port) )
-        if (result == -1): # Node faild to configure itself
-            logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
-            return
-        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
+        node_socket_server_address = ((station_physical_ip_address, cfg.node_manager_tcp_port))
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_socket_client:
+            node_socket_client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            node_socket_client.settimeout(10)
+            try:
+                node_socket_client.connect(node_socket_server_address)
+                node_socket_client.sendall( bytes( swarmNode_config_message.encode() ))
+                response = node_socket_client.recv(1024).decode()
+            except Exception as e:
+                logger.error(f'Error sending config to {node_socket_server_address}: {e}')
+        logger.debug(f'AP has sent this config to the Smart Node:\n\t {swarmNode_config_message}')
+    
+    
+        # result = send_swarmNode_config(swarmNode_config_message, (station_physical_ip_address, cfg.node_manager_tcp_port) )
+        # if (result == -1): # Node faild to configure itself
+        #     logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+        #     return
+        # connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
+        logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations}")
 
         
         # with concurrent.futures.ThreadPoolExecutor() as executor:
