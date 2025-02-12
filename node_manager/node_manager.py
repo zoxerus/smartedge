@@ -85,17 +85,17 @@ ACCESS_POINT_IP = ''
 
 join_queue = queue.Queue()
 
-swarmNode_config = {
-    # STRs.VXLAN_ID : None,
-    # STRs.VETH1_VIP: '',
-    # STRs.SWARM_ID: '',
-    # STRs.VETH1_VMAC: '',
-    # STRs.COORDINATOR_VIP: '',
-    # STRs.COORDINATOR_TCP_PORT: '',
-    # STRs.AP_ID: '',
-    # STRs.AP_IP: '',
-    # STRs.AP_MAC: ''
-}
+# swarmNode_config = {
+#     # STRs.VXLAN_ID : None,
+#     # STRs.VETH1_VIP: '',
+#     # STRs.SWARM_ID: '',
+#     # STRs.VETH1_VMAC: '',
+#     # STRs.COORDINATOR_VIP: '',
+#     # STRs.COORDINATOR_TCP_PORT: '',
+#     # STRs.AP_ID: '',
+#     # STRs.AP_IP: '',
+#     # STRs.AP_MAC: ''
+# }
 
 last_request_id = 0
 
@@ -147,14 +147,12 @@ def handle_tcp_communication():
             node_manager_socket.listen()
             ap_socket, ap_address = node_manager_socket.accept()
             comm_buffer = ap_socket.recv(1024).decode()
-            print('received: ', comm_buffer)
+            logger.debug('received: ', comm_buffer)
             
             config_data = json.loads(comm_buffer)
-            
+            logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] }')                                
             if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00:
-                swarmNode_config = config_data
-                                
-                install_swarmNode_config()
+                install_swarmNode_config(config_data)
                 coordinator_socket.sendall(bytes( "OK!".encode() ))
                 
                 while True:
@@ -166,16 +164,16 @@ def handle_tcp_communication():
                         CMKs.TYPE:           STRs.JOIN_REQUEST,
                         CMKs.REQUIST_ID:     last_request_id,
                         CMKs.THIS_NODE_UUID: THIS_NODE_UUID,
-                        CMKs.THIS_NODE_APID: swarmNode_config[STRs.AP_ID]
+                        CMKs.THIS_NODE_APID: config_data[STRs.AP_ID]
                     }
                     last_request_id = last_request_id + 1
                     
                     join_request_json_string = json.dumps(join_request_dic)
                     
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
-                        print(f'connecting to {swarmNode_config[STRs.COORDINATOR_VIP]}:{swarmNode_config[STRs.COORDINATOR_TCP_PORT]}')
+                        print(f'connecting to {config_data[STRs.COORDINATOR_VIP]}:{config_data[STRs.COORDINATOR_TCP_PORT]}')
                         coordinator_socket.settimeout(10)
-                        coordinator_socket.connect((swarmNode_config[STRs.COORDINATOR_VIP], swarmNode_config[STRs.COORDINATOR_TCP_PORT] ))
+                        coordinator_socket.connect((config_data[STRs.COORDINATOR_VIP], config_data[STRs.COORDINATOR_TCP_PORT] ))
                         coordinator_socket.sendall(bytes( join_request_json_string.encode() ))
                         
                         print(f'sent {join_request_dic} to coordinator')
@@ -198,16 +196,16 @@ def handle_tcp_communication():
                     subprocess.run(cli_command.split(), text=True)
                     
             elif config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_01:
-                swarmNode_config = config_data
                 install_swarmNode_config()
                 coordinator_socket.sendall(bytes( "OK!".encode() ))
 
-def install_swarmNode_config():
-    global swarmNode_config, join_queue, last_request_id
+def install_swarmNode_config(swarmNode_config):
+    global last_request_id, join_queue
     
     vxlan_id = swarmNode_config[STRs.VXLAN_ID]
     swarm_veth1_vip = swarmNode_config[STRs.VETH1_VIP]
-    swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC]
+    if (STRs.VETH1_VMAC) in swarmNode_config.keys():
+        swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC]
         
     commands = [ # add the vxlan interface to the AP
                 f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {swarmNode_config[STRs.AP_IP]} dstport 4789',
