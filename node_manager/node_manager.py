@@ -175,7 +175,7 @@ def handle_tcp_communication():
                         break
                 try:                        
                     join_request_dic = {
-                        STRs.TYPE:           STRs.JOIN_REQUEST.value,
+                        STRs.TYPE:           STRs.JOIN_REQUEST_00.value,
                         STRs.REQUIST_ID:     last_request_id,
                         STRs.THIS_NODE_UUID: THIS_NODE_UUID,
                         STRs.THIS_NODE_APID: config_data[STRs.AP_ID]
