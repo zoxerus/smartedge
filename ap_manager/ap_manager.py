@@ -190,6 +190,9 @@ def send_swarmNode_config(config_messge, node_socket_server_address):
             logger.error(f'Error sending config to {node_socket_server_address}: {e}')
     logger.debug(f'AP has sent this config to the Smart Node:\n\t {config_messge}')
 
+
+
+
 def create_vxlan_by_host_id(vxlan_id, remote, port=4789): 
     logger.debug(f'Adding se_vxlan{vxlan_id}')
     
@@ -275,7 +278,7 @@ def get_next_available_vxlan_id():
     return result 
 
 
-def handle_new_connected_station(station_physical_mac_address):
+async def handle_new_connected_station(station_physical_mac_address):
     logger.debug(f"handling newly connected staion {station_physical_mac_address}")
     
     
@@ -340,13 +343,18 @@ def handle_new_connected_station(station_physical_mac_address):
         }
         
         swarmNode_config_message = json.dumps(swarmNode_config)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
-            result = future.result()  # Get the return value
+        result = send_swarmNode_config()
+        if (result == -1): # Node faild to configure itself
+            logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+            return
+        
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
+        #     result = future.result()  # Get the return value
             
-            if (result == -1): # Node faild to configure itself
-                logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
-                return
+        #     if (result == -1): # Node faild to configure itself
+        #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+        #         return
             
             
         db.insert_into_art(session=database_session, node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id)
@@ -387,15 +395,33 @@ def handle_new_connected_station(station_physical_mac_address):
         
         logger.debug( f'\nStation {station_physical_mac_address}\t{station_physical_ip_address}\n\t' +  
                     f'assigned vIP: {station_vip} and vMAC: {station_vmac}')
+        
+        
+        
+        swarmNode_config = {
+            CMKs.TYPE: STRs.JOIN_REQUEST_01,
+            STRs.VETH1_VIP: node_s0_ip,
+            STRs.VETH1_VMAC: station_vmac,
+            STRs.VXLAN_ID: vxlan_id,
+            STRs.COORDINATOR_VIP: cfg.coordinator_phyip,
+            STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port,
+            STRs.AP_ID: THIS_AP_UUID
+        }
+        
+        swarmNode_config_message = json.dumps(swarmNode_config)
+        result = send_swarmNode_config()
+        if (result == -1): # Node faild to configure itself
+            logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+            return
             
-        swarmNode_config_message = f'setConfig_01 {station_vip} {station_vmac} {vxlan_id} {cfg.coordinator_phyip} {cfg.coordinator_tcp_port} {THIS_AP_UUID}'
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
-            result = future.result()  # Get the return value
+        # swarmNode_config_message = f'setConfig_01 {station_vip} {station_vmac} {vxlan_id} {cfg.coordinator_phyip} {cfg.coordinator_tcp_port} {THIS_AP_UUID}'
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
+        #     result = future.result()  # Get the return value
             
-            if (result == -1): # Node faild to configure itself
-                logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
-                return
+        #     if (result == -1): # Node faild to configure itself
+        #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+        #         return
         # TODO: update the bmv2 
         db.insert_into_art(session=database_session, node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id)
         db.insert_node_into_swarm_database(this_ap_id= THIS_AP_UUID,
