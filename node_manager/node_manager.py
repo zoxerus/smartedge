@@ -144,7 +144,7 @@ def handle_tcp_communication():
             node_manager_socket.bind( ('0.0.0.0', cfg.node_manager_tcp_port) )
             logger.debug(f'Node Manager Listening on port {cfg.node_manager_tcp_port} ...')
         except Exception as e:
-            print(f'Exception in Node Manager Socket: {e}')
+            logger.error(f'Exception in Node Manager Socket: {e}')
         while True:
             node_manager_socket.listen()
             ap_socket, ap_address = node_manager_socket.accept()
