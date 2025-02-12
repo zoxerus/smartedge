@@ -156,7 +156,10 @@ def handle_tcp_communication():
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
             gb_swarmNode_config = config_data
-            logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] }')                                
+            
+            
+            logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] } and the thing {STRs.JOIN_REQUEST_00}')   
+                                         
             if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00:
                 try:
                     install_swarmNode_config(config_data)
