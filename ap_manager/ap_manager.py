@@ -363,7 +363,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                             table_name='MyIngress.tb_ipv4_lpm',
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_s0_ip}/32' , 
-                            action_params= f'{str(vxlan_id)}', thrift_ip= ap_ip, thrift_port= bmv2.DEFAULT_THRIFT_PORT )
+                            action_params= f'{str(vxlan_id)}')
      
         node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
         for key in cfg.ap_list.keys():
