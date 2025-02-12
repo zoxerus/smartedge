@@ -157,7 +157,7 @@ def handle_tcp_communication():
             logger.debug(f'config_data: {config_data}')
             gb_swarmNode_config = config_data
             
-            ACCESS_POINT_IP = ap_address
+            ACCESS_POINT_IP = ap_address[0]
             
             logger.debug(f'Handling Join Type { config_data[STRs.TYPE] } and the thing {STRs.JOIN_REQUEST_00.value}')   
                                          
