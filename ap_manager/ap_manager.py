@@ -19,10 +19,15 @@ import lib.database_comms as db
 import lib.bmv2_thrift_lib as bmv2
 import os
 import asyncio
-
+import lib.global_constants as cts
+import json
 import concurrent.futures
 
 from argparse import ArgumentParser
+
+CMKs = cts.Control_Message_Keys
+STRs = cts.String_Constants
+
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--log-level",type=int, default=50, help="logging level")
@@ -59,14 +64,6 @@ logger.debug(f'running in: {dir_path}')
 # a global variable to set the communication protocol with the switch
 P4CTRL = bmv2.P4_CONTROL_METHOD_THRIFT_CLI
 # Set which database the program is going to use
-
-# string constants
-STR_NODE_VIP = 'Node_vIP'
-STR_AP_ID = 'AP_ID'
-STR_NODE_VMAC = 'NODE_VMAC'
-STR_CONTROL_UPDATE_ACTION = 'ACTION'
-STR_CONTROL_UPDATE_ACTION_JOIN = 'JOIN'
-STR_CONTROL_UPDATE_ACTION_LEAVE = 'LEAVE'
 
 INDEX_IW_EVENT_MAC_ADDRESS = 3
 INDEX_IW_EVENT_ACTION = 1 
@@ -329,7 +326,18 @@ def handle_new_connected_station(station_physical_mac_address):
         connected_stations[station_physical_mac_address] = [ station_vmac ,station_vip, vxlan_id]
         logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations}")
         
-        swarmNode_config_message = f'setConfig_00 {node_s0_ip} {vxlan_id} 0 {cfg.coordinator_phyip} {cfg.coordinator_tcp_port} {THIS_AP_UUID}'
+
+        swarmNode_config = {
+            CMKs.TYPE: STRs.JOIN_REQUEST_00,
+            STRs.VETH1_VIP: node_ap_ip,
+            STRs.VXLAN_ID: vxlan_id,
+            STRs.SWARM_ID: 0,
+            STRs.COORDINATOR_VIP: cfg.coordinator_phyip,
+            STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port,
+            STRs.AP_ID: THIS_AP_UUID
+        }
+        
+        swarmNode_config_message = json.dumps(swarmNode_config)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
             result = future.result()  # Get the return value

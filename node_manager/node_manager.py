@@ -1,5 +1,12 @@
-import subprocess
+# This tells python to look for files in parent folders
 import sys
+# setting path
+sys.path.append('.')
+sys.path.append('..')
+sys.path.append('../..')
+
+
+import subprocess
 import psutil
 import logging
 import threading
@@ -9,6 +16,13 @@ import time
 import socket
 import ipaddress
 import os
+import json
+import lib.helper_functions as utils
+import lib.global_constants as cts
+
+
+CMKs = cts.Control_Message_Keys
+STRs = cts.String_Constants 
 
 from argparse import ArgumentParser
 parser = ArgumentParser()
@@ -69,29 +83,18 @@ ACCESS_POINT_IP = ''
 
 
 
-STR_VXLAN_ID = 'vxlan_id'
-STR_VETH1_VIP = 'veth1_vip'
-STR_VETH1_VMAC = 'veth1_vmac'
-STR_COORDINATOR_VIP = 'coordnator_vip'
-STR_COORDINATOR_TCP_PORT = 'coordinator_tcp_port'
-STR_AP_ID = 'ap_id'
-STR_AP_IP = 'ap_ip'
-STR_AP_MAC = 'ap_mac'
-STR_SWARM_ID = 'swarm_id'
-
-
 join_queue = queue.Queue()
 
 swarmNode_config = {
-    STR_VXLAN_ID : None,
-    STR_VETH1_VIP: '',
-    STR_SWARM_ID: '',
-    STR_VETH1_VMAC: '',
-    STR_COORDINATOR_VIP: '',
-    STR_COORDINATOR_TCP_PORT: '',
-    STR_AP_ID: '',
-    STR_AP_IP: '',
-    STR_AP_MAC: ''
+    # STRs.VXLAN_ID : None,
+    # STRs.VETH1_VIP: '',
+    # STRs.SWARM_ID: '',
+    # STRs.VETH1_VMAC: '',
+    # STRs.COORDINATOR_VIP: '',
+    # STRs.COORDINATOR_TCP_PORT: '',
+    # STRs.AP_ID: '',
+    # STRs.AP_IP: '',
+    # STRs.AP_MAC: ''
 }
 
 last_request_id = 0
@@ -131,24 +134,6 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
-def set_swarm_node_config(comm_buffer_as_word_array):
-    if comm_buffer_as_word_array[0] == 'setConfig_00':
-        swarmNode_config[STR_VETH1_VIP] = comm_buffer_as_word_array[1]
-        swarmNode_config[STR_VXLAN_ID] = comm_buffer_as_word_array[2]
-        swarmNode_config[STR_SWARM_ID] = comm_buffer_as_word_array[3]
-        swarmNode_config[STR_COORDINATOR_VIP] = comm_buffer_as_word_array[4]
-        swarmNode_config[STR_COORDINATOR_TCP_PORT] = comm_buffer_as_word_array[5]
-        swarmNode_config[STR_AP_ID] = comm_buffer_as_word_array[6]
-        
-    elif comm_buffer_as_word_array[0] == 'setConfig_01':
-        swarmNode_config[STR_VETH1_VIP] = comm_buffer_as_word_array[1]
-        swarmNode_config[STR_VETH1_VMAC] = comm_buffer_as_word_array[2]
-        swarmNode_config[STR_VXLAN_ID] = comm_buffer_as_word_array[3]
-        swarmNode_config[STR_SWARM_ID] = comm_buffer_as_word_array[4]
-        swarmNode_config[STR_COORDINATOR_VIP] = comm_buffer_as_word_array[5]
-        swarmNode_config[STR_COORDINATOR_TCP_PORT] = comm_buffer_as_word_array[6]
-        swarmNode_config[STR_AP_ID] = comm_buffer_as_word_array[7]
-
 def handle_tcp_communication():
     global last_request_id
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_manager_socket:
@@ -163,10 +148,11 @@ def handle_tcp_communication():
             ap_socket, ap_address = node_manager_socket.accept()
             comm_buffer = ap_socket.recv(1024).decode()
             print('received: ', comm_buffer)
-            comm_buffer_as_word_array = comm_buffer.split()
             
-            if comm_buffer_as_word_array[0] == 'setConfig_00':
-                set_swarm_node_config()
+            config_data = json.loads(comm_buffer)
+            
+            if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00:
+                swarmNode_config = config_data
                                 
                 install_swarmNode_config()
                 coordinator_socket.sendall(bytes( "OK!".encode() ))
@@ -176,14 +162,24 @@ def handle_tcp_communication():
                     if user_input == '1':
                         break
                 try:                        
-                    join_request_data = f"Join_Request {last_request_id} {THIS_NODE_UUID} {swarmNode_config[STR_AP_ID]}"
+                    join_request_dic = {
+                        CMKs.TYPE:           STRs.JOIN_REQUEST,
+                        CMKs.REQUIST_ID:     last_request_id,
+                        CMKs.THIS_NODE_UUID: THIS_NODE_UUID,
+                        CMKs.THIS_NODE_APID: swarmNode_config[STRs.AP_ID]
+                    }
                     last_request_id = last_request_id + 1
+                    
+                    join_request_json_string = json.dumps(join_request_dic)
+                    
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
-                        print(f'connecting to {swarmNode_config[STR_COORDINATOR_VIP]}:{swarmNode_config[STR_COORDINATOR_TCP_PORT]}')
+                        print(f'connecting to {swarmNode_config[STRs.COORDINATOR_VIP]}:{swarmNode_config[STRs.COORDINATOR_TCP_PORT]}')
                         coordinator_socket.settimeout(10)
-                        coordinator_socket.connect((swarmNode_config[STR_COORDINATOR_VIP], swarmNode_config[STR_COORDINATOR_TCP_PORT] ))
-                        coordinator_socket.sendall(bytes( join_request_data.encode() ))
-                        print(f'sent {join_request_data} to coordinator')
+                        coordinator_socket.connect((swarmNode_config[STRs.COORDINATOR_VIP], swarmNode_config[STRs.COORDINATOR_TCP_PORT] ))
+                        coordinator_socket.sendall(bytes( join_request_json_string.encode() ))
+                        
+                        print(f'sent {join_request_dic} to coordinator')
+                        
                         response = coordinator_socket.recv(1024).decode()
                         if (response.split()[0] == 'Accepted:'):
                             pass                       
@@ -201,20 +197,20 @@ def handle_tcp_communication():
                     cli_command = f'nmcli connection delete id {ap_ssid}'
                     subprocess.run(cli_command.split(), text=True)
                     
-            elif comm_buffer_as_word_array[0] == 'setConfig_01':
-                set_swarm_node_config(comm_buffer_as_word_array)
+            elif config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_01:
+                swarmNode_config = config_data
                 install_swarmNode_config()
                 coordinator_socket.sendall(bytes( "OK!".encode() ))
 
 def install_swarmNode_config():
     global swarmNode_config, join_queue, last_request_id
     
-    vxlan_id = swarmNode_config[STR_VXLAN_ID]
-    swarm_veth1_vip = swarmNode_config[STR_VETH1_VIP]
-    swarm_veth1_vmac = swarmNode_config[STR_VETH1_VMAC]
+    vxlan_id = swarmNode_config[STRs.VXLAN_ID]
+    swarm_veth1_vip = swarmNode_config[STRs.VETH1_VIP]
+    swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC]
         
     commands = [ # add the vxlan interface to the AP
-                f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {swarmNode_config[STR_AP_IP]} dstport 4789',
+                f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {swarmNode_config[STRs.AP_IP]} dstport 4789',
                 # bring the vxlan up
                     f'ip link set dev vxlan{vxlan_id} up',    
                 # add the veth interface pair, will be ignored if name is duplicate
@@ -272,10 +268,10 @@ def handle_disconnection():
     exit_commands = [
         'ifconfig veth1 0.0.0.0',
         'nikss-ctl del-port pipe 0 dev veth0',
-        f"nikss-ctl del-port pipe 0 dev vxlan{swarmNode_config[STR_VXLAN_ID]}",
+        f"nikss-ctl del-port pipe 0 dev vxlan{swarmNode_config[STRs.VXLAN_ID]}",
         'nikss-ctl table delete pipe 0 ingress_route',
         'nikss-ctl pipeline unload id 0 ',
-        f"ip link delete vxlan{swarmNode_config[STR_VXLAN_ID]}"
+        f"ip link delete vxlan{swarmNode_config[STRs.VXLAN_ID]}"
     ]
     try:
         for command in exit_commands:
