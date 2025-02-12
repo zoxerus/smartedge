@@ -65,7 +65,7 @@ def execute_query(query):
         db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{data}")
         return result.one()
     except Exception as e:
-        db_logger.debug(f"Error in query:\n\t {query}\n\tgot result:\n\t\t{data}")
+        db_logger.debug(f"Error in query:\n\t {query}")
         return -1
 
 def get_node_swarm_mac_by_swarm_ip(node_swarm_ip):
