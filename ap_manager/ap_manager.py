@@ -438,7 +438,7 @@ async def handle_disconnected_station(station_physical_mac_address):
     
     
     SN_UUID = 'SN:' + station_physical_mac_address[9:]
-    node_db_result = db.get_node_info_from_art(session=database_session, node_uuid=SN_UUID)
+    node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
     if (node_db_result.node_current_ap != THIS_AP_UUID):
         return
         
