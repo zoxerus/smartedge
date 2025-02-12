@@ -214,7 +214,7 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
     logger.debug(f'\nCreated se_vxlan{vxlan_id}')
     created_vxlans.add(vxlan_id)
     
-    logger.debug(f'\nCreated host IDs:\n\t {created_vxlans}')            
+    logger.debug(f'\ncreated_vxlans:\n\t {created_vxlans}')            
     activate_interface_shell_command = "ip link set se_vxlan%s up" % vxlan_id
     result = subprocess.run(activate_interface_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if (result.stderr):
@@ -457,69 +457,71 @@ async def handle_new_connected_station(station_physical_mac_address):
 
                     
 async def handle_disconnected_station(station_physical_mac_address):
-    # sometimes when the program is started there are already connected nodes to the AP.
-    # so if one of these nodes disconnectes from the AP whre a disconnection is detected but the 
-    # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
-    logger.debug(f'Handling disconnected Node: {station_physical_mac_address}')
-    if (station_physical_mac_address not in connected_stations.keys()):
-        logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations')
-        return
-    
-    # Wait for some time configured by the variable in cfg before considering that the node has actually disconnected
-    t0 = time.time()
-    while time.time() - t0 < cfg.ap_wait_time_for_disconnected_station_in_seconds:
-        cli_command = "iw wlan0 station dump | grep Station | awk '{print $2}'"
-        proc_res = subprocess.run(cli_command,shell=True, text=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if (proc_res.stderr):
-            logger.error(f"Error running command: {cli_command}\nError Message: {proc_res.stderr}")
-        if (station_physical_mac_address in proc_res.stdout):
+    try: 
+        # sometimes when the program is started there are already connected nodes to the AP.
+        # so if one of these nodes disconnectes from the AP whre a disconnection is detected but the 
+        # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
+        logger.debug(f'Handling disconnected Node: {station_physical_mac_address}')
+        if (station_physical_mac_address not in connected_stations.keys()):
+            logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations')
             return
-        time.sleep(1)
-    
-    
-    SN_UUID = 'SN:' + station_physical_mac_address[9:]
-    node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
-    if ( node_db_result == None or node_db_result.node_current_ap != THIS_AP_UUID):
-        return
         
-    logger.debug(f'Removing disconnected Node: {station_physical_mac_address}')    
-    # station_physical_ip_address = get_ip_from_arp(station_physical_mac_address)
-    station_virtual_ip_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VIP_INDEX]
-    station_virtual_mac_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VMAC_INDEX]
-    station_vxlan_id = connected_stations[station_physical_mac_address][CONNECTED_STATION_VXLAN_INDEX]
-
-    # delete the station from the connected stations
-    del connected_stations[station_physical_mac_address]
-    logger.debug(f"Connected Stations List after removing {station_physical_mac_address}: {connected_stations}")
-       
-       
-    # delete the forwarding entries that point to this station from the rest of the Access Points.
-    # TODO: move this functionality to the coordinator.
-    for key in cfg.ap_list.keys():
-        ap_ip = cfg.ap_list[key][0]
-        logger.debug(f'deleting entries from: {key} with IP {ap_ip}')
-        bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                          table_name='MyIngress.tb_ipv4_lpm', key=f'{station_virtual_ip_address}/32',
-                                          thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
+        # Wait for some time configured by the variable in cfg before considering that the node has actually disconnected
+        t0 = time.time()
+        while time.time() - t0 < cfg.ap_wait_time_for_disconnected_station_in_seconds:
+            cli_command = "iw wlan0 station dump | grep Station | awk '{print $2}'"
+            proc_res = subprocess.run(cli_command,shell=True, text=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if (proc_res.stderr):
+                logger.error(f"Error running command: {cli_command}\nError Message: {proc_res.stderr}")
+            if (station_physical_mac_address in proc_res.stdout):
+                return
+            time.sleep(1)
         
-        # bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-        #                                   table_name='MyIngress.tb_l2_forward', key=station_virtual_mac_address,
-        #                                   thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
+        
+        SN_UUID = 'SN:' + station_physical_mac_address[9:]
+        node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
+        if ( node_db_result == None or node_db_result.node_current_ap != THIS_AP_UUID):
+            return
+            
+        logger.debug(f'Removing disconnected Node: {station_physical_mac_address}')    
+        # station_physical_ip_address = get_ip_from_arp(station_physical_mac_address)
+        station_virtual_ip_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VIP_INDEX]
+        station_virtual_mac_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VMAC_INDEX]
+        station_vxlan_id = connected_stations[station_physical_mac_address][CONNECTED_STATION_VXLAN_INDEX]
 
-    
-    # delete the corresponding switch port
-    delete_vxlan_from_bmv2_command = "port_remove %s" % station_vxlan_id
-    bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command)
-    
-    
-    # delete the node from the database
-    db.update_db_with_left_node(node_swarm_id=station_vxlan_id)
+        # delete the station from the connected stations
+        del connected_stations[station_physical_mac_address]
+        logger.debug(f"Connected Stations List after removing {station_physical_mac_address}: {connected_stations}")
+        
+        
+        # delete the forwarding entries that point to this station from the rest of the Access Points.
+        # TODO: move this functionality to the coordinator.
+        for key in cfg.ap_list.keys():
+            ap_ip = cfg.ap_list[key][0]
+            logger.debug(f'deleting entries from: {key} with IP {ap_ip}')
+            bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
+                                            table_name='MyIngress.tb_ipv4_lpm', key=f'{station_virtual_ip_address}/32',
+                                            thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
+            
+            # bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
+            #                                   table_name='MyIngress.tb_l2_forward', key=station_virtual_mac_address,
+            #                                   thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
 
-    
-    logger.debug(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')
-       
-    delete_vxlan_by_host_id(station_vxlan_id)
-    
+        
+        # delete the corresponding switch port
+        delete_vxlan_from_bmv2_command = "port_remove %s" % station_vxlan_id
+        bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command)
+        
+        
+        # delete the node from the database
+        db.update_db_with_left_node(node_swarm_id=station_vxlan_id)
+
+        
+        logger.debug(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')
+        
+        delete_vxlan_by_host_id(station_vxlan_id)
+    except Exception as e:
+        logger.error(f"Error handling disconnected station {SN_UUID}: {repr(e)}")
 
 def monitor_stations():
     # this command is run in the shell to monitor wireless events using the iw tool

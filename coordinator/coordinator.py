@@ -16,13 +16,14 @@ import re
 import os
 import logging
 import ipaddress
-
+import json
 import threading
 import lib.bmv2_thrift_lib as bmv2
 import lib.database_comms as db_comms
-
+import lib.global_constants as cts
 from argparse import ArgumentParser
 
+STRs = cts.String_Constants
 
 def int_to_mac(macint):
     if type(macint) != int:
@@ -135,18 +136,9 @@ def get_ap_ip_from_ap_id(ap_id):
 
 class Swarm_Node_Handler:
     def __init__(self, message, node_socket: socket.socket):
-        print(f'\nNew Request: {message} ')
-        self.message_as_word_array = message.split()
+        logger.debug(f'\nNew Request: {message} ')
+        self.node_request = json.loads(message)
         self.node_socket = node_socket
-       
-        
-    def decode_join_message(self):
-        self.req_id = self.message_as_word_array[1]
-        self.node_uuid = self.message_as_word_array[2]
-        self.node_swarm_id = self.message_as_word_array[3]
-        self.node_swarm_ip = self.message_as_word_array[4]
-        self.node_swarm_mac = self.message_as_word_array[5]
-        self.node_swarm_ap = self.message_as_word_array[6]
 
         
     def user_input_respond_to_node_request(self):
@@ -165,9 +157,10 @@ class Swarm_Node_Handler:
                 
         
     def handle_message(self):
-        match self.message_as_word_array[0]:
-            case 'Join_Request':
-                self.decode_join_message()
+        logger.debug(f"Handling Request with type {self.node_request[STRs.TYPE]}")
+        match self.node_request[STRs.TYPE]:
+            case STRs.JOIN_REQUEST_00:
+                logger.debug(f"Handling Request with type {STRs.JOIN_REQUEST_00.name}")
                 ret_val = self.user_input_respond_to_node_request()
                 if ret_val == 1:
                     self.accept_join_request()
@@ -177,7 +170,7 @@ class Swarm_Node_Handler:
             case 'Node_Left_AP':
                 pass
             
-            case 'Leave_Request':
+            case STRs.LEAVE_REQUEST:
                 ret_val = self.user_input_respond_to_node_request()
                 if ret_val == 1:
                     self.node_socket.send( bytes( f'Accepted: {self.message}'.encode() ) )
@@ -265,7 +258,7 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
 def handle_swarm_node(node_socket, address):
     try:
         message = node_socket.recv(1024).decode()
-        print(f'received: {message} from {address}')    
+        logger.debug(f'received: {message} from {address}')    
         
         message_handler = Swarm_Node_Handler(message= message, node_socket=node_socket)
         message_handler.handle_message()
@@ -284,20 +277,10 @@ def swarm_coordinator():
         print('Coordinator Script is Running')
         while True:
             (node_socket, address) = serversocket.accept()
-            print(f'received connection request from {address}')
+            logger.debug(f'received connection request from {address}')
             handle_swarm_node(node_socket=node_socket, address=address)
             # threading.Thread(target=handle_swarm_node, args=(node_socket, address, ), daemon= True ).start()
 
-
-
-
-
-def set_arps():
-    for host_id in range(global_config.this_swarm_dhcp_start, global_config.this_swarm_dhcp_end + 1):
-        station_virtual_ip_address = str( THIS_SWARM_SUBNET + host_id )
-        station_virtual_mac_address = int_to_mac(int( THIS_SWARM_SUBNET + host_id ))
-        cli_command = f'arp -s {station_virtual_ip_address} {station_virtual_mac_address}'
-        subprocess.run(cli_command.split(), text=True)
 
 def main():
     # set_arps()

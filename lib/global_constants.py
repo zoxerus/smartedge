@@ -21,4 +21,4 @@ class String_Constants(str, Enum):
     SWARM_ID = auto()
     JOIN_REQUEST_00 = auto()
     JOIN_REQUEST_01 = auto()
-
+    LEAVE_REQUEST = auto()
