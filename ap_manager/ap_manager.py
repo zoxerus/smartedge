@@ -357,7 +357,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         #         return
             
             
-        db.insert_into_art(session=database_session, node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id)
+        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id)
         
         # TODO: verify if bmv2 is updated correctly 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
