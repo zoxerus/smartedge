@@ -188,6 +188,7 @@ def send_swarmNode_config(config_messge, node_socket_server_address):
             return -1 
         except Exception as e:
             logger.error(f'Error sending config to {node_socket_server_address}: {e}')
+            return -1
     logger.debug(f'AP has sent this config to the Smart Node:\n\t {config_messge}')
 
 
@@ -467,7 +468,7 @@ async def handle_disconnected_station(station_physical_mac_address):
     
     SN_UUID = 'SN:' + station_physical_mac_address[9:]
     node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
-    if (node_db_result.node_current_ap != THIS_AP_UUID):
+    if ( node_db_result == None or node_db_result.node_current_ap != THIS_AP_UUID):
         return
         
     logger.debug(f'Removing disconnected Node: {station_physical_mac_address}')    

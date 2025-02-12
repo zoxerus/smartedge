@@ -153,7 +153,7 @@ def handle_tcp_communication():
             logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] }')                                
             if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00:
                 install_swarmNode_config(config_data)
-                coordinator_socket.sendall(bytes( "OK!".encode() ))
+                ap_socket.sendall(bytes( "OK!".encode() ))
                 
                 while True:
                     user_input = input("Enter 1 to send a join request")
