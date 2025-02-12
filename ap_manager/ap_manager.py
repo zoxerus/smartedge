@@ -177,9 +177,9 @@ def exit_handler():
 # this connects to the TCP server running in the swarm node and sends the configuration as a string
 def send_swarmNode_config(config_messge, node_socket_server_address):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_socket_client:
-        node_socket_client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        node_socket_client.settimeout(10)
         try:
+            node_socket_client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            node_socket_client.settimeout(10)
             node_socket_client.connect(node_socket_server_address)
             node_socket_client.sendall( bytes( config_messge.encode() ))
             response = node_socket_client.recv(1024).decode()
@@ -279,7 +279,7 @@ def get_next_available_vxlan_id():
     return result 
 
 
-def handle_new_connected_station(station_physical_mac_address):
+async def handle_new_connected_station(station_physical_mac_address):
     logger.debug(f"handling newly connected staion {station_physical_mac_address}")
     
     
@@ -530,8 +530,8 @@ def monitor_stations():
         if output_line_as_word_array[INDEX_IW_EVENT_ACTION] == IW_TOOL_JOINED_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
             logger.debug( '\nNew Station MAC: ' + station_physical_mac_address )
-            handle_new_connected_station(station_physical_mac_address=station_physical_mac_address)
-            # asyncio.run( handle_new_connected_station(station_physical_mac_address=station_physical_mac_address) )
+            
+            asyncio.run( handle_new_connected_station(station_physical_mac_address=station_physical_mac_address) )
 
         elif output_line_as_word_array[INDEX_IW_EVENT_ACTION] ==   IW_TOOL_LEFT_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
