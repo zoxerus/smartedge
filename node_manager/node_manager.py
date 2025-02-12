@@ -85,17 +85,17 @@ ACCESS_POINT_IP = ''
 
 join_queue = queue.Queue()
 
-# swarmNode_config = {
-#     # STRs.VXLAN_ID : None,
-#     # STRs.VETH1_VIP: '',
-#     # STRs.SWARM_ID: '',
-#     # STRs.VETH1_VMAC: '',
-#     # STRs.COORDINATOR_VIP: '',
-#     # STRs.COORDINATOR_TCP_PORT: '',
-#     # STRs.AP_ID: '',
-#     # STRs.AP_IP: '',
-#     # STRs.AP_MAC: ''
-# }
+gb_swarmNode_config = {
+    # STRs.VXLAN_ID : None,
+    # STRs.VETH1_VIP: '',
+    # STRs.SWARM_ID: '',
+    # STRs.VETH1_VMAC: '',
+    # STRs.COORDINATOR_VIP: '',
+    # STRs.COORDINATOR_TCP_PORT: '',
+    # STRs.AP_ID: '',
+    # STRs.AP_IP: '',
+    # STRs.AP_MAC: ''
+}
 
 last_request_id = 0
 
@@ -135,12 +135,13 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
 def handle_tcp_communication():
-    global last_request_id
+    global last_request_id, gb_swarmNode_config
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_manager_socket:
         try:
             set_keepalive_linux(sock= node_manager_socket, after_idle_sec=1, interval_sec=3, max_fails= 5)
             node_manager_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             node_manager_socket.bind( ('0.0.0.0', 29997) )
+            logger.debug('Node Manager Listening on port 29997 ...')
         except Exception as e:
             print(f'Exception in Node Manager Socket: {e}')
         while True:
@@ -150,6 +151,7 @@ def handle_tcp_communication():
             logger.debug('received: ', comm_buffer)
             
             config_data = json.loads(comm_buffer)
+            gb_swarmNode_config = config_data
             logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] }')                                
             if config_data[CMKs.TYPE] == STRs.JOIN_REQUEST_00:
                 install_swarmNode_config(config_data)
@@ -253,16 +255,17 @@ def exit_handler():
         
         
 def handle_disconnection():
+    global gb_swarmNode_config
     logger.debug( '\nHandling Disconnection:\n'  )
-    exit_commands = [
-        'ifconfig veth1 0.0.0.0',
-        'nikss-ctl del-port pipe 0 dev veth0',
-        f"nikss-ctl del-port pipe 0 dev vxlan{swarmNode_config[STRs.VXLAN_ID]}",
-        'nikss-ctl table delete pipe 0 ingress_route',
-        'nikss-ctl pipeline unload id 0 ',
-        f"ip link delete vxlan{swarmNode_config[STRs.VXLAN_ID]}"
-    ]
     try:
+        exit_commands = [
+            'ifconfig veth1 0.0.0.0',
+            'nikss-ctl del-port pipe 0 dev veth0',
+            f"nikss-ctl del-port pipe 0 dev vxlan{gb_swarmNode_config[STRs.VXLAN_ID]}",
+            'nikss-ctl table delete pipe 0 ingress_route',
+            'nikss-ctl pipeline unload id 0 ',
+            f"ip link delete vxlan{gb_swarmNode_config[STRs.VXLAN_ID]}"
+        ]
         for command in exit_commands:
             res = subprocess.run( command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if (res.stderr):
