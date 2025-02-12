@@ -159,19 +159,19 @@ def initialize_program():
 
 # a handler to clean exit the programs
 def exit_handler():
-    logger.debug('Handling exit')
-    logger.debug(f'Created vxlan ids: {created_vxlans}') 
+    pass
+    # logger.debug('Handling exit')
+    # logger.debug(f'Created vxlan ids: {created_vxlans}') 
                
-    # delete any created vxlans during the program lifetime
-    for vxlan_id in created_vxlans:
-        try:
-            delete_vxlan_shell_command = "ip link del se_vxlan%s" % vxlan_id
-            result = subprocess.run(delete_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-            db.delete_node_from_swarm_database(database_type=db.STR_DATABASE_TYPE_CASSANDRA, session=database_session,
-                                    node_swarm_id= vxlan_id)
-            logger.debug(f'deleted vxlan{vxlan_id},\n\t feedback: \n {result.stdout.strip() }')
-        except Exception as e:
-            logger.error(repr(e))
+    # # delete any created vxlans during the program lifetime
+    # for vxlan_id in created_vxlans:
+    #     try:
+    #         delete_vxlan_shell_command = "ip link del se_vxlan%s" % vxlan_id
+    #         result = subprocess.run(delete_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+    #         db.delete_node_from_swarm_database(node_swarm_id= vxlan_id)
+    #         logger.debug(f'deleted vxlan{vxlan_id},\n\t feedback: \n {result.stdout.strip() }')
+    #     except Exception as e:
+    #         logger.error(repr(e))
 
 # a function for sending the configuration to the swarm node
 # this connects to the TCP server running in the swarm node and sends the configuration as a string
@@ -321,7 +321,7 @@ def handle_new_connected_station(station_physical_mac_address):
         attach_vxlan_to_bmv2_command = "port_add vxlan%s %s" % (vxlan_id, vxlan_id)
         bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command)
         
-        node_s0_ip = DEFAULT_SUBNET.split('.')[:3]
+        node_s0_ip = str(DEFAULT_SUBNET).split('.')[:3]
         node_s0_ip.append(station_physical_ip_address.split('.')[3])
         node_s0_ip = '.'.join(node_s0_ip)
         
