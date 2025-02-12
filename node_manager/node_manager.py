@@ -17,6 +17,7 @@ import socket
 import ipaddress
 import os
 import json
+import lib.global_config as cfg
 import lib.helper_functions as utils
 import lib.global_constants as cts
 
@@ -140,8 +141,8 @@ def handle_tcp_communication():
         try:
             set_keepalive_linux(sock= node_manager_socket, after_idle_sec=1, interval_sec=3, max_fails= 5)
             node_manager_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            node_manager_socket.bind( ('0.0.0.0', 29997) )
-            logger.debug('Node Manager Listening on port 29997 ...')
+            node_manager_socket.bind( ('0.0.0.0', cfg.node_manager_tcp_port) )
+            logger.debug(f'Node Manager Listening on port {cfg.node_manager_tcp_port} ...')
         except Exception as e:
             print(f'Exception in Node Manager Socket: {e}')
         while True:
