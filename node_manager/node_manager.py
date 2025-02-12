@@ -145,7 +145,7 @@ def handle_tcp_communication():
             set_keepalive_linux(sock= node_manager_socket, after_idle_sec=1, interval_sec=3, max_fails= 5)
             node_manager_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             node_manager_socket.bind( ('0.0.0.0', cfg.node_manager_tcp_port) )
-            print('Next Line is a log entry')
+
             logger.debug(f'Node Manager Listening on port {cfg.node_manager_tcp_port} ...')
         except Exception as e:
             logger.error(f'Exception in Node Manager Socket: {e}')
@@ -153,7 +153,7 @@ def handle_tcp_communication():
             node_manager_socket.listen()
             ap_socket, ap_address = node_manager_socket.accept()
             comm_buffer = ap_socket.recv(1024).decode()
-            logger.debug('received: ', comm_buffer)
+            logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
             gb_swarmNode_config = config_data
             logger.debug(f'Handling Join Type { config_data[CMKs.TYPE] }')                                
