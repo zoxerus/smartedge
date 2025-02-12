@@ -201,7 +201,7 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
         logger.error(f'\nCould not create se_vxlan{vxlan_id}:\n\t {result.stderr}')
         return -1
     
-    logger.debug(f'\nCreated se_vxlan{vxlan_id}:\n\t {result.stdout}')
+    logger.debug(f'\nCreated se_vxlan{vxlan_id}')
     created_vxlans.add(vxlan_id)
     
     logger.debug(f'\nCreated host IDs:\n\t {created_vxlans}')            
@@ -210,7 +210,7 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
     if (result.stderr):
         logger.error(f'\nCould not activate interface se_vxlan{vxlan_id}:\n\t {result.stderr}')
         return -1
-    logger.debug(f'\nActivated interface se_vxlan{vxlan_id}:\n\t {result.stdout}')
+    logger.debug(f'\nActivated interface se_vxlan{vxlan_id}')
     return vxlan_id
         
 
@@ -318,14 +318,14 @@ def handle_new_connected_station(station_physical_mac_address):
         dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
         bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
         
-        attach_vxlan_to_bmv2_command = "port_add vxlan%s %s" % (vxlan_id, vxlan_id)
+        attach_vxlan_to_bmv2_command = "port_add se_vxlan%s %s" % (vxlan_id, vxlan_id)
         bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command)
         
         node_s0_ip = str(DEFAULT_SUBNET).split('.')[:3]
         node_s0_ip.append(station_physical_ip_address.split('.')[3])
         node_s0_ip = '.'.join(node_s0_ip)
         
-        connected_stations[station_physical_mac_address] = [ station_vmac ,station_vip, vxlan_id]
+        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
         logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations}")
         
 
