@@ -331,7 +331,7 @@ def handle_new_connected_station(station_physical_mac_address):
 
         swarmNode_config = {
             CMKs.TYPE: STRs.JOIN_REQUEST_00,
-            STRs.VETH1_VIP: node_ap_ip,
+            STRs.VETH1_VIP: node_s0_ip,
             STRs.VXLAN_ID: vxlan_id,
             STRs.SWARM_ID: 0,
             STRs.COORDINATOR_VIP: cfg.coordinator_phyip,
