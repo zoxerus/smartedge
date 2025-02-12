@@ -28,6 +28,17 @@ from argparse import ArgumentParser
 CMKs = cts.Control_Message_Keys
 STRs = cts.String_Constants
 
+print('i in CMKs')
+for i in CMKs:
+    print(i.name,':', i.value)
+
+print('i in STRs')
+for i in STRs:
+    print(i.name,':', i.value)
+
+
+
+
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--log-level",type=int, default=50, help="logging level")
