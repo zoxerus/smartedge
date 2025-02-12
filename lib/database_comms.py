@@ -61,8 +61,7 @@ def connect_to_database(host, port):
 def execute_query(query):
     try:
         result =  DATABASE_SESSION.execute(query)
-        data = [dict(row) for row in result]
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{data}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.one()}")
         return result.one()
     except Exception as e:
         db_logger.debug(f"Error in query:\n\t {query}, Error message {repr(e)}")
