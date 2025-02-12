@@ -1,6 +1,11 @@
 from enum import Enum, auto
 
 class String_Constants(str, Enum):
+    def __str__(self):
+        return str(self.value)
+    def __repr__(self):
+        return str(self.value)
+    
     TYPE = auto()
     REQUIST_ID = auto()
     THIS_NODE_UUID = auto()
