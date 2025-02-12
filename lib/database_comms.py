@@ -182,7 +182,7 @@ def insert_into_art(node_uuid, current_ap, swarm_id, ap_port, node_ip):
             '{current_ap}', 
             {swarm_id},
             '{node_ip}',
-            {ap_port} 
+            {ap_port},
             toTimeStamp(now()) 
         ) IF NOT EXISTS;
             """
