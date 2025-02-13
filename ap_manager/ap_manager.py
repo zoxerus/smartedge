@@ -294,10 +294,12 @@ async def handle_new_connected_station(station_physical_mac_address):
     
     # # Then we search the ART  to see if the node is present in there
     node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
-    node_info = node_db_result.one()
+    node_info = None
+    if (node_db_result != None):
+        node_info = node_db_result.one()
     
     # # in case the node is not present in the ART
-    if (node_db_result == None or node_info.node_current_swarm == 0):
+    if ( node_info == None or node_info.node_current_swarm == 0):
         logger.debug(f'node_db_result == None or node_info.node_current_swarm == 0 for {SN_UUID}')
         
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
