@@ -335,9 +335,10 @@ def monitor_wifi_status():
   
 def main():
     print('program started')
-    t1 = threading.Thread(target=handle_tcp_communication, args=() ).start()
-    t2 = threading.Thread(target= monitor_wifi_status, args=() ).start()
-    
+    t1 = threading.Thread(target=handle_tcp_communication, args=() )
+    t2 = threading.Thread(target= monitor_wifi_status, args=() )
+    t1.start()
+    t2.start()
     t1.join()
     t2.join()
 
