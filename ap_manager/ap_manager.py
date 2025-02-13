@@ -20,6 +20,7 @@ import lib.bmv2_thrift_lib as bmv2
 import os
 import asyncio
 import lib.global_constants as cts
+from lib.helper_functions import *
 import json
 import concurrent.futures
 
@@ -101,12 +102,7 @@ loopback_if = 'lo:0'
 db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
 database_session = db.connect_to_database(cfg.database_hostname, cfg.database_port)
 db.DATABASE_SESSION = database_session
-def int_to_mac(macint):
-    if type(macint) != int:
-        raise ValueError('invalid integer')
-    return ':'.join(['{}{}'.format(a, b)
-                     for a, b
-                     in zip(*[iter('{:012x}'.format(macint ))]*2)])  # + 2199023255552
+
 
 THIS_AP_UUID = None
 for snic in psutil.net_if_addrs()[loopback_if]:
@@ -265,17 +261,6 @@ def get_ip_from_arp_by_physical_mac(physical_mac):
                 return ip
  
 
-
-def assign_virtual_mac_and_ip_by_host_id(host_id):
-    station_virtual_ip_address = str( THIS_SWARM_SUBNET + host_id )
-    station_virtual_mac_address = int_to_mac(int( THIS_SWARM_SUBNET + host_id ))
-    
-    logger.debug( f'\nAssigned Station\'s Virtual IP: {station_virtual_ip_address}' )
-    logger.debug( f'\nAssigned Station\'s Virtual MAC: {station_virtual_mac_address}')
-    
-    return station_virtual_mac_address, station_virtual_ip_address
-
-
 def get_next_available_vxlan_id():
     shell_command = "ip -d link show | awk '/vxlan id/ {print $3}' "
     process_ret = subprocess.run(shell_command, text=True, shell=True, stdout=subprocess.PIPE )
@@ -399,11 +384,14 @@ async def handle_new_connected_station(station_physical_mac_address):
                 return
             
         host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
-                    max_host_id=cfg.this_swarm_dhcp_end, node_physical_mac=station_physical_mac_address)
+                    max_host_id=cfg.this_swarm_dhcp_end, uuid=SN_UUID)
         
-        result = assign_virtual_mac_and_ip_by_host_id(host_id)
+        result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
         station_vmac= result[0]
         station_vip = result[1]
+        
+        logger.debug( f'\nAssigned Station\'s Virtual IP: {station_vip}' )
+        logger.debug( f'\nAssigned Station\'s Virtual MAC: {station_vmac}')
         
         logger.debug( f'\nStation {station_physical_mac_address}\t{station_physical_ip_address}\n\t' +  
                     f'assigned vIP: {station_vip} and vMAC: {station_vmac}')

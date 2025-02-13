@@ -178,7 +178,8 @@ def handle_tcp_communication():
                         STRs.TYPE:           STRs.JOIN_REQUEST_00.value,
                         STRs.REQUIST_ID:     last_request_id,
                         STRs.THIS_NODE_UUID: THIS_NODE_UUID,
-                        STRs.THIS_NODE_APID: config_data[STRs.AP_ID]
+                        STRs.THIS_NODE_APID: config_data[STRs.AP_ID],
+                        STRs.VXLAN_ID:       config_data[STRs.VXLAN_ID]
                     }
                     last_request_id = last_request_id + 1
                     
@@ -195,6 +196,7 @@ def handle_tcp_communication():
                         
                         response = coordinator_socket.recv(1024).decode()
                         if (response.split()[0] == 'Accepted:'):
+                            logger.debug('Node Accepted in Swarm')
                             pass                       
                         
                 except Exception as e:

@@ -114,20 +114,20 @@ def insert_node_into_swarm_database(host_id, this_ap_id, node_vip, node_vmac, no
         result = execute_query(query)
         return result
 
-def reuse_node_swarm_id(node_physical_mac):
+def reuse_node_swarm_id(uuid):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
         query = f""" 
         SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} from 
         {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}
-        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_PHYSICAL_MAC} = '{node_physical_mac}' ALLOW FILTERING;
+        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{uuid}' ALLOW FILTERING;
         """
         result = execute_query(query)
         return result
 
 # GET NEXT AVAILABLE HOST ID FROM SWARM TABLE
-def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id, node_physical_mac=None):
+def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id, uuid):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
-        first_result = reuse_node_swarm_id(node_physical_mac)
+        first_result = reuse_node_swarm_id(uuid)
         if first_result.one() == None:   
             query = f""" SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} FROM 
                 {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}"""

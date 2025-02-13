@@ -9,7 +9,7 @@ import queue
 sys.path.append('..')
 sys.path.append('.')
 
-import lib.global_config as global_config
+import lib.global_config as cfg
 import ipaddress
 import socket
 import re
@@ -19,20 +19,12 @@ import ipaddress
 import json
 import threading
 import lib.bmv2_thrift_lib as bmv2
-import lib.database_comms as db_comms
+import lib.database_comms as db
 import lib.global_constants as cts
+from lib.helper_functions import *
 from argparse import ArgumentParser
 
 STRs = cts.String_Constants
-
-def int_to_mac(macint):
-    if type(macint) != int:
-        raise ValueError('invalid integer')
-    return ':'.join(['{}{}'.format(a, b)
-                     for a, b
-                     in zip(*[iter('{:012x}'.format(macint ))]*2)])  # + 2199023255552
-
-
 
 parser = ArgumentParser()
 parser.add_argument("-l", "--log-level",type=int, default=10, help="logging level")
@@ -65,17 +57,10 @@ logger.addHandler(log_console_handler)
 
 logger.debug(f'running in: {dir_path}')
 
-db_comms.db_logger = logger
+db.db_logger = logger
 bmv2.bmv2_logger = logger
 
 thread_q = queue.Queue()
-
-def int_to_mac(macint):
-    if type(macint) != int:
-        raise ValueError('invalid integer')
-    return ':'.join(['{}{}'.format(a, b)
-                     for a, b
-                     in zip(*[iter('{:012x}'.format(macint ))]*2)])  # + 2199023255552
 
 # TCP related
 COORDINATOR_MAX_TCP_CONNNECTIONS = 5
@@ -86,29 +71,15 @@ SWARM_NODE_TCP_SERVER = ('', 29997)
 
 DEFAULT_THRIFT_PORT = bmv2.DEFAULT_THRIFT_PORT
 
-THIS_SWARM_SUBNET=ipaddress.ip_address( global_config.this_swarm_subnet )
+THIS_SWARM_SUBNET=ipaddress.ip_address( cfg.this_swarm_subnet )
 
-db_comms.DATABASE_IN_USE = db_comms.STR_DATABASE_TYPE_CASSANDRA
+db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
 
-database_session = db_comms.init_database('0.0.0.0', global_config.database_port)
-db_comms.DATABASE_SESSION = database_session
+database_session = db.init_database('0.0.0.0', cfg.database_port)
+db.DATABASE_SESSION = database_session
 
 # a function to parse a string and extract integers
 # needed for interactiosn with bmv2
-
-def extract_numbers(lst):
-    """
-    Extracts numbers from a list of strings using regular expressions.
-    """
-    # Compile a regular expression pattern to match digits
-    pattern = re.compile(r'\d+')
-     
-    # Use the pattern to extract all digits from each string in the list
-    extracted_numbers = [pattern.findall(s) for s in lst]
-     
-    # Convert the extracted numbers from strings to integers
-    return [int(x) for sublist in extracted_numbers for x in sublist]
-
 
 
 # this updates the list of broadcast ports in bmv2
@@ -128,7 +99,7 @@ def add_bmv2_swarm_broadcast_port_to_ap(ap_ip, thrift_port, switch_port ):
 
 def get_ap_ip_from_ap_id(ap_id):
     try:
-        return global_config.ap_list[ap_id][0]
+        return cfg.ap_list[ap_id][0]
     except:
         return None
     
@@ -174,7 +145,7 @@ class Swarm_Node_Handler:
                 ret_val = self.user_input_respond_to_node_request()
                 if ret_val == 1:
                     self.node_socket.send( bytes( f'Accepted: {self.message}'.encode() ) )
-                    db_comms.delete_node_from_swarm_database(self.node_swarm_id)
+                    db.delete_node_from_swarm_database(self.node_swarm_id)
                 else:
                     self.node_socket.send( bytes( f'Rejected: {self.message}'.encode() ) )
                     
@@ -182,7 +153,7 @@ class Swarm_Node_Handler:
                 pass
             
     def reject_join_request(self):
-        db_comms.delete_node_from_swarm_database(self.node_swarm_id)
+        db.delete_node_from_swarm_database(self.node_swarm_id)
         self.node_socket.send( bytes( f'Rejected: {self.req_id}'.encode() ) )
         print(f'Rejected node {self.node_uuid} with request {self.req_id}')
         
@@ -190,15 +161,44 @@ class Swarm_Node_Handler:
         
     def accept_join_request(self):
         # TODO: make this automatic
+        
+        SN_UUID = self.node_request[STRs.THIS_NODE_UUID]
+        
         # first we get the ip of the access point from the ap list
-        ap_ip = get_ap_ip_from_ap_id(self.node_swarm_ap)
+        ap_ip = get_ap_ip_from_ap_id(self.node_request[STRs.AP_ID] )
         if (ap_ip == None):
-            logger.error(f'Error: could not find IP of access point {self.node_swarm_ap}')
+            logger.error(f'Error: could not find IP of access point {self.node_request[STRs.AP_ID]}')
             return
-    
-        db_comms.update_db_with_joined_node(self.node_uuid, self.node_swarm_id)
+        
+        
+        host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
+                    max_host_id=cfg.this_swarm_dhcp_end, uuid=SN_UUID)
+        
+        result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
+        
+        station_vmac= result[0]
+        station_vip = result[1]
+        
+        
+        swarmNode_config = {
+            STRs.TYPE: STRs.JOIN_REQUEST_00.value,
+            STRs.VETH1_VIP: station_vip,
+            STRs.VETH1_VMAC: station_vmac,
+            STRs.SWARM_ID: 1,
+            STRs.COORDINATOR_VIP: cfg.coordinator_vip,
+            STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port
+        }
+        try:    
+            self.node_socket.send( bytes( f'Accepted: {self.req_id}'.encode() ) )
+            logger.debug(f'Accepted node {SN_UUID} with request {self.node_request[STRs.REQUIST_ID]}')
+        except Exception as e:
+            logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
+            return 
+        
+        
+        db.update_db_with_joined_node(self.node_request[STRs.THIS_NODE_UUID], 1)
                     
-        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_swarm_id)
+        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID])
 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
@@ -211,33 +211,29 @@ class Swarm_Node_Handler:
         #                                             thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
         
         # bmv2.delete_forwarding_entry_from_bmv2(
-        #     communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {global_config.coordinator_vip}',
+        #     communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {cfg.coordinator_vip}',
         #     thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
 
         # bmv2.delete_forwarding_entry_from_bmv2(
         #     communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name= 'MyIngress.tb_swarm_control', 
-        #     key= f'{global_config.swarm_backbone_switch_port} {self.node_swarm_ip}', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
+        #     key= f'{cfg.swarm_backbone_switch_port} {self.node_swarm_ip}', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
         
         
         # insert table entries in the rest of the APs
-        node_ap_ip = global_config.ap_list[self.node_swarm_ap][0]
-        for key in global_config.ap_list.keys():
+        node_ap_ip = cfg.ap_list[self.node_request[STRs.AP_ID]][0]
+        for key in cfg.ap_list.keys():
             if key != self.node_swarm_ap:
-                ap_ip = global_config.ap_list[key][0]
+                ap_ip = cfg.ap_list[key][0]
                 ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{self.node_swarm_ip}/32' , 
-                        action_params= f'{global_config.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
                 
                 # entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                 #                         table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
-                #                         match_keys= f'{node_swarm_mac}', action_params= str(global_config.swarm_backbone_switch_port),
-                #                         thrift_ip= global_config.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT)
-                    
-                                
-        self.node_socket.send( bytes( f'Accepted: {self.req_id}'.encode() ) )
-        print(f'Accepted node {self.node_uuid} with request {self.req_id}')
+                #                         match_keys= f'{node_swarm_mac}', action_params= str(cfg.swarm_backbone_switch_port),
+                #                         thrift_ip= cfg.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT)
          
 
 
