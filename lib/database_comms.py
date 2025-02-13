@@ -178,7 +178,7 @@ def insert_into_art(node_uuid, current_ap, swarm_id, ap_port, node_ip):
             '{node_ip}',
             {ap_port},
             toTimeStamp(now()) 
-        ) IF NOT EXISTS;
+        ) ;
             """
         result = execute_query(query)
         return result
