@@ -113,15 +113,15 @@ class Swarm_Node_Handler:
 
         
     def user_input_respond_to_node_request(self):
-        user_input = -1
+        user_input = ''
         while True:
             try:
-                user_input = int( input("Enter 1 to Accept the request, 0 for Reject: ") )
+                user_input = input("Enter 1 to Accept the request, 0 for Reject: ") 
             except Exception as e:
                 print("Input Error")
                 print(e)
                 continue
-            if (user_input == 1 or user_input == 0):
+            if (user_input == '1' or user_input == '0'):
                 return user_input
             else:
                 print('Wrong Input')
@@ -198,7 +198,7 @@ class Swarm_Node_Handler:
         
         db.update_db_with_joined_node(self.node_request[STRs.THIS_NODE_UUID], 1)
                     
-        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID])
+        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID])1
 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
