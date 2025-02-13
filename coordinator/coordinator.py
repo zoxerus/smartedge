@@ -138,8 +138,9 @@ class Swarm_Node_Handler:
             case STRs.LEAVE_REQUEST:
                 ret_val = self.user_input_respond_to_node_request()
                 if ret_val == 1:
-                    self.node_socket.send( bytes( f'Accepted: {self.message}'.encode() ) )
-                    db.delete_node_from_swarm_database(self.node_swarm_id)
+                    pass
+                    # self.node_socket.send( bytes( f'Accepted: {self.message}'.encode() ) )
+                    # db.delete_node_from_swarm_database(self.node_swarm_id)
                 else:
                     self.node_socket.send( bytes( f'Rejected: {self.message}'.encode() ) )
                     
@@ -147,9 +148,11 @@ class Swarm_Node_Handler:
                 pass
             
     def reject_join_request(self):
-        db.delete_node_from_swarm_database(self.node_swarm_id)
-        self.node_socket.send( bytes( f'Rejected: {self.req_id}'.encode() ) )
-        print(f'Rejected node {self.node_uuid} with request {self.req_id}')
+        pass
+        #TODO
+        # db.delete_node_from_swarm_database(self.node_swarm_id)
+        # self.node_socket.send( bytes( f'Rejected: {self.req_id}'.encode() ) )
+        # print(f'Rejected node {self.node_uuid} with request {self.req_id}')
         
         
         
@@ -183,8 +186,9 @@ class Swarm_Node_Handler:
             STRs.COORDINATOR_VIP: cfg.coordinator_vip,
             STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port
         }
+        config_message = json.dumps(swarmNode_config)
         try:    
-            self.node_socket.send( bytes( f'Accepted: {self.req_id}'.encode() ) )
+            self.node_socket.sendall( bytes( config_message.encode() ) )
             logger.debug(f'Accepted node {SN_UUID} with request {self.node_request[STRs.REQUIST_ID]}')
         except Exception as e:
             logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
@@ -198,7 +202,7 @@ class Swarm_Node_Handler:
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{self.node_swarm_ip}/32' , 
-            action_params= f'{str(self.node_swarm_id)}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
+            action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
      
         # entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
         #                                             table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
