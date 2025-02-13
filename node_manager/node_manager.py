@@ -188,16 +188,22 @@ def handle_tcp_communication():
                     
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
                         print(f'connecting to {config_data[STRs.COORDINATOR_VIP]}:{config_data[STRs.COORDINATOR_TCP_PORT]}')
-                        coordinator_socket.settimeout(10)
+                        coordinator_socket.settimeout(120)
                         coordinator_socket.connect((config_data[STRs.COORDINATOR_VIP], config_data[STRs.COORDINATOR_TCP_PORT] ))
                         coordinator_socket.sendall(bytes( join_request_json_string.encode() ))
                         
-                        print(f'sent {join_request_dic} to coordinator')
+                        logger.debug(f'sent {join_request_dic} to coordinator')
                         
                         response = coordinator_socket.recv(1024).decode()
-                        if (response.split()[0] == 'Accepted:'):
+                        
+                        response_data = json.loads(response)
+                        if (response_data[STRs.TYPE] == STRs.JOIN_REQUEST_00.value):
                             logger.debug('Node Accepted in Swarm')
-                            pass                       
+                            try:
+                                install_swarmNode_config(response_data)
+                                ap_socket.sendall(bytes( "OK!".encode() ))
+                            except Exception as e:
+                                logger.error(repr(e))                   
                         
                 except Exception as e:
                     print(f'Error installing config: {repr(e)} Leaving Access Point' )

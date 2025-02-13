@@ -113,14 +113,8 @@ class Swarm_Node_Handler:
 
         
     def user_input_respond_to_node_request(self):
-        user_input = ''
         while True:
-            try:
-                user_input = input("Enter 1 to Accept the request, 0 for Reject: ") 
-            except Exception as e:
-                print("Input Error")
-                print(e)
-                continue
+            user_input = input("Enter 1 to Accept the request, 0 for Reject: ") 
             if (user_input == '1' or user_input == '0'):
                 return user_input
             else:
@@ -184,6 +178,7 @@ class Swarm_Node_Handler:
             STRs.TYPE: STRs.JOIN_REQUEST_00.value,
             STRs.VETH1_VIP: station_vip,
             STRs.VETH1_VMAC: station_vmac,
+            STRs.VXLAN_ID: self.node_request[STRs.VXLAN_ID],
             STRs.SWARM_ID: 1,
             STRs.COORDINATOR_VIP: cfg.coordinator_vip,
             STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port
@@ -235,6 +230,9 @@ class Swarm_Node_Handler:
                 #                         match_keys= f'{node_swarm_mac}', action_params= str(cfg.swarm_backbone_switch_port),
                 #                         thrift_ip= cfg.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT)
          
+
+
+
 
 
 # a function to configure the keep alive of the tcp connection
