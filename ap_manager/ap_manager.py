@@ -294,11 +294,11 @@ async def handle_new_connected_station(station_physical_mac_address):
     
     # # Then we search the ART  to see if the node is present in there
     node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
-    
+    node_info = node_db_result.one()
     
     # # in case the node is not present in the ART
-    if (node_db_result == None or node_db_result.node_current_swarm == 0):
-        logger.debug(f'node_db_result == None or node_db_result.node_current_swarm == 0 for {SN_UUID}')
+    if (node_db_result == None or node_info.node_current_swarm == 0):
+        logger.debug(f'node_db_result == None or node_info.node_current_swarm == 0 for {SN_UUID}')
         
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -374,7 +374,7 @@ async def handle_new_connected_station(station_physical_mac_address):
 
         
     else :
-        logger.debug(f'node {SN_UUID} is part of swarm {node_db_result.node_current_swarm}')
+        logger.debug(f'node {SN_UUID} is part of swarm {node_info.node_current_swarm}')
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $5}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if (proc_ret.stdout == '' ):
