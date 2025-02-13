@@ -274,6 +274,7 @@ def swarm_coordinator():
         serversocket.listen(COORDINATOR_MAX_TCP_CONNNECTIONS)
         print('Coordinator Script is Running')
         while True:
+            logger.debug(f'Waiting for Requests ... ')
             (node_socket, address) = serversocket.accept()
             logger.debug(f'received connection request from {address}')
             handle_swarm_node(node_socket=node_socket, address=address)
