@@ -332,7 +332,7 @@ async def handle_new_connected_station(station_physical_mac_address):
             STRs.SWARM_ID: 0,
             STRs.COORDINATOR_VIP: cfg.coordinator_phyip,
             STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port,
-            STRs.AP_ID: THIS_AP_UUID
+            STRs.THIS_NODE_APID: THIS_AP_UUID
         }
         
         swarmNode_config_message = json.dumps(swarmNode_config)   
