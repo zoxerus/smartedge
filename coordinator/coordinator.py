@@ -116,6 +116,7 @@ class Swarm_Node_Handler:
         while True:
             user_input = input("Enter 1 to Accept the request, 0 for Reject: ") 
             if (user_input == '1' or user_input == '0'):
+                print('Accepting the node')
                 return user_input
             else:
                 print('Wrong Input')
@@ -127,7 +128,7 @@ class Swarm_Node_Handler:
             case STRs.JOIN_REQUEST_00:
                 logger.debug(f"Handling Request with type {STRs.JOIN_REQUEST_00.name}")
                 ret_val = self.user_input_respond_to_node_request()
-                if ret_val == 1:
+                if ret_val == '1':
                     self.accept_join_request()
                 else:
                     self.reject_join_request()
@@ -145,7 +146,7 @@ class Swarm_Node_Handler:
                     self.node_socket.send( bytes( f'Rejected: {self.message}'.encode() ) )
                     
             case _:
-                pass
+                logger.debug(f"Request Type Unkown {self.node_request[STRs.TYPE]}")
             
     def reject_join_request(self):
         pass
@@ -158,11 +159,13 @@ class Swarm_Node_Handler:
         
     def accept_join_request(self):
         # TODO: make this automatic
-        
+
         SN_UUID = self.node_request[STRs.THIS_NODE_UUID]
         
+        logger.debug(f'Accecpted Node {SN_UUID} in Swarm')
+        
         # first we get the ip of the access point from the ap list
-        ap_ip = get_ap_ip_from_ap_id(self.node_request[STRs.AP_ID] )
+        ap_ip = get_ap_ip_from_ap_id(self.node_request[STRs.THIS_NODE_APID] )
         if (ap_ip == None):
             logger.error(f'Error: could not find IP of access point {self.node_request[STRs.AP_ID]}')
             return
@@ -176,7 +179,7 @@ class Swarm_Node_Handler:
         station_vmac= result[0]
         station_vip = result[1]
         
-        
+        logger.debug(f'assigning vIP: {station_vip} vMAC: {station_vmac} to {SN_UUID}')
         swarmNode_config = {
             STRs.TYPE: STRs.JOIN_REQUEST_00.value,
             STRs.VETH1_VIP: station_vip,
@@ -187,6 +190,8 @@ class Swarm_Node_Handler:
             STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port
         }
         config_message = json.dumps(swarmNode_config)
+        
+        logger.debug(f'Sending {config_message}')
         try:    
             self.node_socket.sendall( bytes( config_message.encode() ) )
             logger.debug(f'Accepted node {SN_UUID} with request {self.node_request[STRs.REQUIST_ID]}')
@@ -195,13 +200,15 @@ class Swarm_Node_Handler:
             return 
         
         
-        db.update_db_with_joined_node(self.node_request[STRs.THIS_NODE_UUID], 1)
+        db.insert_node_into_swarm_database(host_id=host_id, this_ap_id=self.node_request[STRs.THIS_NODE_APID],
+                                           node_vip= station_vip, node_vmac= station_vmac, node_phy_mac='',
+                                           node_uuid=SN_UUID, status=db.db_defines.SWARM_STATUS.JOINED.value)
                     
         add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID])
 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
-            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{self.node_swarm_ip}/32' , 
+            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
             action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
      
         # entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
@@ -261,7 +268,11 @@ def handle_swarm_node(node_socket, address):
         message_handler = Swarm_Node_Handler(message= message, node_socket=node_socket)
         message_handler.handle_message()
     except Exception as e:
-        print(e)
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        print(f"Exception Type: {exc_type.__name__}")
+        print(f"File: {exc_tb.tb_frame.f_code.co_filename}")
+        print(f"Line Number: {exc_tb.tb_lineno}")
+        logger.error(f'Error Handling swarm Node {address}: {e}')
         
  
 

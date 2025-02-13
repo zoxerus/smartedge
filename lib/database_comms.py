@@ -62,7 +62,7 @@ def execute_query(query):
     try:
         result =  DATABASE_SESSION.execute(query)
         db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.one()}")
-        return result.one()
+        return result
     except Exception as e:
         db_logger.debug(f"Error in query:\n\t {query}, Error message {repr(e)}")
         return -1
@@ -83,7 +83,7 @@ def update_db_with_joined_node(node_uuid, node_swarm_id):
         query = f"""UPDATE {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}
         SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{node_uuid}', 
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.JOINED.value}'
-        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id} IF EXISTS;
+        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
         """
         result = execute_query(query)
         return result
@@ -99,17 +99,17 @@ def update_db_with_left_node(node_swarm_id):
         return result
 
 
-def insert_node_into_swarm_database(host_id, this_ap_id, node_vip, node_vmac, node_phy_mac):
+def insert_node_into_swarm_database(host_id='', this_ap_id='', node_vip='', node_vmac='', node_phy_mac='', node_uuid='', status=''):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
         query = f"""
         INSERT INTO {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE} (
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID}, {db_defines.NAMEOF_DATABASE_FIELD_NODE_CURRENT_AP},
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS}, {db_defines.NAMEOF_DATABASE_FIELD_LAST_UPDATE_TIMESTAMP}, 
         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_IP}, {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_MAC},
-        {db_defines.NAMEOF_DATABASE_FIELD_NODE_PHYSICAL_MAC}
+        {db_defines.NAMEOF_DATABASE_FIELD_NODE_PHYSICAL_MAC}, {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID}
         )
-        VALUES ({host_id}, '{this_ap_id}', '{db_defines.SWARM_STATUS.PENDING.value}', toTimeStamp(now() ),
-        '{node_vip}', '{node_vmac}', '{node_phy_mac}') ;
+        VALUES ({host_id}, '{this_ap_id}', '{status}', toTimeStamp(now() ),
+        '{node_vip}', '{node_vmac}', '{node_phy_mac}', '{node_uuid}') ;
         """
         result = execute_query(query)
         return result

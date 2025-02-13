@@ -18,7 +18,7 @@ import ipaddress
 import os
 import json
 import lib.global_config as cfg
-import lib.helper_functions as utils
+from lib.helper_functions import *
 import lib.global_constants as cts
 
 STRs = cts.String_Constants 
@@ -35,7 +35,7 @@ os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger('SN_Logger')
 
 # this part handles logging to console and to a file for debugging purposes
-log_formatter =  logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s] %(filename)s :\n\t %(message)s \n\n")
+log_formatter =  logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n\t %(message)s \n\n")
 
 # log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
 # log_file_handler.setLevel(args.log_level)
@@ -86,7 +86,9 @@ ACCESS_POINT_IP = ''
 
 
 
-join_queue = queue.Queue()
+q_to_coordinator = queue.Queue()
+q_to_mgr = queue.Queue()
+
 
 gb_swarmNode_config = {
     # STRs.VXLAN_ID : None,
@@ -200,8 +202,11 @@ def handle_tcp_communication():
                         if (response_data[STRs.TYPE] == STRs.JOIN_REQUEST_00.value):
                             logger.debug('Node Accepted in Swarm')
                             try:
-                                install_swarmNode_config(response_data)
-                                ap_socket.sendall(bytes( "OK!".encode() ))
+                                coordinator_socket.sendall(bytes( "OK!".encode() ))
+                                coordinator_socket.close()
+                                
+                                update_config_after_join(response_data)
+
                             except Exception as e:
                                 logger.error(repr(e))                   
                         
@@ -223,6 +228,14 @@ def handle_tcp_communication():
                 coordinator_socket.sendall(bytes( "OK!".encode() ))
             else:
                 logger.error(f'Unkown Message Type {config_data[STRs.TYPE]}')
+
+
+def update_config_after_join(config):
+    veth1_vip   = config[STRs.VETH1_VIP]
+    veth1_vm    = config[STRs.VETH1_VMAC]
+    vxlan_id    = config[STRs.VXLAN_ID]
+    
+
 
 def install_swarmNode_config(swarmNode_config):
     global last_request_id, join_queue, ACCESS_POINT_IP
@@ -276,12 +289,14 @@ def install_swarmNode_config(swarmNode_config):
     
 def exit_handler():
     logger.info('Handling exit')
+    return
     handle_disconnection()
         
         
 def handle_disconnection():
     global gb_swarmNode_config
     logger.debug( '\nHandling Disconnection:\n'  )
+    return
     try:
         exit_commands = [
             'ifconfig veth1 0.0.0.0',
@@ -320,9 +335,11 @@ def monitor_wifi_status():
   
 def main():
     print('program started')
-    threading.Thread(target=handle_tcp_communication, args=() ).start()
-    threading.Thread(target= monitor_wifi_status, args=() ).start()
-
+    t1 = threading.Thread(target=handle_tcp_communication, args=() ).start()
+    t2 = threading.Thread(target= monitor_wifi_status, args=() ).start()
+    
+    t1.join()
+    t2.join()
 
 if __name__ == '__main__':
     atexit.register(exit_handler)
