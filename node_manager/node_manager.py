@@ -35,7 +35,7 @@ os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger('SN_Logger')
 
 # this part handles logging to console and to a file for debugging purposes
-log_formatter =  logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n\t %(message)s \n\n")
+log_formatter =  logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n\t%(message)s\n")
 
 # log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
 # log_file_handler.setLevel(args.log_level)
@@ -315,9 +315,12 @@ def handle_disconnection():
         print(e)    
 
 def monitor_wifi_status(): 
+    last_bssid = ''
+    current_bssid = ''
+    last_connection_timestamp = 0
+    wait_time_before_requesting_new_config = 5
     # this command is run in the shell to monitor wireless events using the iw tool
     monitoring_command = 'nmcli device monitor wlan0'
-
     # python runs the shell command and monitors the output in the terminal
     process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     previous_line = ''
@@ -331,7 +334,23 @@ def monitor_wifi_status():
         if output_line_as_word_array[1] == 'disconnected':
             logger.debug('Disconnected from WiFi')
             # handle_disconnection()
-
+        elif (output_line_as_word_array[1] == 'connected'):
+            current_connection_timestamp = time.time()
+            connection_time_delta = current_connection_timestamp - last_connection_timestamp
+            shell_command = 'iwgetid -r -a'
+            # python runs the shell command and monitors the output in the terminal
+            process = subprocess.run( shell_command.split() , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            current_bssid = process.stdout
+            if (connection_time_delta < wait_time_before_requesting_new_config) and (current_bssid == last_bssid):
+                continue
+            last_bssid = current_bssid
+            shell_command = 'iwgetid -r'
+            # python runs the shell command and monitors the output in the terminal
+            process = subprocess.run( shell_command.split() , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.debug(f'Connected to {process.stdout}')
+            
+  
+  
   
 def main():
     print('program started')
@@ -341,6 +360,9 @@ def main():
     t2.start()
     t1.join()
     t2.join()
+
+
+
 
 if __name__ == '__main__':
     atexit.register(exit_handler)

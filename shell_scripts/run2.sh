@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Set the working directory to where the script path is stored
-# This makes the script executable from anywhere
-SCRIPT_PATH="${BASH_SOURCE[0]:-$0}";
-cd "$( dirname -- "$SCRIPT_PATH"; )";
-
-
 
 SE_BB_VXLAN_ID=10000
 
@@ -55,7 +49,7 @@ done < ./lib/global_config.py
 if [ "$#" != '2' ] || [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
     echo -e "\e[32mError:\e[0m"
     echo -e "Script must be sourced with parameters: \nparam1 Script Type: [ap, co, nd] \nparam2 Log LeveL: [10,20,30,40,50] where 10 is for Debug, 20 for info, 30 for warning, 40 for Error, and 50 is for Critical"
-    echo -e "for example:\nsource ./run ap 1\n"
+    echo -e "for example:\nsource ./run.sh ap 1\n"
     return
 fi
 

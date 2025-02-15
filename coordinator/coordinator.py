@@ -42,7 +42,7 @@ PROGRAM_LOG_FILE_NAME = './logs/coordinator.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger('coordinator_logger')
 # this part handles logging to console and to a file for debugging purposes
-log_formatter = logging.Formatter("\n\nLine:%(lineno)d at %(asctime)s [%(levelname)s] %(filename)s :\n\t %(message)s \n\n")
+log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n\t%(message)s\n")
 
 # log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
 # log_file_handler.setLevel(args.log_level)
@@ -55,7 +55,7 @@ logger.setLevel(args.log_level)
 # logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
 
-logger.debug(f'running in: {dir_path}')
+logger.debug(f'Running in: {dir_path}')
 
 db.db_logger = logger
 bmv2.bmv2_logger = logger

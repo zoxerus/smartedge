@@ -15,7 +15,6 @@ class String_Constants(str, Enum):
     VETH1_VMAC = auto()
     COORDINATOR_VIP = auto()
     COORDINATOR_TCP_PORT = auto()
-    xcv = auto()
     AP_IP = auto()
     AP_MAC = auto()
     SWARM_ID = auto()
