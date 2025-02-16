@@ -276,14 +276,12 @@ def get_next_available_vxlan_id():
 async def handle_new_connected_station(station_physical_mac_address):
     logger.debug(f"handling newly connected staion {station_physical_mac_address}")
     
-    # # Then we search the ART  to see if the node is present in there
-    node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
-    node_info = node_db_result.one()
+    
     # First Step check if node is already in the Connected Nodes 
     # sometimes an already connected station is randomly detected as connecting again, 
     # this check skips the execution of the rest of the code, as the station is already connected and set up.
-    
-    if (station_physical_mac_address in connected_stations.keys() and node_info.current_ap == THIS_AP_UUID ):
+    if (station_physical_mac_address in connected_stations.keys() ):
+        
         logger.warning(f'\nStation {station_physical_mac_address} Connected to {THIS_AP_UUID} but was found already in Connected Stations')
         return
     
@@ -298,7 +296,9 @@ async def handle_new_connected_station(station_physical_mac_address):
     # to do so we first read the UUID (bottom three bytes of MAC address)
     SN_UUID = 'SN:' + station_physical_mac_address[9:]
     
-
+    # # Then we search the ART  to see if the node is present in there
+    node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
+    node_info = node_db_result.one()
     logger.debug(f'node_info: {node_info} for {SN_UUID}')    
     
     # # in case the node is not present in the ART
@@ -515,6 +515,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         node_info = node_db_result.one()
         if ( node_info == None or node_info.current_ap != THIS_AP_UUID):
             bmv2.remove_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=node_info.ap_port)
+            del connected_stations[station_physical_mac_address]
             return
             
         logger.info(f'Removing disconnected Node: {station_physical_mac_address}')    
