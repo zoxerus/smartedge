@@ -8,8 +8,8 @@ class String_Constants(str, Enum):
     
     TYPE = auto()
     REQUIST_ID = auto()
-    THIS_NODE_UUID = auto()
-    THIS_NODE_APID = auto()
+    NODE_UUID = auto()
+    AP_UUID = auto()
     VXLAN_ID = auto()
     VETH1_VIP = auto()
     VETH1_VMAC = auto()
@@ -20,4 +20,19 @@ class String_Constants(str, Enum):
     SWARM_ID = auto()
     JOIN_REQUEST_00 = auto()
     JOIN_REQUEST_01 = auto()
+    SET_CONFIG = auto()
     LEAVE_REQUEST = auto()
+    
+
+STRs = String_Constants
+    
+node_config_json = {
+    STRs.TYPE.name: '',
+    STRs.VETH1_VIP.name: '',
+    STRs.VETH1_VMAC.name: '',
+    STRs.VXLAN_ID.name: '',
+    STRs.SWARM_ID.name: '',
+    STRs.COORDINATOR_VIP.name: '',
+    STRs.COORDINATOR_TCP_PORT.name: '',
+    STRs.AP_UUID.name: ''
+}

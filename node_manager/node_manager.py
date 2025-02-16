@@ -139,7 +139,7 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
-def handle_tcp_communication():
+def handle_communication():
     global last_request_id, gb_swarmNode_config, ACCESS_POINT_IP
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_manager_socket:
         try:
@@ -154,6 +154,7 @@ def handle_tcp_communication():
             node_manager_socket.listen()
             ap_socket, ap_address = node_manager_socket.accept()
             comm_buffer = ap_socket.recv(1024).decode()
+            
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
             logger.debug(f'config_data: {config_data}')
@@ -354,8 +355,8 @@ def monitor_wifi_status():
   
 def main():
     print('program started')
-    t1 = threading.Thread(target=handle_tcp_communication, args=() )
-    t2 = threading.Thread(target= monitor_wifi_status, args=() )
+    t1 = threading.Thread(target=handle_communication, args=() )
+    t2 = threading.Thread(target= monitor_wifi_status, args=())
     t1.start()
     t2.start()
     t1.join()

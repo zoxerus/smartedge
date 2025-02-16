@@ -112,7 +112,7 @@ for snic in psutil.net_if_addrs()[loopback_if]:
 if THIS_AP_UUID == None:
     logger.error("Could not Assign UUID to Node")
     exit()
-logger.debug(f"AP ID: {THIS_AP_UUID}" )
+logger.info(f"AP ID: {THIS_AP_UUID}" )
 
 THIS_AP_ETH_MAC = None
 for snic in psutil.net_if_addrs()[cfg.default_backbone_device]:
@@ -149,7 +149,7 @@ def initialize_program():
     bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
     bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast 01:00:00:00:00:00&&&0x010000000000 => {SWARM_P4_MC_GROUP} 100 ")
     
-    logger.debug('Program Initialized')
+    logger.info('Program Initialized')
     print('AP Started')
 
 # a handler to clean exit the programs
@@ -191,13 +191,13 @@ def send_swarmNode_config(config_messge, node_socket_server_address):
         except Exception as e:
             logger.error(f'Error sending config to {node_socket_server_address}: {e}')
             return -1
-    logger.debug(f'AP has sent this config to the Smart Node:\n\t {config_messge}')
+
 
 
 
 
 def create_vxlan_by_host_id(vxlan_id, remote, port=4789): 
-    logger.debug(f'Adding se_vxlan{vxlan_id}')
+    logger.info(f'Adding se_vxlan{vxlan_id}')
     
     add_vxlan_shell_command = "ip link add se_vxlan%s type vxlan id %s dev %s remote %s dstport %s" % (
         vxlan_id, vxlan_id, DEFAULT_WLAN_DEVICE_NAME, remote, port)
@@ -216,7 +216,7 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
     if (result.stderr):
         logger.error(f'\nCould not activate interface se_vxlan{vxlan_id}:\n\t {result.stderr}')
         return -1
-    logger.debug(f'\nActivated interface se_vxlan{vxlan_id}')
+    logger.info(f'\nActivated interface se_vxlan{vxlan_id}')
     return vxlan_id
         
 
@@ -286,7 +286,7 @@ async def handle_new_connected_station(station_physical_mac_address):
     if (station_physical_ip_address == None ):
         logger.error(f'\nIP not found in ARP for {station_physical_mac_address}. Aborting the handling of the node')
         return
-    logger.debug( f'\nHandling New Station: {station_physical_mac_address} {station_physical_ip_address} at {time.ctime(time.time())}')
+    logger.info( f'\nHandling New Station: {station_physical_mac_address} {station_physical_ip_address} at {time.ctime(time.time())}')
     
     # 2nd Step: Check if Node belong to a Swarm or Not
     # to do so we first read the UUID (bottom three bytes of MAC address)
@@ -294,13 +294,12 @@ async def handle_new_connected_station(station_physical_mac_address):
     
     # # Then we search the ART  to see if the node is present in there
     node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
-    node_info = None
-    if (node_db_result != None):
-        node_info = node_db_result.one()
+    node_info = node_db_result.one()
+    logger.debug(f'node_info: {node_info} {SN_UUID}')    
     
     # # in case the node is not present in the ART
     if ( node_info == None or node_info.node_current_swarm == 0):
-        logger.debug(f'node_db_result == None or node_info.node_current_swarm == 0 for {SN_UUID}')
+        logger.debug(f'Configuring Swarm 0 for {SN_UUID}')    
         
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -327,21 +326,24 @@ async def handle_new_connected_station(station_physical_mac_address):
         node_s0_mac = int_to_mac(int( ipaddress.ip_address(node_s0_ip) ))
         
         swarmNode_config = {
-            STRs.TYPE: STRs.JOIN_REQUEST_00.value,
-            STRs.VETH1_VIP: node_s0_ip,
-            STRs.VETH1_VMAC: node_s0_mac,
-            STRs.VXLAN_ID: vxlan_id,
-            STRs.SWARM_ID: 0,
-            STRs.COORDINATOR_VIP: cfg.coordinator_phyip,
-            STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port,
-            STRs.THIS_NODE_APID: THIS_AP_UUID
+            STRs.TYPE.name: STRs.SET_CONFIG.value,
+            STRs.VETH1_VIP.name: node_s0_ip,
+            STRs.VETH1_VMAC.name: node_s0_mac,
+            STRs.VXLAN_ID.name: vxlan_id,
+            STRs.SWARM_ID.name: 0,
+            STRs.COORDINATOR_VIP.name: cfg.coordinator_phyip,
+            STRs.COORDINATOR_TCP_PORT.name: cfg.coordinator_tcp_port,
+            STRs.AP_UUID.name: THIS_AP_UUID
         }
         
         swarmNode_config_message = json.dumps(swarmNode_config)   
         result = send_swarmNode_config(swarmNode_config_message, (station_physical_ip_address, cfg.node_manager_tcp_port) )
         if (result == -1): # Node faild to configure itself
-            logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+            logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{json.dumps(swarmNode_config, indent = 2 ) }')
             return
+        else:
+            logger.info(f'AP has sent this config to the Smart Node:\n\t {json.dumps(swarmNode_config, indent = 2 )}')
+            
         connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
         logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations}")
 
@@ -376,7 +378,7 @@ async def handle_new_connected_station(station_physical_mac_address):
 
         
     else :
-        logger.debug(f'node {SN_UUID} is part of swarm {node_info.node_current_swarm}')
+        logger.info(f'node {SN_UUID} is part of swarm {node_info.node_current_swarm}')
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $5}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if (proc_ret.stdout == '' ):
@@ -392,10 +394,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         station_vmac= result[0]
         station_vip = result[1]
         
-        logger.debug( f'\nAssigned Station\'s Virtual IP: {station_vip}' )
-        logger.debug( f'\nAssigned Station\'s Virtual MAC: {station_vmac}')
-        
-        logger.debug( f'\nStation {station_physical_mac_address}\t{station_physical_ip_address}\n\t' +  
+        logger.info( f'\nStation {station_physical_mac_address}\t{station_physical_ip_address}\n\t' +  
                     f'assigned vIP: {station_vip} and vMAC: {station_vmac}')
         
         
@@ -451,7 +450,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         # sometimes when the program is started there are already connected nodes to the AP.
         # so if one of these nodes disconnectes from the AP whre a disconnection is detected but the 
         # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
-        logger.debug(f'Handling disconnected Node: {station_physical_mac_address}')
+        logger.info(f'Handling disconnected Node: {station_physical_mac_address}')
         if (station_physical_mac_address not in connected_stations.keys()):
             logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations')
             return
@@ -473,7 +472,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         if ( node_db_result == None or node_db_result.node_current_ap != THIS_AP_UUID):
             return
             
-        logger.debug(f'Removing disconnected Node: {station_physical_mac_address}')    
+        logger.info(f'Removing disconnected Node: {station_physical_mac_address}')    
         # station_physical_ip_address = get_ip_from_arp(station_physical_mac_address)
         station_virtual_ip_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VIP_INDEX]
         station_virtual_mac_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VMAC_INDEX]
@@ -507,7 +506,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         db.update_db_with_left_node(node_swarm_id=station_vxlan_id)
 
         
-        logger.debug(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')
+        logger.info(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')
         
         delete_vxlan_by_host_id(station_vxlan_id)
     except Exception as e:
@@ -526,17 +525,17 @@ def monitor_stations():
             continue
         previous_line = output_line
         output_line_as_word_array = output_line.split()
-        logger.debug( '\WiFi Event: ' + output_line )
+        logger.debug( 'WiFi Event: ' + output_line )
         
         if output_line_as_word_array[INDEX_IW_EVENT_ACTION] == IW_TOOL_JOINED_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
-            logger.debug( '\nNew Station MAC: ' + station_physical_mac_address )
+            logger.debug( 'New Station MAC: ' + station_physical_mac_address )
             
             asyncio.run( handle_new_connected_station(station_physical_mac_address=station_physical_mac_address) )
 
         elif output_line_as_word_array[INDEX_IW_EVENT_ACTION] ==   IW_TOOL_LEFT_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
-            logger.info( '\nDisconnected Station MAC: ' + station_physical_mac_address )
+            logger.info( 'Disconnected Station MAC: ' + station_physical_mac_address )
             asyncio.run(  handle_disconnected_station(station_physical_mac_address=station_physical_mac_address) )
 
 
@@ -549,7 +548,7 @@ def ap_id_to_vxlan_id(access_point_id):
                
 def main():
     print("AP Starting")
-    logger.debug("AP: Program Started")
+    logger.info("AP: Program Started")
     initialize_program()
     monitor_stations()
     

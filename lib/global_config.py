@@ -19,29 +19,30 @@ ap_wait_time_for_disconnected_station_in_seconds=5
 
 # here configure the subnet range that need to be allocated to the swarm
 # here we assume a /24 subnet mask
-this_swarm_subnet='192.168.10.0'      ## this is the subnet to use for the swarm
+this_swarm_subnet='10.1.0.0'      ## this is the subnet to use for the swarm
 this_swarm_subnet_mask='/24'
 this_swarm_dhcp_start = 1         # this is the first IP to be assigned to the swarm node e.g: 10.0.1.1
 this_swarm_dhcp_end  = 253        # last IP to be assigned e.g: 10.0.1.253, we leave the last IP for the coordinator
 
 
-default_subnet= "192.168.0.0"
+default_subnet_ap3= "10.0.3.0"
+default_subnet_ap4= "10.0.4.0"
 
-backbone_subnet='10.0.0.0'
+backbone_subnet='10.0.0.0'  #smartedge-bb
 backbone_subnetmask='/24'
 
 ## This is the IP of the database, in my implementation the DB is running on the same node as the coordinator
 ## It uses the physical IP of the eth0 interface of the coordinator for consistency, and ease of routing
 
 #TODO: configure this ip, physical IP where the database is running
-database_hostname = '10.0.0.6'
+database_hostname = '192.168.137.106'
 database_port = CASSANDRA_PORT
 
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
 # it is sent to the swarm node when it connects to the AP
-coordinator_vip='192.168.10.254'
-coordinator_phyip='10.0.0.6'
+coordinator_vip='10.1.0.254'        # swarm virtual ip
+coordinator_phyip='192.168.137.106' # physical ip of device 
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
 coordinator_tcp_port = 29997
@@ -58,8 +59,8 @@ node_manager_tcp_port = 29997
 #TODO: Configure this IP list, physical IPs of access points
 ap_list = {
     # ID of AP        IP of eth0
-    'AP:00:00:03':  ['10.0.0.3'],
-    'AP:00:00:04':  ['10.0.0.4']  
+    'AP:00:00:03':  ['192.168.137.103'],
+    'AP:00:00:04':  ['192.168.137.104']  
     }
 
 ## currently unused

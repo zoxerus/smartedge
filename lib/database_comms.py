@@ -28,19 +28,19 @@ def init_database(host, port):
         # CREATE A NAME SPACE IN THE DATABSE FOR STORING SWARM INFO
         query = cassandra_db.QUERY_DATABASE_CREATE_KEYSPACE
         result = session.execute( query )
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.one()}")
         
         # CREATE A TABLE TO MANAGE ACTIVE SWARM NODES
         # query = cassandra_db.QUERY_DATABASE_CREATE_TABLE_ACTIVE_NODES
         
         
         result = session.execute(cassandra_db.QUERY_DATABASE_CREATE_TABLE_ACTIVE_NODES)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.one()}")
         
         # query = cassandra_db.QUERY_DATABASE_CREATE_TABLE_DEFAULT_SWARM
         
         result = session.execute(cassandra_db.QUERY_DATABASE_CREATE_TABLE_DEFAULT_SWARM)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{{result}}")
+        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.one()}")
         return session
     
 def connect_to_database(host, port):
@@ -140,7 +140,7 @@ def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id, uuid
                 db_logger.debug(f"getting next host id: id_list is empty: {id_list} returning {first_host_id}")
                 return first_host_id
             result = min(set(range(first_host_id, max_host_id + 1 )) - set(id_list)) 
-            db_logger.debug(f"getting next host id: {result}")
+            db_logger.debug(f"getting next host id: {result.one()}")
             return result 
         else: return first_result.one()[0]
 
