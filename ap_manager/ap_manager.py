@@ -418,7 +418,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         
         swarmNode_config = {
-            STRs.TYPE.name                  : STRs.SET_CONFIG.name,
+            STRs.TYPE.name                  : STRs.UPDAET_CONFIG.name,
             STRs.VETH1_VIP.name             : station_vip,
             STRs.VETH1_VMAC.name            : station_vmac,
             STRs.VXLAN_ID.name              : vxlan_id,

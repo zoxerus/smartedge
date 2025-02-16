@@ -171,6 +171,7 @@ def handle_communication():
                 try:
                     install_swarmNode_config(config_data)
                     ap_socket.sendall(bytes( "OK!".encode() ))
+                    ap_socket.close()
                 except Exception as e:
                     logger.error(repr(e))
                     
@@ -225,9 +226,9 @@ def handle_communication():
                     # cli_command = f'nmcli connection delete id {ap_ssid}'
                     # subprocess.run(cli_command.split(), text=True)
                     
-            elif config_data[STRs.TYPE.name] == STRs.JOIN_REQUEST_01:
-                logger.critical('This is not supposed to happen')
-                # install_swarmNode_config()
+            elif config_data[STRs.TYPE.name] == STRs.UPDAET_CONFIG.name:
+                logger.debug(f'updating config')
+                update_config_after_join(config_data)
                 # coordinator_socket.sendall(bytes( "OK!".encode() ))
             else:
                 logger.error(f'Unkown Message Type {config_data[STRs.TYPE.name]}')

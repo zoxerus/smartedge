@@ -20,6 +20,7 @@ class String_Constants(str, Enum):
     SWARM_ID = auto()
     JOIN_REQUEST = auto()
     SET_CONFIG = auto()
+    UPDAET_CONFIG = auto()
     LEAVE_REQUEST = auto()
     
 
