@@ -313,9 +313,8 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         logger.debug(f"ran command: {command}\ngot output:\n{proc_ret.stdout} ")
         vxlan_id = -1
-        next_vxlan_id = -1
         if (proc_ret.stdout == '' ):
-            next_vxlan_id = get_next_available_vxlan_id()
+            vxlan_id = get_next_available_vxlan_id()
         else:
             vxlan_id = int(proc_ret.stdout)
             command = f"ip link del se_vxlan{vxlan_id}"
@@ -324,7 +323,7 @@ async def handle_new_connected_station(station_physical_mac_address):
             logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
             return
         
-        vxlan_id = create_vxlan_by_host_id( vxlan_id= next_vxlan_id, remote= station_physical_ip_address )
+        create_vxlan_by_host_id( vxlan_id= vxlan_id, remote= station_physical_ip_address )
         
         
         
@@ -405,9 +404,8 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         logger.debug(f"ran command: {command}\ngot output:\n{proc_ret.stdout} ")
         vxlan_id = -1
-        next_vxlan_id = -1
         if (proc_ret.stdout == '' ):
-            next_vxlan_id = get_next_available_vxlan_id()
+            vxlan_id = get_next_available_vxlan_id()
         else:
             vxlan_id = int(proc_ret.stdout)
             command = f"ip link del se_vxlan{vxlan_id}"
@@ -416,7 +414,7 @@ async def handle_new_connected_station(station_physical_mac_address):
             logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
             return
         
-        vxlan_id = create_vxlan_by_host_id( vxlan_id= next_vxlan_id, remote= station_physical_ip_address )
+        create_vxlan_by_host_id( vxlan_id= vxlan_id, remote= station_physical_ip_address )
     
         dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
         bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
