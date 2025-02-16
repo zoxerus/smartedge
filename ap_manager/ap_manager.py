@@ -516,7 +516,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         
         
         # delete the node from the database
-        db.update_db_with_left_node(node_swarm_id=station_vxlan_id)
+        db.update_db_with_node_status(uuid=SN_UUID, status = db.db_defines.SWARM_STATUS.DISCONNECTED)
 
         
         logger.info(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')
@@ -524,6 +524,19 @@ async def handle_disconnected_station(station_physical_mac_address):
         delete_vxlan_by_host_id(station_vxlan_id)
     except Exception as e:
         logger.error(f"Error handling disconnected station {SN_UUID}: {repr(e)}")
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def monitor_stations():
     # this command is run in the shell to monitor wireless events using the iw tool

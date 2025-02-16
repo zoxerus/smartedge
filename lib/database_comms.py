@@ -78,22 +78,22 @@ def get_node_swarm_mac_by_swarm_ip(node_swarm_ip):
         return result.one()[0]
 
 
-def update_db_with_joined_node(node_uuid, node_swarm_id):
-    if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
-        query = f"""UPDATE {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}
-        SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{node_uuid}', 
-        {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.JOINED.value}'
-        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
-        """
-        result = execute_query(query)
-        return result
+# def update_db_with_joined_node(node_uuid, node_swarm_id):
+#     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
+#         query = f"""UPDATE {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}
+#         SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{node_uuid}', 
+#         {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.JOINED.value}'
+#         WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
+#         """
+#         result = execute_query(query)
+#         return result
     
     
-def update_db_with_left_node(node_swarm_id):
+def update_db_with_node_status(uuid, status):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
         query = f"""UPDATE {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}
-        SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{db_defines.SWARM_STATUS.LEFT.value}'
-        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id} IF EXISTS ;
+        SET {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_STATUS} = '{status}'
+        WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {uuid} IF EXISTS ;
         """
         result = execute_query(query)
         return result
@@ -130,7 +130,8 @@ def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id, uuid
         first_result = reuse_node_swarm_id(uuid)
         if first_result.one() == None:   
             query = f""" SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} FROM 
-                {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}"""
+                {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE} ALLOW FILTERING; 
+                """
             result = execute_query(query)
             id_list = []
             for row in result:
