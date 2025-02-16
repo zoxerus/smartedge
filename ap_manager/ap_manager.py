@@ -409,14 +409,14 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         
         swarmNode_config = {
-            STRs.TYPE: STRs.SET_CONFIG.name,
-            STRs.VETH1_VIP: station_vip,
-            STRs.VETH1_VMAC: station_vmac,
-            STRs.VXLAN_ID: vxlan_id,
-            STRs.SWARM_ID.name: node_info.current_swarm,
-            STRs.COORDINATOR_VIP: cfg.coordinator_vip,
-            STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port,
-            STRs.AP_ID: THIS_AP_UUID
+            STRs.TYPE.name                  : STRs.SET_CONFIG.name,
+            STRs.VETH1_VIP.name             : station_vip,
+            STRs.VETH1_VMAC.name            : station_vmac,
+            STRs.VXLAN_ID.name              : vxlan_id,
+            STRs.SWARM_ID.name              : node_info.current_swarm,
+            STRs.COORDINATOR_VIP.name       : cfg.coordinator_vip,
+            STRs.COORDINATOR_TCP_PORT.name  : cfg.coordinator_tcp_port,
+            STRs.AP_UUID.name               : THIS_AP_UUID
         }
         
         swarmNode_config_message = json.dumps(swarmNode_config)
