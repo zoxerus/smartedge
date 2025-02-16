@@ -313,6 +313,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         logger.debug(f"ran command: {command}\ngot output:\n{proc_ret.stdout} ")
         vxlan_id = -1
+        next_vxlan_id = -1
         if (proc_ret.stdout == '' ):
             next_vxlan_id = get_next_available_vxlan_id()
         else:
@@ -404,6 +405,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         logger.debug(f"ran command: {command}\ngot output:\n{proc_ret.stdout} ")
         vxlan_id = -1
+        next_vxlan_id = -1
         if (proc_ret.stdout == '' ):
             next_vxlan_id = get_next_available_vxlan_id()
         else:
