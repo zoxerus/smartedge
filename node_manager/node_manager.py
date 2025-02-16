@@ -280,6 +280,13 @@ def update_config_after_join(config):
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}'
     ]
     
+    for command in commands:
+        logger.debug('executing: ' + command)
+        process_ret = subprocess.run(command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        if (process_ret.stderr):
+            logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
+        else: 
+            logger.debug(f'executed command {command} and got output: {process_ret.stdout}')    
 
 
 def install_swarmNode_config(swarmNode_config):
