@@ -443,7 +443,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
         #         return
         # TODO: update the bmv2 
-        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id, node_ip=node_s0_ip)
+        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id, node_ip=station_vip)
         db.insert_node_into_swarm_database(this_ap_id= THIS_AP_UUID,
                                         host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
                                         node_phy_mac=station_physical_mac_address)
