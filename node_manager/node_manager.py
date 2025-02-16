@@ -241,7 +241,9 @@ def update_config_after_join(config):
     commands = [ # add the vxlan interface to the AP
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
                     f'ifconfig veth1 hw ether {veth1_vmac} ',
-                    f'ifconfig veth1 {veth1_vip} netmask 255.255.255.0 up'
+                    f'ifconfig veth1 {veth1_vip} netmask 255.255.255.0 up',
+                    'nikss-ctl del-port pipe 0 dev veth0',
+                    'nikss-ctl add-port pipe 0 dev veth0'
                 ]
     
     for command in commands:
@@ -249,21 +251,6 @@ def update_config_after_join(config):
         process_ret = subprocess.run(command, text=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         if (process_ret.stderr):
             logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
-
-    get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
-    get_if2_index_command = 'cat /sys/class/net/se_vxlan/ifindex'
-    if1_index = subprocess.run(get_if1_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)   
-    
-    commands = [
-        'nikss-ctl pipeline unload id 0',        
-        'nikss-ctl pipeline load id 0 ./node_manager/utils/nikss.o',
-        'nikss-ctl add-port pipe 0 dev veth0',
-        'nikss-ctl add-port pipe 0 dev se_vxlan',
-        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
-        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}'
-    ]
-
 
 
 def install_swarmNode_config(swarmNode_config):
