@@ -239,18 +239,25 @@ def handle_communication():
 
 
 def update_config_after_join(config):
-    veth1_vip   =   config[STRs.VETH1_VIP.name]
-    veth1_vmac  =   config[STRs.VETH1_VMAC.name]
-    vxlan_id    =   config[STRs.VXLAN_ID.name]
-    
-    commands = [ # add the vxlan interface to the AP
+    vxlan_id = config[STRs.VXLAN_ID.name]
+    swarm_veth1_vip = config[STRs.VETH1_VIP.name]
+    swarm_veth1_vmac = config[STRs.VETH1_VMAC.name]
+
+        
+    commands = [ 
+                'ip link del se_vxlan',
+                # add the vxlan interface to the AP
+                f'ip link add se_vxlan type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
+                # bring the vxlan up
+                'ip link set dev se_vxlan up',    
+                # add the veth interface pair, will be ignored if name is duplicate
+                'ip link add veth0 type veth peer name veth1',
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
-                    'ip link del se_vxlan',
-                    f'ip link add se_vxlan type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
-                    f'ifconfig veth1 hw ether {veth1_vmac} ',
-                    f'ifconfig veth1 {veth1_vip} netmask 255.255.255.0 up',
-                    'nikss-ctl del-port pipe 0 dev veth0',
-                    'nikss-ctl add-port pipe 0 dev veth0'
+                f'ip link set veth1 address {swarm_veth1_vmac} ',
+                f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.255.0 up',
+                f'ip link set veth0 up',
+                # disable HW offloads of checksum calculation, (as this is a virtual interface)
+                    f'ethtool --offload veth1 rx off tx off'
                 ]
     
     for command in commands:
@@ -258,6 +265,21 @@ def update_config_after_join(config):
         process_ret = subprocess.run(command, text=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         if (process_ret.stderr):
             logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
+        
+    get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
+    get_if2_index_command = 'cat /sys/class/net/se_vxlan/ifindex'
+    if1_index = subprocess.run(get_if1_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)   
+    
+    commands = [
+        'nikss-ctl pipeline unload id 0',        
+        'nikss-ctl pipeline load id 0 ./node_manager/utils/nikss.o',
+        'nikss-ctl add-port pipe 0 dev veth0',
+        'nikss-ctl add-port pipe 0 dev se_vxlan',
+        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
+        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}'
+    ]
+    
 
 
 def install_swarmNode_config(swarmNode_config):
