@@ -354,18 +354,18 @@ control MyIngress(inout headers hdr,
             exit;
         } 
         
-        if (tb_l2_forward.apply().hit)  exit;
+        if (tb_l2_forward.apply().hit);
 
         if (hdr.ipv4.isValid()) {
-            if(tb_swarm_control.apply().hit){
-                exit;
-            }
+            // if(tb_swarm_control.apply().hit){
+            //     exit;
+            // }
             // tb_check_swarm_id_src.apply();
             // tb_check_swarm_id_dst.apply();
             // if (meta.id_dst != meta.id_src){
             //     drop();
             // }
-            else if( !tb_ipv4_lpm.apply().hit){
+            if( !tb_ipv4_lpm.apply().hit){
                 tb_ipv4_mc_route_lookup.apply();
             }
         }
