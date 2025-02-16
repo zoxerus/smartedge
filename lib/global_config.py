@@ -15,7 +15,7 @@ default_backbone_device = 'smartedge-bb'
 default_wlan_device = 'wlan0'
 
 
-ap_wait_time_for_disconnected_station_in_seconds=5
+ap_wait_time_for_disconnected_station_in_seconds=15
 
 # here configure the subnet range that need to be allocated to the swarm
 # here we assume a /24 subnet mask

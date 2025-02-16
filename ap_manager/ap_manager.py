@@ -452,7 +452,8 @@ async def handle_disconnected_station(station_physical_mac_address):
         # sometimes when the program is started there are already connected nodes to the AP.
         # so if one of these nodes disconnectes from the AP whre a disconnection is detected but the 
         # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
-        logger.info(f'Handling disconnected Node: {station_physical_mac_address}')
+        logger.info(f'Disconnected Node: {station_physical_mac_address} Waiting for {cfg.ap_wait_time_for_disconnected_station_in_seconds} seconds' + 
+                    '\n\t before removing it.')
         if (station_physical_mac_address not in connected_stations.keys()):
             logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations')
             return
