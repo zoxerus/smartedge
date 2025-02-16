@@ -160,7 +160,7 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
      
     counter (1, CounterType.packets) mcast_counter;
-    // counter(32w1, CounterType.packets) unicast_counter;
+    counter(32w1, CounterType.packets) unicast_counter;
 
     action drop() {
         mark_to_drop(standard_metadata);

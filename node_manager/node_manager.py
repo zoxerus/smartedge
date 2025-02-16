@@ -239,12 +239,14 @@ def handle_communication():
 
 
 def update_config_after_join(config):
-    veth1_vip   = config[STRs.VETH1_VIP.name]
-    veth1_vmac    = config[STRs.VETH1_VMAC.name]
-
+    veth1_vip   =   config[STRs.VETH1_VIP.name]
+    veth1_vmac  =   config[STRs.VETH1_VMAC.name]
+    vxlan_id    =   config[STRs.VXLAN_ID.name]
     
     commands = [ # add the vxlan interface to the AP
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
+                    'ip link del se_vxlan',
+                    f'ip link add se_vxlan type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
                     f'ifconfig veth1 hw ether {veth1_vmac} ',
                     f'ifconfig veth1 {veth1_vip} netmask 255.255.255.0 up',
                     'nikss-ctl del-port pipe 0 dev veth0',
