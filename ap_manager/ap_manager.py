@@ -210,7 +210,7 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
         return -1
     
     logger.debug(f'\nCreated se_vxlan{vxlan_id}')
-    created_vxlans.add(vxlan_id)
+    created_vxlans.add(int(vxlan_id) )
     
     logger.debug(f'\ncreated_vxlans:\n\t {created_vxlans}')            
     activate_interface_shell_command = "ip link set se_vxlan%s up" % vxlan_id
@@ -229,7 +229,7 @@ def delete_vxlan_by_host_id(host_id):
     if (result.stderr):
         logger.error(f'\ncould not delete se_vxlan{host_id}:\n\t {result.stderr}')
         return
-    created_vxlans.remove(host_id)
+    created_vxlans.remove( int(host_id) )
     logger.debug(f'\nCreated host IDs: {created_vxlans}')
 
 
@@ -467,6 +467,8 @@ async def handle_disconnected_station(station_physical_mac_address):
                 logger.error(f"Error running command: {cli_command}\nError Message: {proc_res.stderr}")
             if (station_physical_mac_address in proc_res.stdout):
                 return
+            cli_command = f"ping -c 1 { get_ip_from_arp_by_physical_mac(station_physical_mac_address)}"
+            proc_res = subprocess.run(cli_command.split(), shell=False,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(1)
         
         
