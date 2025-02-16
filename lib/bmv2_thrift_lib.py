@@ -125,8 +125,9 @@ def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_key
             for line in response.splitlines():
                 if 'Dumping entry' in line:
                     entry_handle = int( re.findall(r'0x[0-9A-F]+', line, re.I)[0] , 16  )
-                    bmv2_logger.debug(f'entr_handle exists: {entry_handle}')
+                    bmv2_logger.debug(f'entry_handle exists: {entry_handle}')
                     cli_command = f'table_modify {table_name} {action_name} {entry_handle} {action_params}'
+                    send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port)
                     break
             
              
