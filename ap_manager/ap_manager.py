@@ -42,7 +42,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 PROGRAM_LOG_FILE_NAME = './logs/ap.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger('ap_logger')
-client_monitor_log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n\t%(message)s\n")
+client_monitor_log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n%(message)s\n")
 
 client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
 client_monitor_log_file_handler.setLevel(args.log_level)
@@ -297,7 +297,7 @@ async def handle_new_connected_station(station_physical_mac_address):
     # # Then we search the ART  to see if the node is present in there
     node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
     node_info = node_db_result.one()
-    logger.debug(f'node_info: {node_info} {SN_UUID}')    
+    logger.debug(f'node_info: {node_info} for {SN_UUID}')    
     
     # # in case the node is not present in the ART
     if ( node_info == None or node_info.node_current_swarm == 0):
@@ -471,7 +471,8 @@ async def handle_disconnected_station(station_physical_mac_address):
         
         SN_UUID = 'SN:' + station_physical_mac_address[9:]
         node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
-        if ( node_db_result == None or node_db_result.node_current_ap != THIS_AP_UUID):
+        node_info = node_db_result.one()
+        if ( node_info == None or node_info.node_current_ap != THIS_AP_UUID):
             return
             
         logger.info(f'Removing disconnected Node: {station_physical_mac_address}')    

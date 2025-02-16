@@ -61,10 +61,10 @@ def connect_to_database(host, port):
 def execute_query(query):
     try:
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n\t {query}\n\tgot result:\n\t\t{result.one()}")
+        db_logger.debug(f"Executed database query:\n{query}\ngot result:\n{result.one()}")
         return result
     except Exception as e:
-        db_logger.debug(f"Error in query:\n\t {query}, Error message {repr(e)}")
+        db_logger.debug(f"Error in query:\n{query}, Error message {repr(e)}")
         return -1
 
 def get_node_swarm_mac_by_swarm_ip(node_swarm_ip):

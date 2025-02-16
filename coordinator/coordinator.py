@@ -43,7 +43,7 @@ PROGRAM_LOG_FILE_NAME = './logs/coordinator.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger('coordinator_logger')
 # this part handles logging to console and to a file for debugging purposes
-log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n\t%(message)s\n")
+log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n%(message)s\n")
 
 # log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
 # log_file_handler.setLevel(args.log_level)

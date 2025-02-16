@@ -26,7 +26,7 @@ def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = D
         bmv2_logger.error(f'\nBMV2ERROR:\nsending command:\n{cli_command}\nERROR MESSAGE:\n{proc.stderr}')
     response = proc.stdout.strip()
 
-    bmv2_logger.debug(f'Sent command "{cli_command}" to bmv2\nResponse Received: {response}')
+    bmv2_logger.debug(f'Sent command "{cli_command}" to bmv2\nResponse Received:\n{response}')
     return response
     
 
