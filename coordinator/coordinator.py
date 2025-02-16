@@ -27,7 +27,8 @@ from argparse import ArgumentParser
 STRs = cts.String_Constants
 
 parser = ArgumentParser()
-parser.add_argument("-l", "--log-level",type=int, default=10, help="logging level")
+parser.add_argument("-l", "--log-level",type=int, default=50, help="set logging level [10, 20, 30, 40, 50]")
+parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq numeric id for node identification")
 args = parser.parse_args()
 
 
