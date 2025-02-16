@@ -315,12 +315,18 @@ async def handle_new_connected_station(station_physical_mac_address):
         vxlan_id = -1
         if (proc_ret.stdout == '' ):
             next_vxlan_id = get_next_available_vxlan_id()
-            vxlan_id = create_vxlan_by_host_id( vxlan_id= next_vxlan_id, remote= station_physical_ip_address )
         else:
             vxlan_id = int(proc_ret.stdout)
+            command = f"ip link del se_vxlan{vxlan_id}"
+            proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if (vxlan_id == -1):
             logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
             return
+        
+        vxlan_id = create_vxlan_by_host_id( vxlan_id= next_vxlan_id, remote= station_physical_ip_address )
+        
+        
+        
         
         dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
         bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
@@ -400,12 +406,23 @@ async def handle_new_connected_station(station_physical_mac_address):
         vxlan_id = -1
         if (proc_ret.stdout == '' ):
             next_vxlan_id = get_next_available_vxlan_id()
-            vxlan_id = create_vxlan_by_host_id( vxlan_id= next_vxlan_id, remote= station_physical_ip_address )
         else:
             vxlan_id = int(proc_ret.stdout)
+            command = f"ip link del se_vxlan{vxlan_id}"
+            proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if (vxlan_id == -1):
-                return
-            
+            logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
+            return
+        
+        vxlan_id = create_vxlan_by_host_id( vxlan_id= next_vxlan_id, remote= station_physical_ip_address )
+    
+        dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
+        bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
+        
+        attach_vxlan_to_bmv2_command = "port_add se_vxlan%s %s" % (vxlan_id, vxlan_id)
+        bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command)
+        
+        
         host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
                     max_host_id=cfg.this_swarm_dhcp_end, uuid=SN_UUID)
         
