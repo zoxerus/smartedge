@@ -143,7 +143,7 @@ def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id, uuid
                 db_logger.debug(f"getting next host id: id_list is empty: {id_list} returning {first_host_id}")
                 return first_host_id
             result = min(set(range(first_host_id, max_host_id + 1 )) - set(id_list)) 
-            db_logger.debug(f"getting next host id: {result.one()}")
+            db_logger.debug(f"getting next host id: {result}")
             return result 
         else: return first_result.one()[0]
 

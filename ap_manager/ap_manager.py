@@ -409,10 +409,11 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         
         swarmNode_config = {
-            STRs.TYPE: STRs.JOIN_REQUEST_01,
+            STRs.TYPE: STRs.SET_CONFIG.name,
             STRs.VETH1_VIP: station_vip,
             STRs.VETH1_VMAC: station_vmac,
             STRs.VXLAN_ID: vxlan_id,
+            STRs.SWARM_ID.name: node_info.current_swarm,
             STRs.COORDINATOR_VIP: cfg.coordinator_vip,
             STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port,
             STRs.AP_ID: THIS_AP_UUID
@@ -516,7 +517,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         
         
         # delete the node from the database
-        db.update_db_with_node_status(uuid=SN_UUID, status = db.db_defines.SWARM_STATUS.DISCONNECTED)
+        db.update_db_with_node_status(uuid=SN_UUID, status = db.db_defines.SWARM_STATUS.DISCONNECTED.value)
         db.delete_node_from_art(uuid=SN_UUID)
         db.delete_node_from_swarm_database(uuid=SN_UUID)
 

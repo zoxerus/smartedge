@@ -241,10 +241,7 @@ def update_config_after_join(config):
     commands = [ # add the vxlan interface to the AP
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
                     f'ifconfig veth1 hw ether {veth1_vmac} ',
-                    f'ifconfig veth1 {veth1_vip} netmask 255.255.255.0 up',
-                    f'ifconfig veth0 up',
-                # disable HW offloads of checksum calculation, (as this is a virtual interface)
-                    f'ethtool --offload veth1 rx off tx off'
+                    f'ifconfig veth1 {veth1_vip} netmask 255.255.255.0 up'
                 ]
     
     for command in commands:
@@ -338,7 +335,7 @@ def monitor_wifi_status():
     # this command is run in the shell to monitor wireless events using the iw tool
     monitoring_command = 'nmcli device monitor wlan0'
     # python runs the shell command and monitors the output in the terminal
-    process = subprocess.Popen( monitoring_command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE)
     previous_line = ''
     # we iterate over the output lines to read the event and react accordingly
     for output_line in iter(lambda: process.stdout.readline().decode("utf-8"), ""):
