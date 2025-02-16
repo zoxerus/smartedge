@@ -375,10 +375,11 @@ async def handle_new_connected_station(station_physical_mac_address):
                             action_params= f'{str(vxlan_id)}')
      
         node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
+        ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
         for key in cfg.ap_list.keys():
             if key != THIS_AP_UUID:
                 ap_ip = cfg.ap_list[key][0]
-                ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
+                ap_mac = int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                         table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{node_s0_ip}/32' , 
@@ -455,10 +456,11 @@ async def handle_new_connected_station(station_physical_mac_address):
                             action_params= f'{str(vxlan_id)}')
      
         node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
+        ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
         for key in cfg.ap_list.keys():
             if key != THIS_AP_UUID:
                 ap_ip = cfg.ap_list[key][0]
-                ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
+                ap_mac = int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                         table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
