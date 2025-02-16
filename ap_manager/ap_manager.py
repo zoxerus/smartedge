@@ -212,7 +212,7 @@ def create_vxlan_by_host_id(vxlan_id, remote, port=4789):
     logger.debug(f'\nCreated se_vxlan{vxlan_id}')
     created_vxlans.add(int(vxlan_id) )
     
-    logger.debug(f'\ncreated_vxlans:\n\t {created_vxlans}')            
+    logger.debug(f'\nCreated_vxlans:\n\t {created_vxlans}')            
     activate_interface_shell_command = "ip link set se_vxlan%s up" % vxlan_id
     result = subprocess.run(activate_interface_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if (result.stderr):
@@ -229,8 +229,9 @@ def delete_vxlan_by_host_id(host_id):
     if (result.stderr):
         logger.error(f'\ncould not delete se_vxlan{host_id}:\n\t {result.stderr}')
         return
+    logger.debug(f'\nCreated Vxlans before removing {host_id}: {created_vxlans}')
     created_vxlans.remove( int(host_id) )
-    logger.debug(f'\nCreated host IDs: {created_vxlans}')
+    logger.debug(f'\nCreated Vxlans after removing {host_id}: {created_vxlans}')
 
 
 def get_mac_from_arp_by_physical_ip(ip):
@@ -305,6 +306,12 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if proc_ret.stderr:
+            logger.error(f"Error running: {command}\nError Message:\n{proc_ret.stdout} ")    
+            logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
+            return
+        
+        logger.debug(f"ran command: {command}\ngot output:\n{proc_ret.stdout} ")
         vxlan_id = -1
         if (proc_ret.stdout == '' ):
             next_vxlan_id = get_next_available_vxlan_id()
