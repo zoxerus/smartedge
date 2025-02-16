@@ -83,19 +83,7 @@ db.DATABASE_SESSION = database_session
 # needed for interactiosn with bmv2
 
 
-# this updates the list of broadcast ports in bmv2
-def add_bmv2_swarm_broadcast_port_to_ap(ap_ip, thrift_port, switch_port ):
-        res = bmv2.send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port)
-        res_lines = res.splitlines()
-        i = 0
-        
-        for line in res_lines:
-            if 'mgrp(' in line:
-                port_list = set(extract_numbers([ res_lines[i+1].split('ports=[')[1].split(']')[0] ]))
-                port_list.add(switch_port)
-                broadcast_ports =  ' '.join( str(port) for port in port_list)
-                bmv2.send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port )  
-            i = i + 1
+
 
 
 def get_ap_ip_from_ap_id(ap_id):
@@ -204,7 +192,7 @@ class Swarm_Node_Handler:
         db.update_art_with_node_info(node_uuid=SN_UUID,node_current_ap=self.node_request[STRs.AP_UUID.name],
                                      node_current_swarm=1,node_current_ip=station_vip)
                     
-        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID.name])
+        bmv2.add_bmv2_swarm_broadcast_port(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID.name])
 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',

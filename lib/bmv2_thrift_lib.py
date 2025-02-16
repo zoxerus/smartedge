@@ -17,6 +17,27 @@ bmv2_logger = None
 
 DEFAULT_THRIFT_PORT = 9090
 
+
+def extract_numbers(lst):
+    """
+    Extracts numbers from a list of strings using regular expressions.
+    """
+    # Compile a regular expression pattern to match digits
+    pattern = re.compile(r'\d+')
+     
+    # Use the pattern to extract all digits from each string in the list
+    extracted_numbers = [pattern.findall(s) for s in lst]
+     
+    # Convert the extracted numbers from strings to integers
+    return [int(x) for sublist in extracted_numbers for x in sublist]
+
+
+
+
+
+
+
+
 def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     command_as_word_array = ['docker','exec',BMV2_DOCKER_CONTAINER_NAME,'sh', '-c',
                              f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {thrift_ip} --thrift-port {thrift_port}"  ]
@@ -29,6 +50,55 @@ def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = D
     bmv2_logger.debug(f'Sent command "{cli_command}" to bmv2\nResponse Received:\n{response}')
     return response
     
+
+
+
+
+
+# this updates the list of broadcast ports in bmv2
+def add_bmv2_swarm_broadcast_port(ap_ip, thrift_port, switch_port ):
+        res = send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port)
+        res_lines = res.splitlines()
+        i = 0
+        
+        for line in res_lines:
+            if 'mgrp(' in line:
+                port_list = set(extract_numbers([ res_lines[i+1].split('ports=[')[1].split(']')[0] ]))
+                port_list.add(switch_port)
+                broadcast_ports =  ' '.join( str(port) for port in port_list)
+                send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port )  
+            i = i + 1
+
+
+def remove_bmv2_swarm_broadcast_port(ap_ip, thrift_port, switch_port ):
+        res = send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port)
+        res_lines = res.splitlines()
+        i = 0
+        
+        for line in res_lines:
+            if 'mgrp(' in line:
+                port_list = set(extract_numbers([ res_lines[i+1].split('ports=[')[1].split(']')[0] ]))
+                port_list.remove(switch_port)
+                broadcast_ports =  ' '.join( str(port) for port in port_list)
+                send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port )  
+            i = i + 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_keys, action_params, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT,):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:

@@ -443,11 +443,12 @@ async def handle_new_connected_station(station_physical_mac_address):
         #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
         #         return
         # TODO: update the bmv2 
-        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id, node_ip=station_vip)
-        db.insert_node_into_swarm_database(this_ap_id= THIS_AP_UUID,
+        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=node_info.current_swarm, ap_port=vxlan_id, node_ip=station_vip)
+        db.insert_node_into_swarm_database(node_uuid=SN_UUID, this_ap_id= THIS_AP_UUID,
                                         host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
                                         node_phy_mac=station_physical_mac_address)
         
+        bmv2.add_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=vxlan_id)
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                             table_name='MyIngress.tb_ipv4_lpm',
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
@@ -493,6 +494,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
         node_info = node_db_result.one()
         if ( node_info == None or node_info.current_ap != THIS_AP_UUID):
+            bmv2.remove_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=node_info.ap_port)
             return
             
         logger.info(f'Removing disconnected Node: {station_physical_mac_address}')    
@@ -521,6 +523,7 @@ async def handle_disconnected_station(station_physical_mac_address):
 
         
         # delete the corresponding switch port
+        bmv2.remove_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=node_info.ap_port)
         delete_vxlan_from_bmv2_command = "port_remove %s" % station_vxlan_id
         bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command)
         
