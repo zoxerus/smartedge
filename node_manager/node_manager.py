@@ -162,6 +162,9 @@ def handle_communication():
             gb_swarmNode_config = config_data
             
             ACCESS_POINT_IP = ap_address[0]
+            ping_command = f"ping -i 5 {ACCESS_POINT_IP}"
+            # Start the ping process in the background
+            ping_process = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                                                      
             if config_data[STRs.TYPE.name] == STRs.SET_CONFIG.name:
                 logger.debug(f'Handling Join Type {STRs.SET_CONFIG.name}')
@@ -171,13 +174,10 @@ def handle_communication():
                 except Exception as e:
                     logger.error(repr(e))
                     
-                while True:
-                    user_input = input("Enter 1 to send a join request: ")
-                    if user_input == '1':
-                        break
+                time.sleep(30)
                 try:                        
                     join_request_dic = {
-                        STRs.TYPE.name:           STRs.JOIN_REQUEST,
+                        STRs.TYPE.name:           STRs.JOIN_REQUEST.name,
                         STRs.REQUIST_ID.name:     last_request_id,
                         STRs.NODE_UUID.name: THIS_NODE_UUID,
                         STRs.AP_UUID.name: config_data[STRs.AP_UUID.name],
@@ -186,7 +186,7 @@ def handle_communication():
                     last_request_id = last_request_id + 1
                     
                     join_request_json_string = json.dumps(join_request_dic)
-                    logger.debug(f'preparing join request: {join_request_json_string}')
+                    logger.debug(f'Preparing join request:\n{json.dumps(join_request_dic, indent=2 )}')
                     
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
                         print(f'connecting to {config_data[STRs.COORDINATOR_VIP.name]}:{config_data[STRs.COORDINATOR_TCP_PORT.name]}')
@@ -349,6 +349,7 @@ def monitor_wifi_status():
             # python runs the shell command and monitors the output in the terminal
             process = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             logger.debug(f'Connected to {process.stdout}')
+
             
   
   
