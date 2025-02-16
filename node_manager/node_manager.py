@@ -229,6 +229,10 @@ def handle_communication():
             elif config_data[STRs.TYPE.name] == STRs.UPDAET_CONFIG.name:
                 logger.debug(f'updating config')
                 update_config_after_join(config_data)
+                ap_socket.sendall(bytes( "OK!".encode() ))
+                ap_socket.close()
+                
+                
                 # coordinator_socket.sendall(bytes( "OK!".encode() ))
             else:
                 logger.error(f'Unkown Message Type {config_data[STRs.TYPE.name]}')
