@@ -246,6 +246,7 @@ def update_config_after_join(config):
         
     commands = [ 
                 'ip link del se_vxlan',
+                'ip link del veth1',
                 # add the vxlan interface to the AP
                 f'ip link add se_vxlan type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
                 # bring the vxlan up
@@ -272,6 +273,8 @@ def update_config_after_join(config):
     if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)   
     
     commands = [
+        'nikss-ctl del-port pipe 0 dev veth0',
+        'nikss-ctl del-port pipe 0 dev se_vxlan',
         'nikss-ctl pipeline unload id 0',        
         'nikss-ctl pipeline load id 0 ./node_manager/utils/nikss.o',
         'nikss-ctl add-port pipe 0 dev veth0',
@@ -299,6 +302,7 @@ def install_swarmNode_config(swarmNode_config):
         
     commands = [ 
                 'ip link del se_vxlan',
+                'ip link del veth1',
                 # add the vxlan interface to the AP
                 f'ip link add se_vxlan type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
                 # bring the vxlan up
