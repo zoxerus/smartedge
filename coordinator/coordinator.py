@@ -178,7 +178,7 @@ class Swarm_Node_Handler:
         
         logger.debug(f'assigning vIP: {station_vip} vMAC: {station_vmac} to {SN_UUID}')
         swarmNode_config = {
-            STRs.TYPE.name: STRs.JOIN_REQUEST_00.value,
+            STRs.TYPE.name: STRs.JOIN_REQUEST.name,
             STRs.VETH1_VIP.name: station_vip,
             STRs.VETH1_VMAC.name: station_vmac,
             STRs.VXLAN_ID.name: self.node_request[STRs.VXLAN_ID.name],
@@ -225,12 +225,12 @@ class Swarm_Node_Handler:
         # insert table entries in the rest of the APs
         node_ap_ip = cfg.ap_list[self.node_request[STRs.AP_UUID.name]][0]
         for key in cfg.ap_list.keys():
-            if key != self.node_swarm_ap:
+            if key != self.node_request[STRs.AP_UUID.name]:
                 ap_ip = cfg.ap_list[key][0]
                 ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
-                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{self.node_swarm_ip}/32' , 
+                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
                         action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
                 
                 # entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 

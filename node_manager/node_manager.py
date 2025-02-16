@@ -194,18 +194,20 @@ def handle_communication():
                         coordinator_socket.connect((config_data[STRs.COORDINATOR_VIP.name], config_data[STRs.COORDINATOR_TCP_PORT.name] ))
                         coordinator_socket.sendall(bytes( join_request_json_string.encode() ))
                         
-                        logger.debug(f'sent {join_request_dic} to coordinator')
+                        logger.debug(f'Sent:\n{json.dumps(join_request_dic, indent=2 )} to coordinator')
                         
                         response = coordinator_socket.recv(1024).decode()
-                        
                         response_data = json.loads(response)
+                        logger.debug(f"Response from Coordinator: {json.dumps(response_data, indent=2)}")
                         if (response_data[STRs.TYPE.name] == STRs.JOIN_REQUEST.name):
                             logger.debug('Node Accepted in Swarm')
                             try:
+                                logger.debug('Configuring Self ...')
+                                update_config_after_join(response_data)
                                 coordinator_socket.sendall(bytes( "OK!".encode() ))
                                 coordinator_socket.close()
                                 
-                                update_config_after_join(response_data)
+
 
                             except Exception as e:
                                 logger.error(repr(e))                   
@@ -233,10 +235,23 @@ def handle_communication():
 
 def update_config_after_join(config):
     veth1_vip   = config[STRs.VETH1_VIP.name]
-    veth1_vm    = config[STRs.VETH1_VMAC.name]
-    vxlan_id    = config[STRs.VXLAN_ID.name]
-    
+    veth1_vmac    = config[STRs.VETH1_VMAC.name]
 
+    
+    commands = [ # add the vxlan interface to the AP
+                # add the vmac and vip (received from the AP manager) to the veth1 interface,
+                    f'ifconfig veth1 hw ether {veth1_vmac} ',
+                    f'ifconfig veth1 {veth1_vip} netmask 255.255.255.0 up',
+                    f'ifconfig veth0 up',
+                # disable HW offloads of checksum calculation, (as this is a virtual interface)
+                    f'ethtool --offload veth1 rx off tx off'
+                ]
+    
+    for command in commands:
+        logger.debug('executing: ' + command)
+        process_ret = subprocess.run(command, text=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        if (process_ret.stderr):
+            logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
 
 def install_swarmNode_config(swarmNode_config):
     global last_request_id, join_queue, ACCESS_POINT_IP
