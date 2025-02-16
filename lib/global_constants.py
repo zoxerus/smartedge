@@ -2,9 +2,9 @@ from enum import Enum, auto
 
 class String_Constants(str, Enum):
     def __str__(self):
-        return str(self.value)
+        return str(self.name)
     def __repr__(self):
-        return str(self.value)
+        return str(self.name)
     
     TYPE = auto()
     REQUIST_ID = auto()
@@ -18,8 +18,7 @@ class String_Constants(str, Enum):
     AP_IP = auto()
     AP_MAC = auto()
     SWARM_ID = auto()
-    JOIN_REQUEST_00 = auto()
-    JOIN_REQUEST_01 = auto()
+    JOIN_REQUEST = auto()
     SET_CONFIG = auto()
     LEAVE_REQUEST = auto()
     

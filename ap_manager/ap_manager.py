@@ -152,7 +152,7 @@ def initialize_program():
     bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast 01:00:00:00:00:00&&&0x010000000000 => {SWARM_P4_MC_GROUP} 100 ")
     
     logger.info('Program Initialized')
-    print('AP Started')
+    print('\n\n\nAP Started')
 
 # a handler to clean exit the programs
 def exit_handler():
@@ -328,7 +328,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         node_s0_mac = int_to_mac(int( ipaddress.ip_address(node_s0_ip) ))
         
         swarmNode_config = {
-            STRs.TYPE.name: STRs.SET_CONFIG.value,
+            STRs.TYPE.name: STRs.SET_CONFIG.name,
             STRs.VETH1_VIP.name: node_s0_ip,
             STRs.VETH1_VMAC.name: node_s0_mac,
             STRs.VXLAN_ID.name: vxlan_id,

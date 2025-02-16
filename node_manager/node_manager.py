@@ -161,11 +161,9 @@ def handle_communication():
             gb_swarmNode_config = config_data
             
             ACCESS_POINT_IP = ap_address[0]
-            
-            logger.debug(f'Handling Join Type { config_data[STRs.TYPE] } and the thing {STRs.JOIN_REQUEST_00.value}')   
-                                         
-            if config_data[STRs.TYPE] == STRs.JOIN_REQUEST_00.value:
-                logger.debug(f'Handling Join Type {STRs.JOIN_REQUEST_00.name}')
+                                                     
+            if config_data[STRs.TYPE.name] == STRs.SET_CONFIG.name:
+                logger.debug(f'Handling Join Type {STRs.SET_CONFIG.name}')
                 try:
                     install_swarmNode_config(config_data)
                     ap_socket.sendall(bytes( "OK!".encode() ))
@@ -178,11 +176,11 @@ def handle_communication():
                         break
                 try:                        
                     join_request_dic = {
-                        STRs.TYPE:           STRs.JOIN_REQUEST_00.value,
-                        STRs.REQUIST_ID:     last_request_id,
-                        STRs.THIS_NODE_UUID: THIS_NODE_UUID,
-                        STRs.THIS_NODE_APID: config_data[STRs.AP_ID],
-                        STRs.VXLAN_ID:       config_data[STRs.VXLAN_ID]
+                        STRs.TYPE.name:           STRs.JOIN_REQUEST,
+                        STRs.REQUIST_ID.name:     last_request_id,
+                        STRs.NODE_UUID.name: THIS_NODE_UUID,
+                        STRs.AP_UUID.name: config_data[STRs.AP_UUID.name],
+                        STRs.VXLAN_ID.name:       config_data[STRs.VXLAN_ID.name]
                     }
                     last_request_id = last_request_id + 1
                     
@@ -190,9 +188,9 @@ def handle_communication():
                     logger.debug(f'preparing join request: {join_request_json_string}')
                     
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
-                        print(f'connecting to {config_data[STRs.COORDINATOR_VIP]}:{config_data[STRs.COORDINATOR_TCP_PORT]}')
+                        print(f'connecting to {config_data[STRs.COORDINATOR_VIP.name]}:{config_data[STRs.COORDINATOR_TCP_PORT.name]}')
                         coordinator_socket.settimeout(120)
-                        coordinator_socket.connect((config_data[STRs.COORDINATOR_VIP], config_data[STRs.COORDINATOR_TCP_PORT] ))
+                        coordinator_socket.connect((config_data[STRs.COORDINATOR_VIP.name], config_data[STRs.COORDINATOR_TCP_PORT.name] ))
                         coordinator_socket.sendall(bytes( join_request_json_string.encode() ))
                         
                         logger.debug(f'sent {join_request_dic} to coordinator')
@@ -200,7 +198,7 @@ def handle_communication():
                         response = coordinator_socket.recv(1024).decode()
                         
                         response_data = json.loads(response)
-                        if (response_data[STRs.TYPE] == STRs.JOIN_REQUEST_00.value):
+                        if (response_data[STRs.TYPE.name] == STRs.JOIN_REQUEST.name):
                             logger.debug('Node Accepted in Swarm')
                             try:
                                 coordinator_socket.sendall(bytes( "OK!".encode() ))
@@ -224,26 +222,27 @@ def handle_communication():
                     cli_command = f'nmcli connection delete id {ap_ssid}'
                     subprocess.run(cli_command.split(), text=True)
                     
-            elif config_data[STRs.TYPE] == STRs.JOIN_REQUEST_01:
-                install_swarmNode_config()
-                coordinator_socket.sendall(bytes( "OK!".encode() ))
+            elif config_data[STRs.TYPE.name] == STRs.JOIN_REQUEST_01:
+                logger.critical('This is not supposed to happen')
+                # install_swarmNode_config()
+                # coordinator_socket.sendall(bytes( "OK!".encode() ))
             else:
-                logger.error(f'Unkown Message Type {config_data[STRs.TYPE]}')
+                logger.error(f'Unkown Message Type {config_data[STRs.TYPE.name]}')
 
 
 def update_config_after_join(config):
-    veth1_vip   = config[STRs.VETH1_VIP]
-    veth1_vm    = config[STRs.VETH1_VMAC]
-    vxlan_id    = config[STRs.VXLAN_ID]
+    veth1_vip   = config[STRs.VETH1_VIP.name]
+    veth1_vm    = config[STRs.VETH1_VMAC.name]
+    vxlan_id    = config[STRs.VXLAN_ID.name]
     
 
 
 def install_swarmNode_config(swarmNode_config):
     global last_request_id, join_queue, ACCESS_POINT_IP
     
-    vxlan_id = swarmNode_config[STRs.VXLAN_ID]
-    swarm_veth1_vip = swarmNode_config[STRs.VETH1_VIP]
-    swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC]
+    vxlan_id = swarmNode_config[STRs.VXLAN_ID.name]
+    swarm_veth1_vip = swarmNode_config[STRs.VETH1_VIP.name]
+    swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC.name]
 
         
     commands = [ # add the vxlan interface to the AP
@@ -323,7 +322,7 @@ def monitor_wifi_status():
     # this command is run in the shell to monitor wireless events using the iw tool
     monitoring_command = 'nmcli device monitor wlan0'
     # python runs the shell command and monitors the output in the terminal
-    process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen( monitoring_command.split(),  text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     previous_line = ''
     # we iterate over the output lines to read the event and react accordingly
     for output_line in iter(lambda: process.stdout.readline().decode("utf-8"), ""):
@@ -340,14 +339,14 @@ def monitor_wifi_status():
             connection_time_delta = current_connection_timestamp - last_connection_timestamp
             shell_command = 'iwgetid -r -a'
             # python runs the shell command and monitors the output in the terminal
-            process = subprocess.run( shell_command.split() , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             current_bssid = process.stdout
             if (connection_time_delta < wait_time_before_requesting_new_config) and (current_bssid == last_bssid):
                 continue
             last_bssid = current_bssid
             shell_command = 'iwgetid -r'
             # python runs the shell command and monitors the output in the terminal
-            process = subprocess.run( shell_command.split() , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             logger.debug(f'Connected to {process.stdout}')
             
   
