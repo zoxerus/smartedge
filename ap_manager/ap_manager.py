@@ -446,7 +446,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=node_info.current_swarm, ap_port=vxlan_id, node_ip=station_vip)
         db.insert_node_into_swarm_database(node_uuid=SN_UUID, this_ap_id= THIS_AP_UUID,
                                         host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
-                                        node_phy_mac=station_physical_mac_address)
+                                        node_phy_mac=station_physical_mac_address, status=db.db_defines.SWARM_STATUS.JOINED.value)
         
         bmv2.add_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=vxlan_id)
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
