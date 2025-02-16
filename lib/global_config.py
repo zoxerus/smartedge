@@ -25,8 +25,8 @@ this_swarm_dhcp_start = 1         # this is the first IP to be assigned to the s
 this_swarm_dhcp_end  = 253        # last IP to be assigned e.g: 10.0.1.253, we leave the last IP for the coordinator
 
 
-default_subnet_ap3= "10.0.3.0"
-default_subnet_ap4= "10.0.4.0"
+# default_subnet= "10.0.3.0"
+# default_subnet_ap4= "10.0.4.0"
 
 backbone_subnet='10.0.0.0'  #smartedge-bb
 backbone_subnetmask='/24'
