@@ -106,7 +106,7 @@ case $ROLE in
     
     # Genereate the MAC address for the Coordinator
     SWARM_IP=$(nextip $SWARM_SUBNET 254)
-    # BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
+    BACKBONE_IP=$(nextip $BACKBONE_SUBNET 254)
     oldMAC=00:00:00:00:00:00
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
     rawOldMac=$(echo $oldMAC | tr -d ':')
@@ -116,7 +116,8 @@ case $ROLE in
 
     sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
     sudo ip address flush smartedge-bb
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb address $final_mac
     sudo ip link set dev smartedge-bb up
@@ -129,7 +130,7 @@ case $ROLE in
     echo "Role is set as Access Point"
     /bin/bash ./run_bmv2_docker.sh
     # Genereate the MAC and IP address for the AP
-    BACKBONE_IP=$(nextip 10.0.0.0 $NUMID)
+    BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
@@ -153,7 +154,7 @@ case $ROLE in
     sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
     sudo ip link set dev smartedge-bb address $final_mac
     
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
     sudo python ./ap_manager/ap_manager.py --log-level $LOGLEVEL --num-id $NUMID
