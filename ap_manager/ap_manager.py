@@ -388,8 +388,15 @@ async def handle_new_connected_station(station_physical_mac_address):
         
     else :
         logger.info(f'node {SN_UUID} is part of swarm {node_info.current_swarm}')
-        command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $5}}' "
+        command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if proc_ret.stderr:
+            logger.error(f"Error running: {command}\nError Message:\n{proc_ret.stdout} ")    
+            logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
+            return
+        
+        logger.debug(f"ran command: {command}\ngot output:\n{proc_ret.stdout} ")
+        vxlan_id = -1
         if (proc_ret.stdout == '' ):
             next_vxlan_id = get_next_available_vxlan_id()
             vxlan_id = create_vxlan_by_host_id( vxlan_id= next_vxlan_id, remote= station_physical_ip_address )
