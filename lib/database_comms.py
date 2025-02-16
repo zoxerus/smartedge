@@ -25,6 +25,8 @@ def init_database(host, port):
         )
         session = cluster.connect()
         session.execute(f'DROP TABLE IF EXISTS {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE}')
+
+
         # CREATE A NAME SPACE IN THE DATABSE FOR STORING SWARM INFO
         query = cassandra_db.QUERY_DATABASE_CREATE_KEYSPACE
         result = session.execute( query )
@@ -184,13 +186,21 @@ def insert_into_art(node_uuid, current_ap, swarm_id, ap_port, node_ip):
         result = execute_query(query)
         return result
 
-
+def delete_node_from_art(uuid):
+    if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
+        query = f"""
+            DELETE FROM {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_ADDRESS_RESOLUTION_TABLE} 
+            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = {uuid};
+            """
+        result = execute_query(query)
+        return result
+        
     
-def delete_node_from_swarm_database(node_swarm_id):
+def delete_node_from_swarm_database(uuid):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
         query = f"""
             DELETE FROM {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE} 
-            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} = {node_swarm_id};
+            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = {uuid};
             """
         result = execute_query(query)
         return result

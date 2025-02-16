@@ -517,6 +517,8 @@ async def handle_disconnected_station(station_physical_mac_address):
         
         # delete the node from the database
         db.update_db_with_node_status(uuid=SN_UUID, status = db.db_defines.SWARM_STATUS.DISCONNECTED)
+        db.delete_node_from_art(uuid=SN_UUID)
+        db.delete_node_from_swarm_database(uuid=SN_UUID)
 
         
         logger.info(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')

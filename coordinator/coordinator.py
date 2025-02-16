@@ -200,6 +200,9 @@ class Swarm_Node_Handler:
         db.insert_node_into_swarm_database(host_id=host_id, this_ap_id=self.node_request[STRs.AP_UUID.name],
                                            node_vip= station_vip, node_vmac= station_vmac, node_phy_mac='',
                                            node_uuid=SN_UUID, status=db.db_defines.SWARM_STATUS.JOINED.value)
+        
+        db.update_art_with_node_info(uuid=SN_UUID,node_current_ap=self.node_request[STRs.AP_UUID.name],
+                                     node_current_swarm=1,node_current_ip=station_vip)
                     
         add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID.name])
 
