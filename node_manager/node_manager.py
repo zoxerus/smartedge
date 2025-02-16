@@ -164,7 +164,7 @@ def handle_communication():
             ACCESS_POINT_IP = ap_address[0]
             ping_command = f"ping -i 5 {ACCESS_POINT_IP}"
             # Start the ping process in the background
-            ping_process = subprocess.Popen(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            ping_process = subprocess.Popen(ping_command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                                                      
             if config_data[STRs.TYPE.name] == STRs.SET_CONFIG.name:
                 logger.debug(f'Handling Join Type {STRs.SET_CONFIG.name}')
