@@ -258,16 +258,18 @@ def install_swarmNode_config(swarmNode_config):
     swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC.name]
 
         
-    commands = [ # add the vxlan interface to the AP
-                f'ip link add vxlan{vxlan_id} type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
+    commands = [ 
+                'ip link del se_vxlan',
+                # add the vxlan interface to the AP
+                f'ip link add se_vxlan type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
                 # bring the vxlan up
-                    f'ip link set dev vxlan{vxlan_id} up',    
+                'ip link set dev se_vxlan up',    
                 # add the veth interface pair, will be ignored if name is duplicate
-                    f'ip link add veth0 type veth peer name veth1',
+                'ip link add veth0 type veth peer name veth1',
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
-                    f'ifconfig veth1 hw ether {swarm_veth1_vmac} ',
-                    f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.255.0 up',
-                    f'ifconfig veth0 up',
+                f'ip link set veth1 address {swarm_veth1_vmac} ',
+                f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.255.0 up',
+                f'ip link set veth0 up',
                 # disable HW offloads of checksum calculation, (as this is a virtual interface)
                     f'ethtool --offload veth1 rx off tx off'
                 ]
@@ -279,15 +281,15 @@ def install_swarmNode_config(swarmNode_config):
             logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
         
     get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
-    get_if2_index_command = f'cat /sys/class/net/vxlan{vxlan_id}/ifindex'
+    get_if2_index_command = 'cat /sys/class/net/se_vxlan/ifindex'
     if1_index = subprocess.run(get_if1_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)   
     
     commands = [
         'nikss-ctl pipeline unload id 0',        
         'nikss-ctl pipeline load id 0 ./node_manager/utils/nikss.o',
-        f'nikss-ctl add-port pipe 0 dev veth0',
-        f'nikss-ctl add-port pipe 0 dev vxlan{vxlan_id}',
+        'nikss-ctl add-port pipe 0 dev veth0',
+        'nikss-ctl add-port pipe 0 dev se_vxlan',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
         f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}'
     ]
