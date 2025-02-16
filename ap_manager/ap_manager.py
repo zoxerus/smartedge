@@ -400,7 +400,9 @@ async def handle_new_connected_station(station_physical_mac_address):
         if (proc_ret.stdout == '' ):
             next_vxlan_id = get_next_available_vxlan_id()
             vxlan_id = create_vxlan_by_host_id( vxlan_id= next_vxlan_id, remote= station_physical_ip_address )
-            if (vxlan_id == -1):
+        else:
+            vxlan_id = int(proc_ret.stdout)
+        if (vxlan_id == -1):
                 return
             
         host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
@@ -427,7 +429,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         }
         
         swarmNode_config_message = json.dumps(swarmNode_config)
-        result = send_swarmNode_config(swarmNode_config_message, station_physical_ip_address )
+        result = send_swarmNode_config(swarmNode_config_message, (station_physical_ip_address, cfg.node_manager_tcp_port)  )
         if (result == -1): # Node faild to configure itself
             logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
             return
