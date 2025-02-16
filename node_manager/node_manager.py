@@ -250,6 +250,22 @@ def update_config_after_join(config):
         if (process_ret.stderr):
             logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
 
+    get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
+    get_if2_index_command = 'cat /sys/class/net/se_vxlan/ifindex'
+    if1_index = subprocess.run(get_if1_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)   
+    
+    commands = [
+        'nikss-ctl pipeline unload id 0',        
+        'nikss-ctl pipeline load id 0 ./node_manager/utils/nikss.o',
+        'nikss-ctl add-port pipe 0 dev veth0',
+        'nikss-ctl add-port pipe 0 dev se_vxlan',
+        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
+        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}'
+    ]
+
+
+
 def install_swarmNode_config(swarmNode_config):
     global last_request_id, join_queue, ACCESS_POINT_IP
     
