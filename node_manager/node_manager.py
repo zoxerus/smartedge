@@ -323,10 +323,10 @@ def monitor_wifi_status():
     # this command is run in the shell to monitor wireless events using the iw tool
     monitoring_command = 'nmcli device monitor wlan0'
     # python runs the shell command and monitors the output in the terminal
-    process = subprocess.Popen( monitoring_command.split(),  text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen( monitoring_command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     previous_line = ''
     # we iterate over the output lines to read the event and react accordingly
-    for output_line in iter(lambda: process.stdout.readline(), ""):
+    for output_line in iter(lambda: process.stdout.readline().decode("utf-8"), ""):
         if (output_line.strip() == previous_line.strip()):
             continue
         previous_line = output_line

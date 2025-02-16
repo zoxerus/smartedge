@@ -301,7 +301,7 @@ async def handle_new_connected_station(station_physical_mac_address):
     logger.debug(f'node_info: {node_info} for {SN_UUID}')    
     
     # # in case the node is not present in the ART
-    if ( node_info == None or node_info.node_current_swarm == 0):
+    if ( node_info == None or node_info.current_swarm == 0):
         logger.debug(f'Configuring Swarm 0 for {SN_UUID}')    
         
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
@@ -387,7 +387,7 @@ async def handle_new_connected_station(station_physical_mac_address):
 
         
     else :
-        logger.info(f'node {SN_UUID} is part of swarm {node_info.node_current_swarm}')
+        logger.info(f'node {SN_UUID} is part of swarm {node_info.current_swarm}')
         command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $5}}' "
         proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if (proc_ret.stdout == '' ):
@@ -482,7 +482,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         SN_UUID = 'SN:' + station_physical_mac_address[9:]
         node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
         node_info = node_db_result.one()
-        if ( node_info == None or node_info.node_current_ap != THIS_AP_UUID):
+        if ( node_info == None or node_info.current_ap != THIS_AP_UUID):
             return
             
         logger.info(f'Removing disconnected Node: {station_physical_mac_address}')    

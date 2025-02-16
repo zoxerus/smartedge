@@ -124,20 +124,16 @@ class Swarm_Node_Handler:
                 
         
     def handle_message(self):
-        logger.debug(f"Handling Request with type {self.node_request[STRs.TYPE]}")
-        match self.node_request[STRs.TYPE]:
-            case STRs.JOIN_REQUEST_00:
-                logger.debug(f"Handling Request with type {STRs.JOIN_REQUEST_00.name}")
-                ret_val = self.user_input_respond_to_node_request()
-                if ret_val == '1':
-                    self.accept_join_request()
-                else:
-                    self.reject_join_request()
+        logger.debug(f"Handling Request with type {self.node_request[STRs.TYPE.name]}")
+        match self.node_request[STRs.TYPE.name]:
+            case STRs.JOIN_REQUEST.name:
+                logger.debug(f"Handling Request with type {STRs.JOIN_REQUEST.name}")
+                self.accept_join_request()
                     
             case 'Node_Left_AP':
                 pass
             
-            case STRs.LEAVE_REQUEST:
+            case STRs.LEAVE_REQUEST.name:
                 ret_val = self.user_input_respond_to_node_request()
                 if ret_val == 1:
                     pass
@@ -147,7 +143,7 @@ class Swarm_Node_Handler:
                     self.node_socket.send( bytes( f'Rejected: {self.message}'.encode() ) )
                     
             case _:
-                logger.debug(f"Request Type Unkown {self.node_request[STRs.TYPE]}")
+                logger.debug(f"Request Type Unkown {self.node_request[STRs.TYPE.name]}")
             
     def reject_join_request(self):
         pass
@@ -161,14 +157,14 @@ class Swarm_Node_Handler:
     def accept_join_request(self):
         # TODO: make this automatic
 
-        SN_UUID = self.node_request[STRs.THIS_NODE_UUID]
+        SN_UUID = self.node_request[STRs.NODE_UUID.name]
         
         logger.debug(f'Accecpted Node {SN_UUID} in Swarm')
         
         # first we get the ip of the access point from the ap list
-        ap_ip = get_ap_ip_from_ap_id(self.node_request[STRs.THIS_NODE_APID] )
+        ap_ip = get_ap_ip_from_ap_id(self.node_request[STRs.AP_UUID.name] )
         if (ap_ip == None):
-            logger.error(f'Error: could not find IP of access point {self.node_request[STRs.AP_ID]}')
+            logger.error(f'Error: could not find IP of access point {self.node_request[STRs.AP_UUID.name]}')
             return
         
         
@@ -182,30 +178,30 @@ class Swarm_Node_Handler:
         
         logger.debug(f'assigning vIP: {station_vip} vMAC: {station_vmac} to {SN_UUID}')
         swarmNode_config = {
-            STRs.TYPE: STRs.JOIN_REQUEST_00.value,
-            STRs.VETH1_VIP: station_vip,
-            STRs.VETH1_VMAC: station_vmac,
-            STRs.VXLAN_ID: self.node_request[STRs.VXLAN_ID],
-            STRs.SWARM_ID: 1,
-            STRs.COORDINATOR_VIP: cfg.coordinator_vip,
-            STRs.COORDINATOR_TCP_PORT: cfg.coordinator_tcp_port
+            STRs.TYPE.name: STRs.JOIN_REQUEST_00.value,
+            STRs.VETH1_VIP.name: station_vip,
+            STRs.VETH1_VMAC.name: station_vmac,
+            STRs.VXLAN_ID.name: self.node_request[STRs.VXLAN_ID.name],
+            STRs.SWARM_ID.name: 1,
+            STRs.COORDINATOR_VIP.name: cfg.coordinator_vip,
+            STRs.COORDINATOR_TCP_PORT.name: cfg.coordinator_tcp_port
         }
         config_message = json.dumps(swarmNode_config)
         
         logger.debug(f'Sending {config_message}')
         try:    
             self.node_socket.sendall( bytes( config_message.encode() ) )
-            logger.debug(f'Accepted node {SN_UUID} with request {self.node_request[STRs.REQUIST_ID]}')
+            logger.debug(f'Accepted node {SN_UUID} with request {self.node_request[STRs.REQUIST_ID.name]}')
         except Exception as e:
             logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
             return 
         
         
-        db.insert_node_into_swarm_database(host_id=host_id, this_ap_id=self.node_request[STRs.THIS_NODE_APID],
+        db.insert_node_into_swarm_database(host_id=host_id, this_ap_id=self.node_request[STRs.AP_UUID.name],
                                            node_vip= station_vip, node_vmac= station_vmac, node_phy_mac='',
                                            node_uuid=SN_UUID, status=db.db_defines.SWARM_STATUS.JOINED.value)
                     
-        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID])
+        add_bmv2_swarm_broadcast_port_to_ap(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID.name])
 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
@@ -227,7 +223,7 @@ class Swarm_Node_Handler:
         
         
         # insert table entries in the rest of the APs
-        node_ap_ip = cfg.ap_list[self.node_request[STRs.AP_ID]][0]
+        node_ap_ip = cfg.ap_list[self.node_request[STRs.AP_UUID.name]][0]
         for key in cfg.ap_list.keys():
             if key != self.node_swarm_ap:
                 ap_ip = cfg.ap_list[key][0]
