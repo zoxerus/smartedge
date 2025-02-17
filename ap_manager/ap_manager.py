@@ -476,7 +476,12 @@ async def handle_new_connected_station(station_physical_mac_address):
         #     if (result == -1): # Node faild to configure itself
         #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
         #         return
-        # TODO: update the bmv2 
+        # TODO: update the bmv2
+        
+        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
+        
+        logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations.keys()}")
+        
         db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=node_info.current_swarm, ap_port=vxlan_id, node_ip=station_vip)
         db.insert_node_into_swarm_database(node_uuid=SN_UUID, this_ap_id= THIS_AP_UUID,
                                         host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
@@ -511,7 +516,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         if (station_physical_mac_address not in connected_stations.keys()):
             logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations')
             return
-        
+
         # Wait for some time configured by the variable in cfg before considering that the node has actually disconnected
         t0 = time.time()
         while time.time() - t0 < cfg.ap_wait_time_for_disconnected_station_in_seconds:
