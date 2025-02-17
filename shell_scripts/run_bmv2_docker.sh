@@ -1,6 +1,6 @@
 #!/bin/bash
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}";
-cd "$( dirname -- "$SCRIPT_PATH/.."; )";
+cd "$( dirname -- "$SCRIPT_PATH"; )/..";
 
 BMV2_IMAGE=bmv2se
 BMV2_CONTAINER=bmv2smartedge
