@@ -101,8 +101,8 @@ case $ROLE in
 # Coordinator:
     co)
     echo "Role is set to Coordinator"
-    /bin/bash ./run_cassandra_docker.sh
-    /bin/bash ./run_bmv2_docker.sh co
+    /bin/bash ./shell_scripts/run_cassandra_docker.sh
+    /bin/bash ./shell_scripts/run_bmv2_docker.sh co
     
     # Genereate the MAC address for the Coordinator
     SWARM_IP=$(nextip $SWARM_SUBNET 254)
@@ -128,7 +128,7 @@ case $ROLE in
 # Access Point: 
     ap)
     echo "Role is set as Access Point"
-    /bin/bash ./run_bmv2_docker.sh
+    /bin/bash ./shell_scripts/run_bmv2_docker.sh
     # Genereate the MAC and IP address for the AP
     BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
