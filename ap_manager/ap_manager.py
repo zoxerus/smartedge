@@ -76,7 +76,7 @@ IW_TOOL_LEFT_STATION_EVENT = 'del'
 THIS_SWARM_SUBNET=ipaddress.ip_address( cfg.this_swarm_subnet )
 
 DEFAULT_SUBNET=ipaddress.ip_address(f'10.0.{args.num_id}.0')
-
+COORDINATOR_S0_IP = f'10.0.{args.num_id}.254'
 
 # a variable to track created host ids
 # TODO: have a database table for this
@@ -144,6 +144,17 @@ def initialize_program():
                                             table_name='MyIngress.tb_ipv4_lpm',
     action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{cfg.coordinator_vip}/32' , 
     action_params= f'{cfg.swarm_backbone_switch_port} { int_to_mac( int( ipaddress.ip_address(cfg.coordinator_vip)) )} 100')
+    
+    
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                                            table_name='MyIngress.tb_ipv4_lpm',
+    action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{COORDINATOR_S0_IP}/32' , 
+    action_params= f'{cfg.swarm_backbone_switch_port} { int_to_mac( int( ipaddress.ip_address(cfg.coordinator_vip)) )} 100')
+    
+    
+    
+    
+    
     
     # handle broadcast
     bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
