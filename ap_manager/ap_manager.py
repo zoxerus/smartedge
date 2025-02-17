@@ -341,13 +341,15 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         node_s0_mac = int_to_mac(int( ipaddress.ip_address(node_s0_ip) ))
         
+        coordinator_vip = DEFAULT_SUBNET + 254
+        
         swarmNode_config = {
             STRs.TYPE.name: STRs.SET_CONFIG.name,
             STRs.VETH1_VIP.name: node_s0_ip,
             STRs.VETH1_VMAC.name: node_s0_mac,
             STRs.VXLAN_ID.name: vxlan_id,
             STRs.SWARM_ID.name: 0,
-            STRs.COORDINATOR_VIP.name: cfg.coordinator_phyip,
+            STRs.COORDINATOR_VIP.name: coordinator_vip,
             STRs.COORDINATOR_TCP_PORT.name: cfg.coordinator_tcp_port,
             STRs.AP_UUID.name: THIS_AP_UUID
         }
