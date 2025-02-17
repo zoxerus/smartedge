@@ -478,7 +478,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         #         return
         # TODO: update the bmv2
         
-        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
+        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,station_vip, vxlan_id]
         
         logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations.keys()}")
         
