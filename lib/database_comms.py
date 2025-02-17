@@ -190,17 +190,17 @@ def delete_node_from_art(uuid):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
         query = f"""
             DELETE FROM {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_ADDRESS_RESOLUTION_TABLE} 
-            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = {uuid};
+            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{uuid}' ;
             """
-        result = execute_query(query)
-        return result
+        execute_query(query)
+        delete_node_from_swarm_database(uuid)
         
     
 def delete_node_from_swarm_database(uuid):
     if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
         query = f"""
             DELETE FROM {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE} 
-            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = {uuid};
+            WHERE {db_defines.NAMEOF_DATABASE_FIELD_NODE_UUID} = '{uuid}';
             """
         result = execute_query(query)
         return result

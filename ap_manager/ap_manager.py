@@ -511,9 +511,15 @@ async def handle_disconnected_station(station_physical_mac_address):
         # sometimes when the program is started there are already connected nodes to the AP.
         # so if one of these nodes disconnectes from the AP whre a disconnection is detected but the 
         # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
-        logger.info(f'Disconnected Node: {station_physical_mac_address} Waiting for {cfg.ap_wait_time_for_disconnected_station_in_seconds} seconds' + 
-                    '\n\t before removing it.')
-        if (station_physical_mac_address not in connected_stations.keys()):
+        # logger.info(f'Disconnected Node: {station_physical_mac_address} Waiting for {cfg.ap_wait_time_for_disconnected_station_in_seconds} seconds' + 
+        #             '\n\t before removing it.')
+        SN_UUID = 'SN:' + station_physical_mac_address[9:]
+        node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
+        node_info = node_db_result.one()
+        node_ap = ''
+        if (node_info != None):
+            node_ap = node_info.current_ap
+        if (station_physical_mac_address not in connected_stations.keys() or node_ap != THIS_AP_UUID ):
             logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations')
             return
 
@@ -531,7 +537,6 @@ async def handle_disconnected_station(station_physical_mac_address):
             time.sleep(1)
         
         
-        SN_UUID = 'SN:' + station_physical_mac_address[9:]
         node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
         node_info = node_db_result.one()
         if ( node_info == None or node_info.current_ap != THIS_AP_UUID):
@@ -571,9 +576,8 @@ async def handle_disconnected_station(station_physical_mac_address):
         
         
         # delete the node from the database
-        db.update_db_with_node_status(uuid=SN_UUID, status = db.db_defines.SWARM_STATUS.DISCONNECTED.value)
+        # db.update_db_with_node_status(uuid=SN_UUID, status = db.db_defines.SWARM_STATUS.DISCONNECTED.value)
         db.delete_node_from_art(uuid=SN_UUID)
-        db.delete_node_from_swarm_database(uuid=SN_UUID)
 
         
         logger.info(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')
