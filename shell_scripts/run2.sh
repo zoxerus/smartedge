@@ -123,7 +123,7 @@ case $ROLE in
     sudo ip link set dev smartedge-bb up
 
     # Run the python script for the coordinator
-    sudo python ./coordinator/coordinator.py --log-level $LOGLEVEL --num-id $NUMID
+    sudo .venv/bin/python ./coordinator/coordinator.py --log-level $LOGLEVEL --num-id $NUMID
     ;;
 # Access Point: 
     ap)
@@ -157,7 +157,7 @@ case $ROLE in
     sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
-    sudo python ./ap_manager/ap_manager.py --log-level $LOGLEVEL --num-id $NUMID
+    sudo .venv/bin/python ./ap_manager/ap_manager.py --log-level $LOGLEVEL --num-id $NUMID
     ;;
 # Smart Node
     sn)
@@ -182,7 +182,7 @@ case $ROLE in
         # sudo ip link set dev wlan0 up
     fi
     sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
-    sudo python ./node_manager/node_manager.py --log-level $LOGLEVEL --num-id $NUMID
+    sudo .venv/bin/python ./node_manager/node_manager.py --log-level $LOGLEVEL --num-id $NUMID
     ;;
 
     *)
