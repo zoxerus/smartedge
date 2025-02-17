@@ -118,7 +118,9 @@ case $ROLE in
     sudo ip address flush smartedge-bb
 
     # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
-    sudo ip address add 10.0.0.0/16 dev smartedge-bb
+    # sudo ip address add 10.0.0.254/16 dev smartedge-bb
+    sudo ip address add 10.0.4.254/24 dev smartedge-bb
+    sudo ip address add 10.0.5.254/24 dev smartedge-bb
     sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb address $final_mac
     sudo ip link set dev smartedge-bb up
