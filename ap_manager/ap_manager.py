@@ -142,8 +142,8 @@ def initialize_program():
     
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                             table_name='MyIngress.tb_ipv4_lpm',
-    action_name='MyIngress.ac_ipv4_forward', match_keys=f'{cfg.coordinator_vip}/32' , 
-    action_params= f'{cfg.swarm_backbone_switch_port}')
+    action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{cfg.coordinator_vip}/32' , 
+    action_params= f'{cfg.swarm_backbone_switch_port} { int_to_mac( int( ipaddress.ip_address(cfg.coordinator_vip)) )} 100')
     
     # handle broadcast
     bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
@@ -470,6 +470,7 @@ async def handle_new_connected_station(station_physical_mac_address):
                                         node_phy_mac=station_physical_mac_address, status=db.db_defines.SWARM_STATUS.JOINED.value)
         
         bmv2.add_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=vxlan_id)
+        
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                             table_name='MyIngress.tb_ipv4_lpm',
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
