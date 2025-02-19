@@ -245,7 +245,6 @@ def delete_vxlan_by_host_id(host_id):
     logger.debug(f'\nCreated Vxlans before removing {host_id}: {created_vxlans}')
     if int(host_id) in created_vxlans:
         created_vxlans.remove( int(host_id) )
-    else:
         logger.debug(f'\nCreated Vxlans after removing {host_id}: {created_vxlans}')
 
 
