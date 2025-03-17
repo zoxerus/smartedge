@@ -9,12 +9,15 @@ import queue
 sys.path.append('..')
 sys.path.append('.')
 
+import psutil
+import atexit
 import lib.global_config as cfg
 import ipaddress
 import socket
 import re
 import os
 import logging
+import logging.handlers
 import ipaddress
 import json
 import threading
@@ -32,8 +35,52 @@ parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq
 args = parser.parse_args()
 
 
+class SocketStreamHandler(logging.StreamHandler):
+    """Custom StreamHandler to send logs over TCP."""
+    def __init__(self, host, port):
+        super().__init__(sys.stdout)  # StreamHandler needs an output stream
+        self.host = host
+        self.port = port
+        self.sock = None
+        self._connect()
 
+    def _connect(self):
+        """Establish connection to log server."""
+        try:
+            self.sock = socket.create_connection((self.host, self.port))
+        except Exception as e:
+            print(f"Failed to connect to log server: {e}")
+            self.sock = None
 
+    def emit(self, record):
+        """Send log message to log server."""
+        if not self.sock:
+            self._connect()  # Try to reconnect if needed
+            if not self.sock:
+                return  # Drop log if connection fails
+
+        try:
+            msg = self.format(record) + "\n"
+            self.sock.sendall(msg.encode('utf-8'))  # Send log as bytes
+        except Exception as e:
+            print(f"Error sending log: {e}")
+            self.sock = None  # Reset socket on failure
+
+    def close(self):
+        """Close the socket when done."""
+        if self.sock:
+            self.sock.close()
+        super().close()
+
+loopback_if = 'lo:0'
+
+THIS_NODE_UUID = None
+for snic in psutil.net_if_addrs()[loopback_if]:
+    if snic.family == socket.AF_INET:        
+        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) -1 ))
+        THIS_NODE_UUID = f'AP:{temp_mac[9:]}'
+if THIS_NODE_UUID == None:
+    exit()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -41,19 +88,18 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 # where to store program logs
 PROGRAM_LOG_FILE_NAME = './logs/coordinator.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
-logger = logging.getLogger('coordinator_logger')
-# this part handles logging to console and to a file for debugging purposes
-log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n%(message)s\n")
+logger = logging.getLogger(THIS_NODE_UUID)
 
-# log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-# log_file_handler.setLevel(args.log_level)
-# log_file_handler.setFormatter(log_formatter)
+log_socket_handler = SocketStreamHandler( cfg.logs_server_address[0], cfg.logs_server_address[1] )
+log_info_formatter =  logging.Formatter("%(name)s %(asctime)s [%(levelname)s]:\n%(message)s\n")
+log_socket_handler.setFormatter(log_info_formatter)
+log_socket_handler.setLevel(logging.INFO)
 
 log_console_handler = logging.StreamHandler(sys.stdout)
 log_console_handler.setLevel(args.log_level)
+log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n%(message)s\n")
 log_console_handler.setFormatter(log_formatter)
 logger.setLevel(args.log_level)    
-# logger.addHandler(log_file_handler)
 logger.addHandler(log_console_handler)
 
 logger.debug(f'Running in: {dir_path}')
@@ -81,10 +127,6 @@ db.DATABASE_SESSION = database_session
 
 # a function to parse a string and extract integers
 # needed for interactiosn with bmv2
-
-
-
-
 
 def get_ap_ip_from_ap_id(ap_id):
     try:
@@ -280,10 +322,15 @@ def swarm_coordinator():
             # threading.Thread(target=handle_swarm_node, args=(node_socket, address, ), daemon= True ).start()
 
 
+def exit_handler():
+    log_socket_handler.close()
+
+
 def main():
+    atexit.register(exit_handler)
+
     # set_arps()
-    logger.debug('Coordinator Starting')
-    print('Starting Coordinator')
+    logger.info('Coordinator Starting')
     swarm_coordinator()
 
     return 0 

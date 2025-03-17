@@ -15,6 +15,8 @@ default_backbone_device = 'smartedge-bb'
 default_wlan_device = 'wlan0'
 
 
+logs_server_address = ('192.168.137.106', 5000)
+
 ap_wait_time_for_disconnected_station_in_seconds=5
 
 # here configure the subnet range that need to be allocated to the swarm
@@ -41,7 +43,8 @@ database_port = CASSANDRA_PORT
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
 # it is sent to the swarm node when it connects to the AP
-coordinator_vip='10.1.0.254'        # swarm virtual ip
+
+coordinator_vip='10.1.255.254'        # swarm virtual ip
 coordinator_phyip='192.168.100.254' # physical ip of device 
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
@@ -59,7 +62,6 @@ node_manager_tcp_port = 29997
 #TODO: Configure this IP list, physical IPs of access points
 ap_list = {
     # ID of AP        IP of eth0         IP smartedge-bb
-    #'AP:00:00:03':  ['192.168.137.103', '192.168.100.3'],
     'AP:00:00:04':  ['192.168.137.104', '192.168.100.4'],
     'AP:00:00:05':  ['192.168.137.105', '192.168.100.5'],
     'AP:00:00:07':  ['192.168.137.107', '192.168.100.7']  

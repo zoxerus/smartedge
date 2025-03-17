@@ -103,9 +103,11 @@ case $ROLE in
     echo "Role is set to Coordinator"
     /bin/bash ./shell_scripts/run_cassandra_docker.sh
     /bin/bash ./shell_scripts/run_bmv2_docker.sh co
-    
+    sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
+
     # Genereate the MAC address for the Coordinator
-    SWARM_IP=$(nextip $SWARM_SUBNET 254)
+    # SWARM_IP=$(nextip $SWARM_SUBNET 254)
+    SWARM_IP=10.1.255.254
     BACKBONE_IP=$(nextip $BACKBONE_SUBNET 254)
     oldMAC=00:00:00:00:00:00
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
@@ -116,12 +118,13 @@ case $ROLE in
 
     sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
     sudo ip address flush smartedge-bb
-
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
-    # sudo ip address add 10.0.0.254/16 dev smartedge-bb
+    sudo ip address add 10.0.1.254/24 dev smartedge-bb
+    sudo ip address add 10.0.2.254/24 dev smartedge-bb
+    sudo ip address add 10.0.3.254/24 dev smartedge-bb
     sudo ip address add 10.0.4.254/24 dev smartedge-bb
     sudo ip address add 10.0.5.254/24 dev smartedge-bb
-    sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
+
+    sudo ip address add 10.1.255.254/16 dev smartedge-bb
     sudo ip link set dev smartedge-bb address $final_mac
     sudo ip link set dev smartedge-bb up
 

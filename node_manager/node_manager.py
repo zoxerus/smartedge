@@ -168,6 +168,7 @@ def handle_communication():
                                                      
             if config_data[STRs.TYPE.name] == STRs.SET_CONFIG.name:
                 logger.debug(f'Handling Join Type {STRs.SET_CONFIG.name}')
+                gb_swarmNode_config = config_data
                 try:
                     install_swarmNode_config(config_data)
                     ap_socket.sendall(bytes( "OK!".encode() ))
@@ -175,67 +176,85 @@ def handle_communication():
                 except Exception as e:
                     logger.error(repr(e))
                     
-                time.sleep(30)
-                try:                        
-                    join_request_dic = {
-                        STRs.TYPE.name:           STRs.JOIN_REQUEST.name,
-                        STRs.REQUIST_ID.name:     last_request_id,
-                        STRs.NODE_UUID.name: THIS_NODE_UUID,
-                        STRs.AP_UUID.name: config_data[STRs.AP_UUID.name],
-                        STRs.VXLAN_ID.name:       config_data[STRs.VXLAN_ID.name]
-                    }
-                    last_request_id = last_request_id + 1
-                    
-                    join_request_json_string = json.dumps(join_request_dic)
-                    logger.debug(f'Preparing join request:\n{json.dumps(join_request_dic, indent=2 )}')
-                    
-                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
-                        print(f'connecting to {config_data[STRs.COORDINATOR_VIP.name]}:{config_data[STRs.COORDINATOR_TCP_PORT.name]}')
-                        coordinator_socket.settimeout(120)
-                        coordinator_socket.connect((config_data[STRs.COORDINATOR_VIP.name], config_data[STRs.COORDINATOR_TCP_PORT.name] ))
-                        coordinator_socket.sendall(bytes( join_request_json_string.encode() ))
-                        
-                        logger.debug(f'Sent:\n{json.dumps(join_request_dic, indent=2 )} to coordinator')
-                        
-                        response = coordinator_socket.recv(1024).decode()
-                        response_data = json.loads(response)
-                        logger.debug(f"Response from Coordinator: {json.dumps(response_data, indent=2)}")
-                        if (response_data[STRs.TYPE.name] == STRs.JOIN_REQUEST.name):
-                            logger.debug('Node Accepted in Swarm')
-                            try:
-                                logger.debug('Configuring Self ...')
-                                update_config_after_join(response_data)
-                                coordinator_socket.sendall(bytes( "OK!".encode() ))
-                                coordinator_socket.close()
-                                
-
-
-                            except Exception as e:
-                                logger.error(repr(e))                   
-                        
-                except Exception as e:
-                    print(f'Error installing config: {repr(e)} Leaving Access Point' )
-                    # cli_command = f'nmcli connection show --active'
-                    # res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
-                    # ap_ssid = ''
-                    # for line in res.stdout.strip().splitlines():
-                    #     if DEFAULT_IFNAME in line:
-                    #         ap_ssid = line.split()[0]
-                    # cli_command = f'nmcli connection down id {ap_ssid}'
-                    # subprocess.run(cli_command.split(), text=True)
-                    # cli_command = f'nmcli connection delete id {ap_ssid}'
-                    # subprocess.run(cli_command.split(), text=True)
-                    
             elif config_data[STRs.TYPE.name] == STRs.UPDAET_CONFIG.name:
                 logger.debug(f'updating config')
                 update_config_after_join(config_data)
                 ap_socket.sendall(bytes( "OK!".encode() ))
                 ap_socket.close()
-                
+
+            elif config_data[STRs.TYPE.name] == STRs.LEAVE_REQUEST.name:
+                logger.debug(f'Got asked to leave')
+                send_leave_request()                
                 
                 # coordinator_socket.sendall(bytes( "OK!".encode() ))
             else:
                 logger.error(f'Unkown Message Type {config_data[STRs.TYPE.name]}')
+
+def send_join_request():
+    global gb_swarmNode_config, last_request_id
+    
+    config_data = gb_swarmNode_config
+    try:                        
+        join_request_dic = {
+            STRs.TYPE.name:           STRs.JOIN_REQUEST.name,
+            STRs.REQUIST_ID.name:     last_request_id,
+            STRs.NODE_UUID.name: THIS_NODE_UUID,
+            STRs.AP_UUID.name: config_data[STRs.AP_UUID.name],
+            STRs.VXLAN_ID.name:       config_data[STRs.VXLAN_ID.name]
+        }
+        last_request_id = last_request_id + 1
+        
+        join_request_json_string = json.dumps(join_request_dic)
+        logger.debug(f'Preparing join request:\n{json.dumps(join_request_dic, indent=2 )}')
+        
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
+            print(f'connecting to {config_data[STRs.COORDINATOR_VIP.name]}:{config_data[STRs.COORDINATOR_TCP_PORT.name]}')
+            coordinator_socket.settimeout(120)
+            coordinator_socket.connect((config_data[STRs.COORDINATOR_VIP.name], config_data[STRs.COORDINATOR_TCP_PORT.name] ))
+            coordinator_socket.sendall(bytes( join_request_json_string.encode() ))
+            
+            logger.debug(f'Sent:\n{json.dumps(join_request_dic, indent=2 )} to coordinator')
+            
+            response = coordinator_socket.recv(1024).decode()
+            response_data = json.loads(response)
+            logger.debug(f"Response from Coordinator: {json.dumps(response_data, indent=2)}")
+            if (response_data[STRs.TYPE.name] == STRs.JOIN_REQUEST.name):
+                logger.debug('Node Accepted in Swarm')
+                try:
+                    logger.debug('Configuring Self ...')
+                    update_config_after_join(response_data)
+                    coordinator_socket.sendall(bytes( "OK!".encode() ))
+                    coordinator_socket.close()
+                    
+                except Exception as e:
+                    logger.error(repr(e))                   
+            
+    except Exception as e:
+        print(f'Error installing config: {repr(e)} Leaving Access Point' )
+        cli_command = f'nmcli connection show --active'
+        res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
+        ap_ssid = ''
+        for line in res.stdout.strip().splitlines():
+            if DEFAULT_IFNAME in line:
+                ap_ssid = line.split()[0]
+        cli_command = f'nmcli connection down id {ap_ssid}'
+        subprocess.run(cli_command.split(), text=True)
+        cli_command = f'nmcli connection delete id {ap_ssid}'
+        subprocess.run(cli_command.split(), text=True)
+
+
+def send_leave_request():
+    print('Leaving Swarm')
+    cli_command = f'nmcli connection show --active'
+    res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
+    ap_ssid = ''
+    for line in res.stdout.strip().splitlines():
+        if DEFAULT_IFNAME in line:
+            ap_ssid = line.split()[0]
+    cli_command = f'nmcli connection down id {ap_ssid}'
+    subprocess.run(cli_command.split(), text=True)
+    cli_command = f'nmcli connection up id {ap_ssid}'
+    subprocess.run(cli_command.split(), text=True)
 
 
 def update_config_after_join(config):
@@ -380,10 +399,10 @@ def monitor_wifi_status():
     # this command is run in the shell to monitor wireless events using the iw tool
     monitoring_command = 'nmcli device monitor wlan0'
     # python runs the shell command and monitors the output in the terminal
-    process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE)
+    process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE, text = True)
     previous_line = ''
     # we iterate over the output lines to read the event and react accordingly
-    for output_line in iter(lambda: process.stdout.readline().decode("utf-8"), ""):
+    for output_line in iter(lambda: process.stdout.readlines(), ""):
         if (output_line.strip() == previous_line.strip()):
             continue
         previous_line = output_line
@@ -409,17 +428,33 @@ def monitor_wifi_status():
 
             
   
-  
-  
+def handle_user_input():
+    while True:
+        user_input = input("Enter 1 to join, 2 to leave: ")
+        if (user_input == '1'):
+            print('sending join request')
+            send_join_request()
+        elif (user_input == '2'):
+            print('sending leave request')
+            send_leave_request()
+        elif (user_input== ''):
+            print('\n')
+            continue
+        else:
+            print('wrong input')
+        time.sleep(1)
+
 def main():
     print('program started')
     t1 = threading.Thread(target=handle_communication, args=() )
     t2 = threading.Thread(target= monitor_wifi_status, args=())
+    t3 = threading.Thread(target= handle_user_input, args=())
     t1.start()
     t2.start()
+    t3.start()
     t1.join()
     t2.join()
-
+    t3.join()
 
 
 
