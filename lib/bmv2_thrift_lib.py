@@ -74,14 +74,15 @@ def remove_bmv2_swarm_broadcast_port(ap_ip, thrift_port, switch_port ):
         res = send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port)
         res_lines = res.splitlines()
         i = 0
-        
         for line in res_lines:
             if 'mgrp(' in line:
                 port_list = set(extract_numbers([ res_lines[i+1].split('ports=[')[1].split(']')[0] ]))
-                bmv2_logger.debug("Port_list = " + str(port_list) )
-                port_list.remove(switch_port)
-                broadcast_ports =  ' '.join( str(port) for port in port_list)
-                send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port )  
+                if (switch_port in port_list):
+                    port_list.remove(switch_port)
+                    broadcast_ports =  ' '.join( str(port) for port in port_list)
+                    send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port )  
+            else:
+                bmv2_logger.debug(f'Port {switch_port} is not in swarm boradcast ports')
             i = i + 1
 
 
