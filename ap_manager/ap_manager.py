@@ -553,6 +553,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
         # logger.info(f'Disconnected Node: {station_physical_mac_address} Waiting for {cfg.ap_wait_time_for_disconnected_station_in_seconds} seconds' + 
         #             '\n\t before removing it.')
+        print("***************\n\n\n\n\n\n\n  1111111   \n\n\n\n\n\n")
         SN_UUID = 'SN:' + station_physical_mac_address[9:]
         node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
         node_info = node_db_result.one()
@@ -562,7 +563,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         if (station_physical_mac_address not in connected_stations.keys() or node_ap != THIS_AP_UUID ):
             logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations: {connected_stations.keys()}')
             return
-
+        print("***************\n\n\n\n\n\n\n  2222222222   \n\n\n\n\n\n")
         # Wait for some time configured by the variable in cfg before considering that the node has actually disconnected
         t0 = time.time()
         while time.time() - t0 < cfg.ap_wait_time_for_disconnected_station_in_seconds:
@@ -576,7 +577,7 @@ async def handle_disconnected_station(station_physical_mac_address):
             proc_res = subprocess.run(cli_command.split(), shell=False,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(1)
         
-        
+        print("***************\n\n\n\n\n\n\n  33333333   \n\n\n\n\n\n")
         node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
         node_info = node_db_result.one()
         if ( node_info == None or node_info.current_ap != THIS_AP_UUID):
@@ -588,7 +589,7 @@ async def handle_disconnected_station(station_physical_mac_address):
             except:
                 logger.error(f'could not delete station from connected station set {repr(e)}')
             return
-            
+        print("***************\n\n\n\n\n\n\n  4   \n\n\n\n\n\n")   
         logger.info(f'Removing disconnected Node: {station_physical_mac_address}')
         logger.debug(f"Connected Stations List before removing {station_physical_mac_address}: {connected_stations}")                
     
@@ -601,7 +602,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         del connected_stations[station_physical_mac_address]
         logger.debug(f"Connected Stations List after removing {station_physical_mac_address}: {connected_stations}")
         
-        
+        print("***************\n\n\n\n\n\n\n  5   \n\n\n\n\n\n")
         # delete the forwarding entries that point to this station from the rest of the Access Points.
         # TODO: move this functionality to the coordinator.
         for key in cfg.ap_list.keys():
@@ -615,19 +616,21 @@ async def handle_disconnected_station(station_physical_mac_address):
             #                                   table_name='MyIngress.tb_l2_forward', key=station_virtual_mac_address,
             #                                   thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
 
-        
+        print("***************\n\n\n\n\n\n\n  6   \n\n\n\n\n\n")
         # delete the corresponding switch port
         bmv2.remove_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=node_info.ap_port)
         delete_vxlan_from_bmv2_command = "port_remove %s" % station_vxlan_id
         bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command)
         
-        
+        print("***************\n\n\n\n\n\n\n  7   \n\n\n\n\n\n")
         # delete the node from the database
         # db.update_db_with_node_status(uuid=SN_UUID, status = db.db_defines.SWARM_STATUS.DISCONNECTED.value)
+        
         db.delete_node_from_art(uuid=SN_UUID)
-               
+        print("***************\n\n\n\n\n\n\n  8   \n\n\n\n\n\n")
         logger.info(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')
         delete_vxlan_by_host_id(station_vxlan_id)
+        print("***************\n\n\n\n\n\n\n  9   \n\n\n\n\n\n")
     except Exception as e:
         logger.error(f"Error handling disconnected station {SN_UUID}: {repr(e)}")
 
