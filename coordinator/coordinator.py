@@ -322,18 +322,25 @@ def swarm_coordinator():
             # threading.Thread(target=handle_swarm_node, args=(node_socket, address, ), daemon= True ).start()
 
 
+
+def swarm_node_handler():
+    return
+
+def ap_handler():
+    return
+
+def adaptive_coordinator_handler():
+    return
+
+
 def exit_handler():
     log_socket_handler.close()
 
-
 def main():
     atexit.register(exit_handler)
-
-    # set_arps()
     logger.info('Coordinator Starting')
     swarm_coordinator()
 
-    return 0 
 
 if __name__ == "__main__":
     main()
