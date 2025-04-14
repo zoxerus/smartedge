@@ -311,30 +311,30 @@ def monitor_wifi_status():
 
             
   
-def handle_user_input():
-    while True:
-        user_input = input("Enter 1 to join, 2 to leave: ")
-        if (user_input == '1'):
-            print('sending join request')
-            send_join_request()
-        elif (user_input == '2'):
-            print('sending leave request')
-            send_leave_request()
-        elif (user_input== ''):
-            print('\n')
-            continue
-        else:
-            print('wrong input')
-        time.sleep(1)
+# def handle_user_input():
+#     while True:
+#         user_input = input("Enter 1 to join, 2 to leave: ")
+#         if (user_input == '1'):
+#             print('sending join request')
+#             send_join_request()
+#         elif (user_input == '2'):
+#             print('sending leave request')
+#             send_leave_request()
+#         elif (user_input== ''):
+#             print('\n')
+#             continue
+#         else:
+#             print('wrong input')
+#         time.sleep(1)
 
 def main():
     print('program started')
     t1 = threading.Thread(target=handle_communication, args=() )
     t2 = threading.Thread(target= monitor_wifi_status, args=())
-    t3 = threading.Thread(target= handle_user_input, args=())
+    # t3 = threading.Thread(target= handle_user_input, args=())
     t1.start()
     t2.start()
-    t3.start()
+    # t3.start()
 
 
 
