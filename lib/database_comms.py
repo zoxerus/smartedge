@@ -148,6 +148,26 @@ def get_next_available_host_id_from_swarm_table(first_host_id, max_host_id, uuid
         else: return first_result.one()[0]
 
 
+
+# GET NEXT AVAILABLE HOST ID FROM SWARM TABLE
+def batch_get_available_host_id_from_swarm_table(first_host_id, max_host_id):
+    if DATABASE_IN_USE == STR_DATABASE_TYPE_CASSANDRA:
+        query = f""" SELECT {db_defines.NAMEOF_DATABASE_FIELD_NODE_SWARM_ID} FROM 
+            {db_defines.NAMEOF_DATABASE_SWARM_KEYSPACE}.{db_defines.NAMEOF_DATABASE_SWARM_TABLE} ALLOW FILTERING; 
+            """
+        result = execute_query(query)
+        id_list = []
+        for row in result:
+            db_logger.debug(f"received Row from DB: {row}")
+            id_list.append(row[0])
+        if (id_list == []):
+            db_logger.debug(f"getting next host id: id_list is empty: {id_list} returning {first_host_id}")
+            return first_host_id
+        availalbe_ids = list( set(range(first_host_id, max_host_id + 1 )) - set(id_list) )
+        availalbe_ids.sort()
+        db_logger.debug(f"available host ids: {availalbe_ids}")
+        return availalbe_ids
+
         
         
         

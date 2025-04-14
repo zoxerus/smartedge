@@ -9,6 +9,7 @@ import queue
 sys.path.append('..')
 sys.path.append('.')
 
+import asyncio
 import psutil
 import atexit
 import lib.global_config as cfg
@@ -240,19 +241,6 @@ class Swarm_Node_Handler:
                                                     table_name='MyIngress.tb_ipv4_lpm',
             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
             action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
-     
-        # entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-        #                                             table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
-        #                                             match_keys= f'{node_swarm_mac}', action_params= str(node_swarm_id),
-        #                                             thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
-        
-        # bmv2.delete_forwarding_entry_from_bmv2(
-        #     communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_swarm_control', key= f'{node_swarm_id} {cfg.coordinator_vip}',
-        #     thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT)
-
-        # bmv2.delete_forwarding_entry_from_bmv2(
-        #     communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name= 'MyIngress.tb_swarm_control', 
-        #     key= f'{cfg.swarm_backbone_switch_port} {self.node_swarm_ip}', thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT)
         
         
         # insert table entries in the rest of the APs
@@ -265,14 +253,77 @@ class Swarm_Node_Handler:
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
                         action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
-                
-                # entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                #                         table_name='MyIngress.tb_l2_forward', action_name= 'ac_l2_forward', 
-                #                         match_keys= f'{node_swarm_mac}', action_params= str(cfg.swarm_backbone_switch_port),
-                #                         thrift_ip= cfg.ap_list[key][0], thrift_port= DEFAULT_THRIFT_PORT)
+
          
 
+async def onboard_node(host_id, uuid, ap_id):
+    SN_UUID = uuid
+    logger.debug(f'Accepted Node {SN_UUID} in Swarm')
+    
+    # first we get the ip of the access point from the ap list
+    ap_ip = get_ap_ip_from_ap_id(ap_id)
+    
+    if (ap_ip == None):
+        logger.error(f'Error: could not find IP of access point {ap_id}')
+        return
+    
+    result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
+    
+    station_vmac= result[0]
+    station_vip = result[1]
+    
+    logger.debug(f'assigning vIP: {station_vip} vMAC: {station_vmac} to {SN_UUID}')
+    swarmNode_config = {
+        STRs.TYPE.name: STRs.SET_CONFIG.name,
+        STRs.VETH1_VIP.name: station_vip,
+        STRs.VETH1_VMAC.name: station_vmac,
+        STRs.SWARM_ID.name: 1,
+        STRs.COORDINATOR_VIP.name: cfg.coordinator_vip,
+        STRs.COORDINATOR_TCP_PORT.name: cfg.coordinator_tcp_port
+    }
+    
+    config_message = json.dumps(swarmNode_config)
+    
+    logger.debug(f'Sending {config_message}')
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((station_vip, cfg.node_manager_tcp_port))
+            s.sendall( bytes( config_message.encode() ) )
+            logger.debug(f'sent {config_message} to {SN_UUID}')
+            data = s.recv(1024) #receive up to 1024 bytes.
+            logger.debug(f'response {data} from {SN_UUID}')
+            return data.decode()
+        
+    except Exception as e:
+        logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
+        return 
+    
+    
+    db.insert_node_into_swarm_database(host_id=host_id, this_ap_id=self.node_request[STRs.AP_UUID.name],
+                                        node_vip= station_vip, node_vmac= station_vmac, node_phy_mac='',
+                                        node_uuid=SN_UUID, status=db.db_defines.SWARM_STATUS.JOINED.value)
+    
+    db.update_art_with_node_info(node_uuid=SN_UUID,node_current_ap=self.node_request[STRs.AP_UUID.name],
+                                    node_current_swarm=1,node_current_ip=station_vip)
+                
+    bmv2.add_bmv2_swarm_broadcast_port(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID.name])
 
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                                                table_name='MyIngress.tb_ipv4_lpm',
+        action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
+        action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
+    
+    
+    # insert table entries in the rest of the APs
+    node_ap_ip = cfg.ap_list[self.node_request[STRs.AP_UUID.name]][0]
+    for key in cfg.ap_list.keys():
+        if key != self.node_request[STRs.AP_UUID.name]:
+            ap_ip = cfg.ap_list[key][0]
+            ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
+            entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                                                table_name='MyIngress.tb_ipv4_lpm',
+                    action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
+                    action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
 
 
 
@@ -322,14 +373,66 @@ def swarm_coordinator():
             # threading.Thread(target=handle_swarm_node, args=(node_socket, address, ), daemon= True ).start()
 
 
+str_TYPE = 'Type'
+str_NODE_JOIN_LIST = 'njl'
+str_NODE_IDS = 'nids'
 
-def swarm_node_handler():
+
+def handle_ac_communication(ac_socket):
+    ac_message_in = ac_socket.recv(1024).decode()
+    logger.debug(f'ac_message_in: {ac_message_in}')
+    ac_message_in_json = json.loads(ac_message_in)
+    if ac_message_in_json[str_TYPE] == str_NODE_JOIN_LIST:
+        nodes_id_tuple = tuple(ac_message_in_json[str_NODE_IDS])
+        query = f'SELECT * FROM ks_swarm.art WHERE uuid IN {str(nodes_id_tuple)};'
+        rows = db.execute_query(query)
+        availalbe_nodes_ids = []
+        available_nodes_ips = []
+        available_nodes_aps = []
+        for row in rows:
+            if row.current_swarm == 0:
+                availalbe_nodes_ids.append(row.uuid)
+                available_nodes_ips.append(row.virt_ip)
+                available_nodes_aps.append(row.current_ap)
+        num_ips = len(available_nodes_ips)
+        if num_ips == 0: 
+            return
+        available_host_ids = db.batch_get_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
+                    max_host_id=cfg.this_swarm_dhcp_end)
+        
+        for i in range(1, num_ips + 1):
+            host_id = available_host_ids[i]
+            node_uuid = availalbe_nodes_ids[i]
+            ap_id = available_nodes_aps[i]
+            asyncio.run( onboard_node( host_id, node_uuid, ap_id ) )
     return
 
-def ap_handler():
+HOST = 'localhost'
+NODE_PORT = 9997
+AP_PORT = 9998
+HIGHER_PORT = 9999
+
+def node_handler(HOST, HIGHER_PORT):
     return
 
-def adaptive_coordinator_handler():
+def ap_handler(HOST, HIGHER_PORT):
+    return
+
+def adaptive_coordinator_handler(HOST, HIGHER_PORT):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serversocket:
+        serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        serversocket.bind(SWARM_NODE_TCP_SERVER)
+        set_keepalive_linux(sock= serversocket, after_idle_sec=1, interval_sec=3, max_fails= 5)
+        serversocket.listen(3)  # max number of connections
+        print('AC Thread is Running: waiting for communication ..')
+        iter = 0
+        while True:
+            iter = iter + 1
+            logger.debug(f'AC server waiting for requests, iteration {iter} ... ')
+            (ac_socket, address) = serversocket.accept()
+            logger.debug(f'received connection request from {address}')
+            handle_ac_communication(ac_socket)
+            
     return
 
 
@@ -339,8 +442,12 @@ def exit_handler():
 def main():
     atexit.register(exit_handler)
     logger.info('Coordinator Starting')
-    swarm_coordinator()
-
+    node_thread = threading.Thread(target=node_handler, args=(HOST, NODE_PORT))
+    ap_thread = threading.Thread(target=ap_handler, args=(HOST, AP_PORT ))
+    ac_thread = threading.Thread(target=adaptive_coordinator_handler, args=(HOST, HIGHER_PORT))
+    node_thread.start()
+    ap_thread.start()
+    ac_thread.start()
 
 if __name__ == "__main__":
     main()

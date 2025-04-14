@@ -151,127 +151,35 @@ def handle_communication():
             logger.debug(f'Node Manager Listening on port {cfg.node_manager_tcp_port} ...')
         except Exception as e:
             logger.error(f'Exception in Node Manager Socket: {e}')
+        iter = 0
         while True:
+            iter = iter + 1 
+            print(f'Node Manager waiting for instruction, iteration {iter}')
             node_manager_socket.listen()
             ap_socket, ap_address = node_manager_socket.accept()
             comm_buffer = ap_socket.recv(1024).decode()
-            
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
             logger.debug(f'config_data: {config_data}')
-            gb_swarmNode_config = config_data
-            
-            ACCESS_POINT_IP = ap_address[0]
-            ping_command = f"ping -i 5 {ACCESS_POINT_IP}"
-            # Start the ping process in the background
-            ping_process = subprocess.Popen(ping_command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                                                      
             if config_data[STRs.TYPE.name] == STRs.SET_CONFIG.name:
                 logger.debug(f'Handling Join Type {STRs.SET_CONFIG.name}')
-                gb_swarmNode_config = config_data
-                try:
-                    install_swarmNode_config(config_data)
+                try:    
+                    if STRs.VXLAN_ID.name in config_data.keys():
+                        install_swarmNode_config(config_data)
+                    else:
+                        install_config_no_update_vxlan(config_data)
                     ap_socket.sendall(bytes( "OK!".encode() ))
                     ap_socket.close()
                 except Exception as e:
                     logger.error(repr(e))
-                    
-            elif config_data[STRs.TYPE.name] == STRs.UPDAET_CONFIG.name:
-                logger.debug(f'updating config')
-                update_config_after_join(config_data)
-                ap_socket.sendall(bytes( "OK!".encode() ))
-                ap_socket.close()
-
-            elif config_data[STRs.TYPE.name] == STRs.LEAVE_REQUEST.name:
-                logger.debug(f'Got asked to leave')
-                send_leave_request()                
-                
-                # coordinator_socket.sendall(bytes( "OK!".encode() ))
-            else:
-                logger.error(f'Unkown Message Type {config_data[STRs.TYPE.name]}')
-
-def send_join_request():
-    global gb_swarmNode_config, last_request_id
-    
-    config_data = gb_swarmNode_config
-    try:                        
-        join_request_dic = {
-            STRs.TYPE.name:           STRs.JOIN_REQUEST.name,
-            STRs.REQUIST_ID.name:     last_request_id,
-            STRs.NODE_UUID.name: THIS_NODE_UUID,
-            STRs.AP_UUID.name: config_data[STRs.AP_UUID.name],
-            STRs.VXLAN_ID.name:       config_data[STRs.VXLAN_ID.name]
-        }
-        last_request_id = last_request_id + 1
-        
-        join_request_json_string = json.dumps(join_request_dic)
-        logger.debug(f'Preparing join request:\n{json.dumps(join_request_dic, indent=2 )}')
-        
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as coordinator_socket:
-            print(f'connecting to {config_data[STRs.COORDINATOR_VIP.name]}:{config_data[STRs.COORDINATOR_TCP_PORT.name]}')
-            coordinator_socket.settimeout(120)
-            coordinator_socket.connect((config_data[STRs.COORDINATOR_VIP.name], config_data[STRs.COORDINATOR_TCP_PORT.name] ))
-            coordinator_socket.sendall(bytes( join_request_json_string.encode() ))
-            
-            logger.debug(f'Sent:\n{json.dumps(join_request_dic, indent=2 )} to coordinator')
-            
-            response = coordinator_socket.recv(1024).decode()
-            response_data = json.loads(response)
-            logger.debug(f"Response from Coordinator: {json.dumps(response_data, indent=2)}")
-            if (response_data[STRs.TYPE.name] == STRs.JOIN_REQUEST.name):
-                logger.debug('Node Accepted in Swarm')
-                try:
-                    logger.debug('Configuring Self ...')
-                    update_config_after_join(response_data)
-                    coordinator_socket.sendall(bytes( "OK!".encode() ))
-                    coordinator_socket.close()
-                    
-                except Exception as e:
-                    logger.error(repr(e))                   
-            
-    except Exception as e:
-        print(f'Error installing config: {repr(e)} Leaving Access Point' )
-        cli_command = f'nmcli connection show --active'
-        res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
-        ap_ssid = ''
-        for line in res.stdout.strip().splitlines():
-            if DEFAULT_IFNAME in line:
-                ap_ssid = line.split()[0]
-        cli_command = f'nmcli connection down id {ap_ssid}'
-        subprocess.run(cli_command.split(), text=True)
-        cli_command = f'nmcli connection delete id {ap_ssid}'
-        subprocess.run(cli_command.split(), text=True)
 
 
-def send_leave_request():
-    print('Leaving Swarm')
-    cli_command = f'nmcli connection show --active'
-    res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
-    ap_ssid = ''
-    for line in res.stdout.strip().splitlines():
-        if DEFAULT_IFNAME in line:
-            ap_ssid = line.split()[0]
-    cli_command = f'nmcli connection down id {ap_ssid}'
-    subprocess.run(cli_command.split(), text=True)
-    cli_command = f'nmcli connection up id {ap_ssid}'
-    subprocess.run(cli_command.split(), text=True)
+def install_config_no_update_vxlan(config_data):
+    swarm_veth1_vip = config_data[STRs.VETH1_VIP.name]
+    swarm_veth1_vmac = config_data[STRs.VETH1_VMAC.name]
 
-
-def update_config_after_join(config):
-    vxlan_id = config[STRs.VXLAN_ID.name]
-    swarm_veth1_vip = config[STRs.VETH1_VIP.name]
-    swarm_veth1_vmac = config[STRs.VETH1_VMAC.name]
-
-        
-    commands = [ 
-                'ip link del se_vxlan',
-                'ip link del veth1',
-                # add the vxlan interface to the AP
-                f'ip link add se_vxlan type vxlan id {vxlan_id} dev {DEFAULT_IFNAME} remote {ACCESS_POINT_IP} dstport 4789',
-                # bring the vxlan up
-                'ip link set dev se_vxlan up',    
-                # add the veth interface pair, will be ignored if name is duplicate
-                'ip link add veth0 type veth peer name veth1',
+    commands = [
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
                 f'ip link set veth1 address {swarm_veth1_vmac} ',
                 f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.255.0 up',
@@ -285,40 +193,15 @@ def update_config_after_join(config):
         process_ret = subprocess.run(command, text=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         if (process_ret.stderr):
             logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
-        
-    get_if1_index_command = 'cat /sys/class/net/veth0/ifindex'
-    get_if2_index_command = 'cat /sys/class/net/se_vxlan/ifindex'
-    if1_index = subprocess.run(get_if1_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if2_index = subprocess.run(get_if2_index_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)   
-    
-    commands = [
-        'nikss-ctl del-port pipe 0 dev veth0',
-        'nikss-ctl del-port pipe 0 dev se_vxlan',
-        'nikss-ctl pipeline unload id 0',        
-        'nikss-ctl pipeline load id 0 ./node_manager/utils/nikss.o',
-        'nikss-ctl add-port pipe 0 dev veth0',
-        'nikss-ctl add-port pipe 0 dev se_vxlan',
-        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if1_index.stdout} data {if2_index.stdout}',
-        f'nikss-ctl table add pipe 0 ingress_route action id 2 key {if2_index.stdout} data {if1_index.stdout}'
-    ]
-    
-    for command in commands:
-        logger.debug('executing: ' + command)
-        process_ret = subprocess.run(command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-        if (process_ret.stderr):
-            logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
-        else: 
-            logger.debug(f'executed command {command} and got output: {process_ret.stdout}')    
-
+    return
 
 def install_swarmNode_config(swarmNode_config):
     global last_request_id, join_queue, ACCESS_POINT_IP
-    
+
     vxlan_id = swarmNode_config[STRs.VXLAN_ID.name]
     swarm_veth1_vip = swarmNode_config[STRs.VETH1_VIP.name]
     swarm_veth1_vmac = swarmNode_config[STRs.VETH1_VMAC.name]
 
-        
     commands = [ 
                 'ip link del se_vxlan',
                 'ip link del veth1',
