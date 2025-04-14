@@ -157,6 +157,7 @@ def handle_communication():
             print(f'Node Manager waiting for instruction, iteration {iter}')
             node_manager_socket.listen()
             ap_socket, ap_address = node_manager_socket.accept()
+            ACCESS_POINT_IP = ap_address[0]
             comm_buffer = ap_socket.recv(1024).decode()
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
