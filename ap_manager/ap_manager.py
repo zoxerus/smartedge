@@ -327,6 +327,7 @@ def get_next_available_vxlan_id():
 
 
 async def handle_new_connected_station(station_physical_mac_address):
+    t0 = time.time_ns()
     logger.debug(f"handling newly connected staion {station_physical_mac_address}")
     
     
@@ -544,6 +545,8 @@ async def handle_new_connected_station(station_physical_mac_address):
                         table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
                         action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= bmv2.DEFAULT_THRIFT_PORT )
+    t1 = time.time_ns()
+    total_time = t1 - t0 
 
                     
 async def handle_disconnected_station(station_physical_mac_address):
