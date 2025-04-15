@@ -581,16 +581,12 @@ async def handle_disconnected_station(station_physical_mac_address):
         node_info = node_db_result.one()
         if ( node_info == None or node_info.current_ap != THIS_AP_UUID):
             bmv2.remove_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=node_info.ap_port)
-<<<<<<< HEAD
             try:
                 logger.debug(f"Connected Stations List before removing {station_physical_mac_address}: {connected_stations}")                
                 del connected_stations[station_physical_mac_address]
                 logger.debug(f"Connected Stations List after removing {station_physical_mac_address}: {connected_stations}")
             except:
                 logger.error(f'could not delete station from connected station set {repr(e)}')
-=======
-            del connected_stations[station_physical_mac_address]
->>>>>>> parent of 8f3f9ed (preparing demo)
             return
             
         logger.info(f'Removing disconnected Node: {station_physical_mac_address}')
