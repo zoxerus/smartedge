@@ -62,6 +62,7 @@ node_manager_tcp_port = 29997
 #TODO: Configure this IP list, physical IPs of access points
 ap_list = {
     # ID of AP        IP of eth0         IP smartedge-bb
+    'AP:00:00:03':  ['192.168.137.103', '192.168.100.3'],
     'AP:00:00:04':  ['192.168.137.104', '192.168.100.4'],
     'AP:00:00:05':  ['192.168.137.105', '192.168.100.5'],
     'AP:00:00:07':  ['192.168.137.107', '192.168.100.7']  
