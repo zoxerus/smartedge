@@ -162,7 +162,8 @@ def handle_communication():
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
             logger.debug(f'config_data: {config_data}')
-                                                     
+            ap_socket.sendall(bytes( "OK!".encode() ))
+            ap_socket.close()                                         
             if config_data[STRs.TYPE.name] == STRs.SET_CONFIG.name:
                 logger.debug(f'Handling Join Type {STRs.SET_CONFIG.name}')
                 try:    
@@ -170,8 +171,6 @@ def handle_communication():
                         install_swarmNode_config(config_data)
                     else:
                         install_config_no_update_vxlan(config_data)
-                    ap_socket.sendall(bytes( "OK!".encode() ))
-                    ap_socket.close()
                 except Exception as e:
                     logger.error(repr(e))
 
