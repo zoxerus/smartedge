@@ -171,9 +171,9 @@ if THIS_AP_WLAN_MAC == None:
                          
 AP_LIST = bmv2.connect_to_all_switches()
 print(AP_LIST)
-bmv2.THIS_AP = AP_LIST[THIS_AP_UUID]
+
 THIS_AP = AP_LIST[THIS_AP_UUID]
-print('this ap', bmv2.THIS_AP)
+print('THIS_AP: ', THIS_AP)
 
 def initialize_program():    
     # remvoe all configureation from bmv2, start fresh
