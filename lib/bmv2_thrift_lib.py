@@ -57,7 +57,6 @@ def connect_to_all_switches():
         try:
             standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
             THRIFT_IP, 9090, services)
-            
             # runtime_CLI.load_json_config(standard_client) #   , args.json)
             cli_instance = SimpleSwitchAPI(pre, standard_client, mc_client, sswitch_client)
             switch_cli_instances[ap] = cli_instance

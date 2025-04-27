@@ -106,14 +106,7 @@ def thrift_connect(thrift_ip, thrift_port, services, out=sys.stdout):
         clients.append(client)
 
     # Connect!
-    try:
-        transport.open()
-    except TTransport.TTransportException:
-        my_print("Could not connect to thrift client on port {}\n".format(
-            thrift_port))
-        my_print("Make sure the switch is running ")
-        my_print("and that you have the right port\n")
-        # sys.exit(1)
+    transport.open()
 
     return clients
 
