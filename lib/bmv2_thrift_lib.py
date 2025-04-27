@@ -28,7 +28,7 @@ BMV2_DOCKER_CONTAINER_NAME = 'bmv2smartedge'
 bmv2_logger = None
 
 DEFAULT_THRIFT_PORT = 9090
-
+THIS_AP = None
 
 def extract_numbers(lst):
     """
@@ -92,7 +92,7 @@ def send_cli_command_to_bmv2(cli_command, **args):
     
 
 # this updates the list of broadcast ports in bmv2
-def add_bmv2_swarm_broadcast_port(switch_port, ap_ip, thrift_port=DEFAULT_THRIFT_PORT, instance=None):
+def add_bmv2_swarm_broadcast_port(switch_port, ap_ip, thrift_port=DEFAULT_THRIFT_PORT, instance=THIS_AP):
         res = send_cli_command_to_bmv2(cli_command='mc_dump', instance=instance, thrift_ip=ap_ip, thrift_port=thrift_port)
         res_lines = res.splitlines()
         i = 0        
@@ -104,7 +104,7 @@ def add_bmv2_swarm_broadcast_port(switch_port, ap_ip, thrift_port=DEFAULT_THRIFT
                 send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port, instance )  
             i = i + 1
 
-def remove_bmv2_swarm_broadcast_port(switch_port, ap_ip, thrift_port=DEFAULT_THRIFT_PORT, instance=None  ):
+def remove_bmv2_swarm_broadcast_port(switch_port, ap_ip, thrift_port=DEFAULT_THRIFT_PORT, instance=THIS_AP ):
         res = send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port, instance=instance)
         res_lines = res.splitlines()
         i = 0
@@ -120,7 +120,7 @@ def remove_bmv2_swarm_broadcast_port(switch_port, ap_ip, thrift_port=DEFAULT_THR
             i = i + 1
 
 
-def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_keys, action_params, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT, instance=None):
+def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_keys, action_params, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT, instance=THIS_AP):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
         cli_command = f'table_dump_entry_from_key {table_name} {match_keys}'
         response = send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port, instance)
@@ -153,7 +153,7 @@ def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_key
              
 
 
-def get_entry_handle(table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT, instance=None):
+def get_entry_handle(table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT, instance=THIS_AP):
     command = f'table_dump_entry_from_key {table_name} {key}'
     response = send_cli_command_to_bmv2(command, thrift_ip, thrift_port, instance=instance)
     bmv2_logger.debug(f'Getting entry handle from bmv2 for: {key}\n {response}')
@@ -167,7 +167,7 @@ def get_entry_handle(table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAU
 
 
 def delete_forwarding_entry_from_bmv2(
-    communication_protocol, table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT, instance=None ):
+    communication_protocol, table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT, instance=THIS_AP):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
         handle = get_entry_handle(table_name, key, thrift_ip, thrift_port, instance=instance)
         if handle != None:
