@@ -1,11 +1,20 @@
-import logging
-import subprocess
 import sys
+# setting path
+sys.path.append('.')
+sys.path.append('..')
+sys.path.append('../..')
+sys.path.append('./lib/bmv2_pylibs')
+
+import subprocess
 import re
 import os
-import global_config as cfg
+import lib.global_config as cfg
+import io 
 
-from bmv2_pylibs.sswitch_CLI import *
+from lib.bmv2_pylibs import *
+from lib.bmv2_pylibs.sswitch_CLI import runtime_CLI, SimpleSwitchAPI
+from contextlib import redirect_stdout 
+
 
 SWITCH_RESPONSE_ERROR = -1
 SWITCH_RESPONSE_INVALID = -2
@@ -38,19 +47,22 @@ def extract_numbers(lst):
 def connect_to_all_switches():
     switch_cli_instances = {}
     
-    args = runtime_CLI.get_parser().parse_args()
-    args.pre = runtime_CLI.PreType.SimplePreLAG
-    services = runtime_CLI.RuntimeAPI.get_thrift_services(args.pre)
+    # args = runtime_CLI.get_parser().parse_args()
+    pre = runtime_CLI.PreType.SimplePreLAG
+    services = runtime_CLI.RuntimeAPI.get_thrift_services(pre)
     services.extend(SimpleSwitchAPI.get_thrift_services())
 
     for ap in cfg.ap_list.keys():
         THRIFT_IP = cfg.ap_list[ap][0]
-        standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
-        THRIFT_IP, 9090, services
-        )
-        runtime_CLI.load_json_config(standard_client, args.json)
-        cli_instance = SimpleSwitchAPI(args.pre, standard_client, mc_client, sswitch_client)
-        switch_cli_instances[ap] = cli_instance
+        try:
+            standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
+            THRIFT_IP, 9090, services)
+            
+            # runtime_CLI.load_json_config(standard_client) #   , args.json)
+            cli_instance = SimpleSwitchAPI(pre, standard_client, mc_client, sswitch_client)
+            switch_cli_instances[ap] = cli_instance
+        except Exception as e:
+            bmv2_logger.warning(e)
     return switch_cli_instances
 
 

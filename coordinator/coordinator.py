@@ -126,6 +126,9 @@ db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
 database_session = db.init_database('0.0.0.0', cfg.database_port)
 db.DATABASE_SESSION = database_session
 
+AP_Dictionary = bmv2.connect_to_all_switches()
+
+
 # a function to parse a string and extract integers
 # needed for interactiosn with bmv2
 

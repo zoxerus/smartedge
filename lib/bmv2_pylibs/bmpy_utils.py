@@ -29,6 +29,8 @@ from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol
 from thrift.protocol import TMultiplexedProtocol
 
+import thrift
+print(thrift.__file__)
 
 def check_JSON_md5(client, json_src, out=sys.stdout):
     with open(json_src, 'rb') as f:
@@ -111,7 +113,7 @@ def thrift_connect(thrift_ip, thrift_port, services, out=sys.stdout):
             thrift_port))
         my_print("Make sure the switch is running ")
         my_print("and that you have the right port\n")
-        sys.exit(1)
+        # sys.exit(1)
 
     return clients
 

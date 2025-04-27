@@ -23,12 +23,12 @@ import runtime_CLI
 from runtime_CLI import UIn_Error
 
 from functools import wraps
-import os
-import sys
-import  io
-import time
-import timeit
-import subprocess
+# import os
+# import sys
+# import  io
+# import time
+# import timeit
+# import subprocess
 
 from sswitch_runtime import SimpleSwitch
 from sswitch_runtime.ttypes import *
@@ -135,68 +135,68 @@ class SimpleSwitchAPI(runtime_CLI.RuntimeAPI):
         "Get time elapsed (in microseconds) since the switch clock's epoch: get_time_since_epoch"
         print(self.sswitch_client.get_time_since_epoch_us())
 
-def main():
-    # args = runtime_CLI.get_parser().parse_args()
+# def main():
+#     args = runtime_CLI.get_parser().parse_args()
 
-    # args.pre = runtime_CLI.PreType.SimplePreLAG
+#     args.pre = runtime_CLI.PreType.SimplePreLAG
 
-    # services = runtime_CLI.RuntimeAPI.get_thrift_services(args.pre)
-    # services.extend(SimpleSwitchAPI.get_thrift_services())
-
-
-    # THRIFT_IP = '192.168.137.105'
+#     services = runtime_CLI.RuntimeAPI.get_thrift_services(args.pre)
+#     services.extend(SimpleSwitchAPI.get_thrift_services())
 
 
-    # standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
-    #     THRIFT_IP, 9090, services
-    # )
+#     THRIFT_IP = '192.168.137.105'
 
-    # runtime_CLI.load_json_config(standard_client, args.json)
 
-    # cli_instance = SimpleSwitchAPI(args.pre, standard_client, mc_client, sswitch_client)
+#     standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
+#         THRIFT_IP, 9090, services
+#     )
+
+#     runtime_CLI.load_json_config(standard_client, args.json)
+
+#     cli_instance = SimpleSwitchAPI(args.pre, standard_client, mc_client, sswitch_client)
     
     
-    # output_capture = io.StringIO()
-    # def run_cli_command(command, instance):
-    #     command_output = ""
-    #     with redirect_stdout(output_capture):
-    #         instance.onecmd(command)
-    #     command_output = output_capture.getvalue()
-    #     output_capture.truncate(0)
-    #     return command_output
+#     output_capture = io.StringIO()
+#     def run_cli_command(command, instance):
+#         command_output = ""
+#         with redirect_stdout(output_capture):
+#             instance.onecmd(command)
+#         command_output = output_capture.getvalue()
+#         output_capture.truncate(0)
+#         return command_output
 
-    # def send_cli_command_to_bmv2(cli_command, thrift_ip = THRIFT_IP, thrift_port = 9090):
-    #     command_as_word_array = ['docker','exec','bmv2smartedge','sh', '-c',
-    #                             f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {thrift_ip} --thrift-port {thrift_port}"  ]
+#     def send_cli_command_to_bmv2(cli_command, thrift_ip = THRIFT_IP, thrift_port = 9090):
+#         command_as_word_array = ['docker','exec','bmv2smartedge','sh', '-c',
+#                                 f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {thrift_ip} --thrift-port {thrift_port}"  ]
 
-    #     proc = subprocess.run(command_as_word_array, text=True, stdout=subprocess.PIPE , stderr=subprocess.PIPE)
-    #     response = proc.stdout.strip()
-    #     print(response + '\n')
+#         proc = subprocess.run(command_as_word_array, text=True, stdout=subprocess.PIPE , stderr=subprocess.PIPE)
+#         response = proc.stdout.strip()
+#         print(response + '\n')
         
     
-    # num_entries = 1
+#     num_entries = 1
     
-    # def add_entries_directly():
-    #     for i in range(num_entries):
-    #         command = f"table_add MyIngress.tb_ipv4_lpm MyIngress.ac_ipv4_forward 10.10.10.{i}/32 => 1"
-    #         run_cli_command(command)
+#     def add_entries_directly():
+#         for i in range(num_entries):
+#             command = f"table_add MyIngress.tb_ipv4_lpm MyIngress.ac_ipv4_forward 10.10.10.{i}/32 => 1"
+#             run_cli_command(command)
             
-    # def add_entries_docker():
-    #     for i in range(num_entries):
-    #         command = f"table_add MyIngress.tb_ipv4_lpm MyIngress.ac_ipv4_forward 10.10.10.{i}/32 => 1"
-    #         send_cli_command_to_bmv2(command)
+#     def add_entries_docker():
+#         for i in range(num_entries):
+#             command = f"table_add MyIngress.tb_ipv4_lpm MyIngress.ac_ipv4_forward 10.10.10.{i}/32 => 1"
+#             send_cli_command_to_bmv2(command)
             
-    # print('running add_entries_local')
-    # run_cli_command('table_clear MyIngress.tb_ipv4_lpm')
-    # time1 = timeit.timeit(stmt=add_entries_directly, number=1)
-    # run_cli_command('table_clear MyIngress.tb_ipv4_lpm')
-    # print('\n------------------------------------------------------\n')
-    # print('running add_entires_docker:')
-    # time2 = timeit.timeit(stmt=add_entries_docker, number=1)
+#     print('running add_entries_local')
+#     run_cli_command('table_clear MyIngress.tb_ipv4_lpm')
+#     time1 = timeit.timeit(stmt=add_entries_directly, number=1)
+#     run_cli_command('table_clear MyIngress.tb_ipv4_lpm')
+#     print('\n------------------------------------------------------\n')
+#     print('running add_entires_docker:')
+#     time2 = timeit.timeit(stmt=add_entries_docker, number=1)
     
     
-    # print(f"Execution Time direct': {time1:.6f} seconds")
-    # print(f"Execution Time docker': {time2:.6f} seconds")
+#     print(f"Execution Time direct': {time1:.6f} seconds")
+#     print(f"Execution Time docker': {time2:.6f} seconds")
     
     
 
