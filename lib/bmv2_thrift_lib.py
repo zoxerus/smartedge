@@ -68,11 +68,13 @@ def connect_to_all_switches():
 
 output_capture = io.StringIO()
 def run_cli_command(command, instance):
+    bmv2_logger.debug(f'sending command to bmv2: \n{command}')
     command_output = ""
     with redirect_stdout(output_capture):
         instance.onecmd(command)
     command_output = output_capture.getvalue()
     output_capture.truncate(0)
+    bmv2_logger.debug(f"response from switch: {command_output}")
     return command_output
 
 
