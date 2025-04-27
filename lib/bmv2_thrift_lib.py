@@ -69,7 +69,6 @@ def connect_to_all_switches():
 output_capture = io.StringIO()
 def run_cli_command(command, instance):
     command_output = ""
-    print(f'instance is {instance}')
     with redirect_stdout(output_capture):
         instance.onecmd(command)
     command_output = output_capture.getvalue()
