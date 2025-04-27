@@ -173,7 +173,7 @@ AP_LIST = bmv2.connect_to_all_switches()
 print(AP_LIST)
 
 THIS_AP = AP_LIST[THIS_AP_UUID]
-print('THIS_AP: ', THIS_AP)
+print(f'THIS_AP: {THIS_AP}, it\'s type {type(THIS_AP)}')
 
 def initialize_program():    
     # remvoe all configureation from bmv2, start fresh
