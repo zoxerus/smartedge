@@ -172,23 +172,23 @@ if THIS_AP_WLAN_MAC == None:
 AP_LIST = bmv2.connect_to_all_switches()
 print(AP_LIST)
 bmv2.THIS_AP = AP_LIST[THIS_AP_UUID]
-
+THIS_AP = AP_LIST[THIS_AP_UUID]
 print('this ap', bmv2.THIS_AP)
 
 def initialize_program():    
     # remvoe all configureation from bmv2, start fresh
-    bmv2.send_cli_command_to_bmv2(cli_command="reset_state")
+    bmv2.send_cli_command_to_bmv2(cli_command="reset_state", instance=THIS_AP)
 
     # attach the backbone interface to the bmv2
-    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {cfg.swarm_backbone_switch_port}")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {cfg.default_backbone_device} {cfg.swarm_backbone_switch_port}")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {cfg.swarm_backbone_switch_port}", instance=THIS_AP)
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {cfg.default_backbone_device} {cfg.swarm_backbone_switch_port}", instance=THIS_AP)
     
     coordinator_vmac = int_to_mac( int( ipaddress.ip_address(cfg.coordinator_vip)) )
     print(f'Coordinator MAC { coordinator_vmac}')
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                             table_name='MyIngress.tb_ipv4_lpm',
     action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{cfg.coordinator_vip}/32' , 
-    action_params= f'{cfg.swarm_backbone_switch_port} { coordinator_vmac }')
+    action_params= f'{cfg.swarm_backbone_switch_port} { coordinator_vmac }', instance=THIS_AP)
     
     
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
@@ -197,10 +197,10 @@ def initialize_program():
     action_params= f'{cfg.swarm_backbone_switch_port} { coordinator_vmac }')
     
     # handle broadcast
-    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_create {SWARM_P4_MC_NODE} {cfg.swarm_backbone_switch_port}")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast 01:00:00:00:00:00&&&0x010000000000 => {SWARM_P4_MC_GROUP} 100 ")
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}", instance=THIS_AP)
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_create {SWARM_P4_MC_NODE} {cfg.swarm_backbone_switch_port}", instance=THIS_AP)
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0", instance=THIS_AP)
+    bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast 01:00:00:00:00:00&&&0x010000000000 => {SWARM_P4_MC_GROUP} 100 ", instance=THIS_AP)
     
     logger.info(f"AP ID: {THIS_AP_UUID} is up" )
     print('\n\n\nAP Started')
@@ -365,10 +365,10 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         
         dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
-        bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
+        bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command, instance=THIS_AP)
         
         attach_vxlan_to_bmv2_command = "port_add se_vxlan%s %s" % (vxlan_id, vxlan_id)
-        bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command)
+        bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command, instance=THIS_AP)
         
         node_s0_ip = str(DEFAULT_SUBNET).split('.')[:3]
         node_s0_ip.append(station_physical_ip_address.split('.')[3])
@@ -416,7 +416,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                             table_name='MyIngress.tb_ipv4_lpm',
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_s0_ip}/32' , 
-                            action_params= f'{str(vxlan_id)}')
+                            action_params= f'{str(vxlan_id)}', instance=THIS_AP)
      
         node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
         ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
@@ -455,10 +455,10 @@ async def handle_new_connected_station(station_physical_mac_address):
         create_vxlan_by_host_id( vxlan_id= vxlan_id, remote= station_physical_ip_address )
     
         dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
-        bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
+        bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command, instance=THIS_AP)
         
         attach_vxlan_to_bmv2_command = "port_add se_vxlan%s %s" % (vxlan_id, vxlan_id)
-        bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command)
+        bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command, instance=THIS_AP)
         
         
         host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
@@ -514,7 +514,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                             table_name='MyIngress.tb_ipv4_lpm',
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
-                            action_params= f'{str(vxlan_id)}')
+                            action_params= f'{str(vxlan_id)}', instance=THIS_AP)
      
         node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
         ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
@@ -560,7 +560,7 @@ async def handle_disconnected_station(station_physical_mac_address):
         node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
         node_info = node_db_result.one()
         if ( node_info == None or node_info.current_ap != THIS_AP_UUID):
-            bmv2.remove_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=node_info.ap_port)
+            bmv2.remove_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=node_info.ap_port, instance=THIS_AP)
             try:
                 logger.debug(f"Connected Stations List before removing {station_physical_mac_address}: {connected_stations}")                
                 del connected_stations[station_physical_mac_address]
@@ -588,9 +588,9 @@ async def handle_disconnected_station(station_physical_mac_address):
                                             instance=istnc )
 
         # delete the corresponding switch port
-        bmv2.remove_bmv2_swarm_broadcast_port(switch_port=node_info.ap_port)
+        bmv2.remove_bmv2_swarm_broadcast_port(switch_port=node_info.ap_port, instance=THIS_AP)
         delete_vxlan_from_bmv2_command = "port_remove %s" % station_vxlan_id
-        bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command)
+        bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command, instance=THIS_AP)
         
         db.delete_node_from_art(uuid=SN_UUID)  # also deletes from swarm database
     
