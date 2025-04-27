@@ -61,6 +61,7 @@ def connect_to_all_switches():
             # runtime_CLI.load_json_config(standard_client) #   , args.json)
             cli_instance = SimpleSwitchAPI(pre, standard_client, mc_client, sswitch_client)
             switch_cli_instances[ap] = cli_instance
+            bmv2_logger.debug(f'thrift connected to {ap}')
         except Exception as e:
             bmv2_logger.warning(e)
     return switch_cli_instances
