@@ -265,7 +265,7 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port):
     
     # first we get the ip of the access point from the ap list
     ap_ip = get_ap_ip_from_ap_id(ap_id)
-    
+    instance = AP_Dictionary[ap_id]
     if (ap_ip == None):
         logger.error(f'Error: could not find IP of access point {ap_id}')
         return
@@ -308,24 +308,24 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port):
     db.update_art_with_node_info(node_uuid=SN_UUID,node_current_ap=ap_id,
                                      node_current_swarm=1,node_current_ip=station_vip)
                     
-    bmv2.add_bmv2_swarm_broadcast_port(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= ap_port)
+    bmv2.add_bmv2_swarm_broadcast_port(instance=instance, thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= ap_port)
 
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
-            action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
+            action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT, instance=instance )
         
         
-        # insert table entries in the rest of the APs
+    # insert table entries in the rest of the APs
     node_ap_ip = ap_ip
-    for key in cfg.ap_list.keys():
+    for key, istc in AP_Dictionary.keys():
         if key != ap_id:
-            ap_ip = cfg.ap_list[key][0]
+            # ap_ip = cfg.ap_list[key][0]
             ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
             entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
-                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT, instance=istc )
     
 
 # a function to configure the keep alive of the tcp connection
