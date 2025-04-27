@@ -78,7 +78,7 @@ def run_cli_command(command, instance):
 
 
 def send_cli_command_to_bmv2(cli_command, **args):
-    return run_cli_command(cli_command, args.instance)
+    return run_cli_command(cli_command, args['instance'])
     command_as_word_array = ['docker','exec',BMV2_DOCKER_CONTAINER_NAME,'sh', '-c',
                              f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {args.thrift_ip} --thrift-port {args.thrift_port}"  ]
 
