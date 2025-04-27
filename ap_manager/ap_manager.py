@@ -28,6 +28,7 @@ import concurrent.futures
 
 from argparse import ArgumentParser
 
+
 STRs = cts.String_Constants
 
 class SocketStreamHandler(logging.StreamHandler):
@@ -207,21 +208,12 @@ def initialize_program():
 
 # a handler to clean exit the programs
 def exit_handler():
+    logger.debug('Handling exit')
     log_socket_handler.close()
-    pass
-    # logger.debug('Handling exit')
-    # logger.debug(f'Created vxlan ids: {created_vxlans}') 
-               
-    # # delete any created vxlans during the program lifetime
-    # for vxlan_id in created_vxlans:
-    #     try:
-    #         delete_vxlan_shell_command = "ip link del se_vxlan%s" % vxlan_id
-    #         result = subprocess.run(delete_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-    #         db.delete_node_from_swarm_database(node_swarm_id= vxlan_id)
-    #         logger.debug(f'deleted vxlan{vxlan_id},\n\t feedback: \n {result.stdout.strip() }')
-    #     except Exception as e:
-    #         logger.error(repr(e))
-
+    for snic in psutil.net_if_addrs():
+        if 'se_vxlan' in snic:
+            shell_command = f"ip link del {snic}"
+            result = subprocess.run(shell_command.split())
 
 
 
@@ -624,18 +616,6 @@ async def handle_disconnected_station(station_physical_mac_address):
         delete_vxlan_by_host_id(station_vxlan_id)
     except Exception as e:
         logger.error(f"Error handling disconnected station {SN_UUID}: {repr(e)}")
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def monitor_stations():
