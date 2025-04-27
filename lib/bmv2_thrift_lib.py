@@ -92,8 +92,8 @@ def send_cli_command_to_bmv2(cli_command, instance, thrift_ip='0.0.0.0', thrift_
     
 
 # this updates the list of broadcast ports in bmv2
-def add_bmv2_swarm_broadcast_port(switch_port, instance, ap_ip, thrift_port=DEFAULT_THRIFT_PORT):
-        res = send_cli_command_to_bmv2(cli_command='mc_dump', instance=instance, thrift_ip=ap_ip, thrift_port=thrift_port)
+def add_bmv2_swarm_broadcast_port(switch_port, instance, thrift_ip='0.0.0.0', thrift_port=DEFAULT_THRIFT_PORT):
+        res = send_cli_command_to_bmv2(cli_command='mc_dump', instance=instance, thrift_ip=thrift_ip, thrift_port=thrift_port)
         res_lines = res.splitlines()
         i = 0        
         for line in res_lines:
@@ -101,11 +101,11 @@ def add_bmv2_swarm_broadcast_port(switch_port, instance, ap_ip, thrift_port=DEFA
                 port_list = set(extract_numbers([ res_lines[i+1].split('ports=[')[1].split(']')[0] ]))
                 port_list.add(switch_port)
                 broadcast_ports =  ' '.join( str(port) for port in port_list)
-                send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port, instance )  
+                send_cli_command_to_bmv2(cli_command=f"mc_node_update 0 {broadcast_ports} ", thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance )  
             i = i + 1
 
-def remove_bmv2_swarm_broadcast_port(switch_port, instance, ap_ip, thrift_port=DEFAULT_THRIFT_PORT):
-        res = send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=ap_ip, thrift_port=thrift_port, instance=instance)
+def remove_bmv2_swarm_broadcast_port(switch_port, instance, thrift_ip='0.0.0.0', thrift_port=DEFAULT_THRIFT_PORT):
+        res = send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
         res_lines = res.splitlines()
         i = 0
         for line in res_lines:
@@ -114,7 +114,7 @@ def remove_bmv2_swarm_broadcast_port(switch_port, instance, ap_ip, thrift_port=D
                 if (switch_port in port_list):
                     port_list.remove(switch_port)
                     broadcast_ports =  ' '.join( str(port) for port in port_list)
-                    send_cli_command_to_bmv2(f"mc_node_update 0 {broadcast_ports} ", ap_ip, thrift_port, instance=instance )  
+                    send_cli_command_to_bmv2(cli_command=f"mc_node_update 0 {broadcast_ports} ", thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance )  
             else:
                 bmv2_logger.debug(f'Port {switch_port} is not in swarm boradcast ports')
             i = i + 1
