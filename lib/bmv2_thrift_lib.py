@@ -70,6 +70,7 @@ output_capture = io.StringIO()
 def run_cli_command(command, instance):
     command_output = ""
     with redirect_stdout(output_capture):
+        print(instance)
         instance.onecmd(command)
     command_output = output_capture.getvalue()
     output_capture.truncate(0)
