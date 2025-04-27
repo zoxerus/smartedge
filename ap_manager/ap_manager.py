@@ -173,6 +173,8 @@ AP_LIST = bmv2.connect_to_all_switches()
 print(AP_LIST)
 bmv2.THIS_AP = AP_LIST[THIS_AP_UUID]
 
+print('this ap', bmv2.THIS_AP)
+
 def initialize_program():    
     # remvoe all configureation from bmv2, start fresh
     bmv2.send_cli_command_to_bmv2(cli_command="reset_state")
