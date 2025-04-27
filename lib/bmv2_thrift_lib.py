@@ -123,7 +123,7 @@ def remove_bmv2_swarm_broadcast_port(switch_port, instance, ap_ip, thrift_port=D
 def add_entry_to_bmv2(communication_protocol, instance, table_name, action_name, match_keys, action_params, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
         cli_command = f'table_dump_entry_from_key {table_name} {match_keys}'
-        response = send_cli_command_to_bmv2(cli_command=cli_command, thrif_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
+        response = send_cli_command_to_bmv2(cli_command=cli_command, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
         # print(f'Sent command: {cli_command} \nresponse: {response}')
         if 'Invalid table operation (BAD_MATCH_KEY)' in response: # entry doesn't exist
             cli_command = "table_add " + table_name + ' ' + action_name + ' ' + match_keys + ' => ' + action_params
