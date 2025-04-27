@@ -124,11 +124,11 @@ def remove_bmv2_swarm_broadcast_port(switch_port, instance, ap_ip, thrift_port=D
 def add_entry_to_bmv2(communication_protocol, instance, table_name, action_name, match_keys, action_params, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
         cli_command = f'table_dump_entry_from_key {table_name} {match_keys}'
-        response = send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port, instance)
+        response = send_cli_command_to_bmv2(cli_command=cli_command, thrif_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
         # print(f'Sent command: {cli_command} \nresponse: {response}')
         if 'Invalid table operation (BAD_MATCH_KEY)' in response: # entry doesn't exist
             cli_command = "table_add " + table_name + ' ' + action_name + ' ' + match_keys + ' => ' + action_params
-            response = send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port, instance)
+            response = send_cli_command_to_bmv2(cli_command=cli_command, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
             # bmv2_logger.debug('\nresponse received: ' + response )
             response_as_lines = response.splitlines()
             for line in response_as_lines:
@@ -148,7 +148,7 @@ def add_entry_to_bmv2(communication_protocol, instance, table_name, action_name,
                     entry_handle = int( re.findall(r'0x[0-9A-F]+', line, re.I)[0] , 16  )
                     bmv2_logger.debug(f'entry_handle exists: {entry_handle}')
                     cli_command = f'table_modify {table_name} {action_name} {entry_handle} {action_params}'
-                    send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port, instance=instance)
+                    send_cli_command_to_bmv2(cli_command=cli_command,  thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
                     break
             
              
@@ -156,7 +156,7 @@ def add_entry_to_bmv2(communication_protocol, instance, table_name, action_name,
 
 def get_entry_handle(table_name, instance, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     command = f'table_dump_entry_from_key {table_name} {key}'
-    response = send_cli_command_to_bmv2(command, thrift_ip, thrift_port, instance=instance)
+    response = send_cli_command_to_bmv2(cli_command=command, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
     bmv2_logger.debug(f'Getting entry handle from bmv2 for: {key}\n {response}')
     for line in response.splitlines():
         if 'Dumping entry' in line:
@@ -170,9 +170,9 @@ def get_entry_handle(table_name, instance, key, thrift_ip = '0.0.0.0', thrift_po
 def delete_forwarding_entry_from_bmv2(
     communication_protocol, instance, table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
-        handle = get_entry_handle(table_name, key, thrift_ip, thrift_port, instance=instance)
+        handle = get_entry_handle(table_name=table_name, key=key, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
         if handle != None:
             cli_command = f'table_delete {table_name} {handle}'
-            send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port, instance=instance)
+            send_cli_command_to_bmv2(cli_command=cli_command, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
             return
         bmv2_logger.debug(f'Entry Handle is None for table: {table_name}, and key: {key}')

@@ -509,7 +509,7 @@ async def handle_new_connected_station(station_physical_mac_address):
                                         host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
                                         node_phy_mac=station_physical_mac_address, status=db.db_defines.SWARM_STATUS.JOINED.value)
         
-        bmv2.add_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=vxlan_id)
+        bmv2.add_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=vxlan_id, instance=THIS_AP)
         
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                             table_name='MyIngress.tb_ipv4_lpm',
