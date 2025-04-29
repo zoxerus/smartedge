@@ -259,7 +259,7 @@ class Swarm_Node_Handler:
 
          
 
-async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port):
+async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_nodes, lock):
     SN_UUID = uuid
     logger.debug(f'Accepted Node {SN_UUID} in Swarm')
     
@@ -294,8 +294,12 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port):
             s.connect((node_s0_ip, cfg.node_manager_tcp_port))
             s.sendall( bytes( config_message.encode() ) )
             logger.debug(f'sent {config_message} to {SN_UUID}')
-            # data = s.recv(1024) #receive up to 1024 bytes.
-            # logger.debug(f'response {data} from {SN_UUID}')
+            data = s.recv(1024) #receive up to 1024 bytes.decode()
+            if data == 'OK':
+                with lock:
+                    available_nodes.append(uuid)
+            else: return
+            logger.debug(f'response {data} from {SN_UUID}')
                    
     except Exception as e:
         logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
@@ -318,7 +322,7 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port):
         
     # insert table entries in the rest of the APs
     node_ap_ip = ap_ip
-    for key, istc in AP_Dictionary.keys():
+    for key, istc in AP_Dictionary.items():
         if key != ap_id:
             # ap_ip = cfg.ap_list[key][0]
             ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
@@ -402,14 +406,16 @@ def handle_ac_communication(ac_socket):
             return
         available_host_ids = db.batch_get_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
                     max_host_id=cfg.this_swarm_dhcp_end)
-        
+        available_nodes = []
+        lock = asyncio.Lock()
         for i in range(0, num_ips ):
             host_id = available_host_ids[i]
             node_uuid = availalbe_nodes_ids[i]
             node_s0_ip = available_nodes_ips[i]
             ap_id = available_nodes_aps[i]
             ap_port = available_nodes_ports[i]
-            asyncio.run( onboard_node( host_id, node_uuid, ap_id, node_s0_ip, ap_port ) )
+            asyncio.run( onboard_node( host_id=host_id, node_uuid=node_uuid, ap_id=ap_id, node_s0_ip=node_s0_ip, 
+                                      ap_port=ap_port, available_nodes=available_nodes, lock=lock) )
     return
 
 HOST = 'localhost'

@@ -156,14 +156,12 @@ def handle_communication():
             iter = iter + 1 
             print(f'Node Manager waiting for instruction, iteration {iter}')
             node_manager_socket.listen()
-            ap_socket, ap_address = node_manager_socket.accept()
+            remote_socket, ap_address = node_manager_socket.accept()
             ACCESS_POINT_IP = ap_address[0]
-            comm_buffer = ap_socket.recv(1024).decode()
+            comm_buffer = remote_socket.recv(1024).decode()
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
-            logger.debug(f'config_data: {config_data}')
-            ap_socket.sendall(bytes( "OK!".encode() ))
-            ap_socket.close()                                         
+            logger.debug(f'config_data: {config_data}')                                         
             if config_data[STRs.TYPE.name] == STRs.SET_CONFIG.name:
                 logger.debug(f'Handling Join Type {STRs.SET_CONFIG.name}')
                 try:    
@@ -173,6 +171,9 @@ def handle_communication():
                         install_config_no_update_vxlan(config_data)
                 except Exception as e:
                     logger.error(repr(e))
+                    return
+            remote_socket.sendall(bytes( "OK!".encode() ))
+            remote_socket.close()
 
 
 def install_config_no_update_vxlan(config_data):
