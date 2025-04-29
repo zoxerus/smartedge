@@ -163,7 +163,7 @@ def handle_communication():
             ACCESS_POINT_IP = ap_address[0]
             if not PING_IN_PROGRESS:
                 ping_command = f'ping {ACCESS_POINT_IP}'
-                subprocess.Popen(ping_command.split(), stdout=subprocess.PIPE )
+                subprocess.Popen(ping_command.split() )
             comm_buffer = remote_socket.recv(1024).decode()
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
