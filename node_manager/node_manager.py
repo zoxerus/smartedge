@@ -140,6 +140,9 @@ def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
 
+
+PING_IN_PROGRESS = False
+
 def handle_communication():
     global last_request_id, gb_swarmNode_config, ACCESS_POINT_IP
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_manager_socket:
@@ -158,8 +161,9 @@ def handle_communication():
             node_manager_socket.listen()
             remote_socket, ap_address = node_manager_socket.accept()
             ACCESS_POINT_IP = ap_address[0]
-            ping_command = f'ping {ACCESS_POINT_IP}'
-            subprocess.Popen(ping_command.split() )
+            if not PING_IN_PROGRESS:
+                ping_command = f'ping {ACCESS_POINT_IP}'
+                subprocess.Popen(ping_command.split(), stdout=subprocess.PIPE )
             comm_buffer = remote_socket.recv(1024).decode()
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
