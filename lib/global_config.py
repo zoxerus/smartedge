@@ -17,7 +17,7 @@ default_wlan_device = 'wlan0'
 
 logs_server_address = ('192.168.137.106', 5000)
 
-ap_wait_time_for_disconnected_station_in_seconds=5
+ap_wait_time_for_disconnected_station_in_seconds= 0
 
 # here configure the subnet range that need to be allocated to the swarm
 # here we assume a /24 subnet mask
