@@ -258,6 +258,73 @@ class Swarm_Node_Handler:
     #                     action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
 
          
+async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_nodes, lock):
+    SN_UUID = uuid
+    logger.debug(f'Kicking Node {SN_UUID} from Swarm')
+    
+    # first we get the ip of the access point from the ap list
+    ap_ip = get_ap_ip_from_ap_id(ap_id)
+    instance = AP_Dictionary[ap_id]
+    if (ap_ip == None):
+        logger.error(f'Error: could not find IP of access point {ap_id}')
+        return
+    
+    # result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
+    
+    # station_vmac= result[0]
+    # station_vip = result[1]
+    
+    # logger.debug(f'assigning vIP: {station_vip} vMAC: {station_vmac} to {SN_UUID}')
+    swarmNode_config = {
+        STRs.TYPE.name: 'go_away'
+    }
+    
+    config_message = json.dumps(swarmNode_config)
+    
+    logger.debug(f'Sending {config_message}')
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            # s.settimeout(5)
+            s.connect((node_s0_ip, cfg.node_manager_tcp_port))
+            s.sendall( bytes( config_message.encode() ) )
+            logger.debug(f'sent {config_message} to {SN_UUID}')
+            s.close()
+            async with lock:
+                available_nodes.append(uuid)    
+            # data = s.recv(1024) #receive up to 1024 bytes.decode()
+            # logger.debug(f'response {data} from {SN_UUID}')
+            # if data == 'OK!':
+               
+    except Exception as e:
+        logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
+        return 
+    
+    db.insert_node_into_swarm_database(host_id=host_id, this_ap_id=ap_id,
+                                           node_vip= station_vip, node_vmac= station_vmac, node_phy_mac='',
+                                           node_uuid=SN_UUID, status=db.db_defines.SWARM_STATUS.JOINED.value)
+        
+    db.update_art_with_node_info(node_uuid=SN_UUID,node_current_ap=ap_id,
+                                     node_current_swarm=1,node_current_ip=station_vip)
+                    
+    bmv2.add_bmv2_swarm_broadcast_port(instance=instance, thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= ap_port)
+
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                                                    table_name='MyIngress.tb_ipv4_lpm',
+            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
+            action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT, instance=instance )
+        
+        
+    # insert table entries in the rest of the APs
+    node_ap_ip = ap_ip
+    for key, istc in AP_Dictionary.items():
+        if key != ap_id:
+            # ap_ip = cfg.ap_list[key][0]
+            ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
+            entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                                                    table_name='MyIngress.tb_ipv4_lpm',
+                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT, instance=istc )
+            
 
 async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_nodes, lock):
     SN_UUID = uuid
@@ -294,13 +361,13 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
             s.connect((node_s0_ip, cfg.node_manager_tcp_port))
             s.sendall( bytes( config_message.encode() ) )
             logger.debug(f'sent {config_message} to {SN_UUID}')
-            data = s.recv(1024) #receive up to 1024 bytes.decode()
-            if data == 'OK':
-                with lock:
-                    available_nodes.append(uuid)
-            else: return
-            logger.debug(f'response {data} from {SN_UUID}')
-                   
+            s.close()
+            async with lock:
+                available_nodes.append(uuid)    
+            # data = s.recv(1024) #receive up to 1024 bytes.decode()
+            # logger.debug(f'response {data} from {SN_UUID}')
+            # if data == 'OK!':
+               
     except Exception as e:
         logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
         return 
@@ -380,16 +447,18 @@ def swarm_coordinator():
 
 str_TYPE = 'Type'
 str_NODE_JOIN_LIST = 'njl'
+str_NODE_LEAVE_LIST = 'nll'
+str_AVAILABLE_NODES = 'avn'
 str_NODE_IDS = 'nids'
 
 
-def handle_ac_communication(ac_socket):
+async def handle_ac_communication(ac_socket):
     ac_message_in = ac_socket.recv(1024).decode()
     logger.debug(f'ac_message_in: {ac_message_in}')
     ac_message_in_json = json.loads(ac_message_in)
     if ac_message_in_json[str_TYPE] == str_NODE_JOIN_LIST:
-        nodes_id_tuple = tuple(ac_message_in_json[str_NODE_IDS])
-        query = f"SELECT * FROM ks_swarm.art WHERE uuid IN {repr(nodes_id_tuple)};"
+        # nodes_id_tuple = tuple(ac_message_in_json[str_NODE_IDS])
+        query = f"SELECT * FROM ks_swarm.art WHERE uuid IN ({', '.join(repr(item) for item in ac_message_in_json[str_NODE_IDS])});"
         rows = db.execute_query(query)
         availalbe_nodes_ids = []
         available_nodes_ips = []
@@ -408,14 +477,64 @@ def handle_ac_communication(ac_socket):
                     max_host_id=cfg.this_swarm_dhcp_end)
         available_nodes = []
         lock = asyncio.Lock()
+        tasks = []
         for i in range(0, num_ips ):
             host_id = available_host_ids[i]
             node_uuid = availalbe_nodes_ids[i]
             node_s0_ip = available_nodes_ips[i]
             ap_id = available_nodes_aps[i]
             ap_port = available_nodes_ports[i]
-            asyncio.run( onboard_node( host_id=host_id, node_uuid=node_uuid, ap_id=ap_id, node_s0_ip=node_s0_ip, 
+            task = asyncio.create_task( onboard_node( host_id=host_id, uuid=node_uuid, ap_id=ap_id, node_s0_ip=node_s0_ip, 
                                       ap_port=ap_port, available_nodes=available_nodes, lock=lock) )
+            tasks.append(task)
+        
+        await asyncio.gather(*tasks)  # Wait for all tasks to complete
+        
+        message = {'Type': str_AVAILABLE_NODES,
+           str_NODE_IDS: available_nodes 
+           }
+        str_message = json.dumps(message)
+        ac_socket.sendall( bytes( str_message.encode() ) )
+        
+    elif ac_message_in_json[str_TYPE] == str_NODE_LEAVE_LIST:
+        query = f"SELECT * FROM ks_swarm.art WHERE uuid IN ({', '.join(repr(item) for item in ac_message_in_json[str_NODE_IDS])});"
+        rows = db.execute_query(query)
+        availalbe_nodes_ids = []
+        available_nodes_ips = []
+        available_nodes_aps = []
+        available_nodes_ports = []
+        for row in rows:
+            if row.current_swarm == 0:
+                availalbe_nodes_ids.append(row.uuid)
+                available_nodes_ips.append(row.virt_ip)
+                available_nodes_aps.append(row.current_ap)
+                available_nodes_ports.append(row.ap_port)
+        num_ips = len(available_nodes_ips)
+        if num_ips == 0: 
+            return
+        available_host_ids = db.batch_get_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
+                    max_host_id=cfg.this_swarm_dhcp_end)
+        available_nodes = []
+        lock = asyncio.Lock()
+        tasks = []
+        for i in range(0, num_ips ):
+            host_id = available_host_ids[i]
+            node_uuid = availalbe_nodes_ids[i]
+            node_s0_ip = available_nodes_ips[i]
+            ap_id = available_nodes_aps[i]
+            ap_port = available_nodes_ports[i]
+            task = asyncio.create_task( offboard_node( host_id=host_id, uuid=node_uuid, ap_id=ap_id, node_s0_ip=node_s0_ip, 
+                                      ap_port=ap_port, available_nodes=available_nodes, lock=lock) )
+            tasks.append(task)
+        
+        await asyncio.gather(*tasks)  # Wait for all tasks to complete
+        
+        message = {'Type': str_AVAILABLE_NODES,
+           str_NODE_IDS: available_nodes 
+           }
+        str_message = json.dumps(message)
+        ac_socket.sendall( bytes( str_message.encode() ) )
+        
     return
 
 HOST = 'localhost'
@@ -442,7 +561,7 @@ def adaptive_coordinator_handler(HOST, HIGHER_PORT):
             logger.debug(f'AC server waiting for requests, iteration {iter} ... ')
             (ac_socket, address) = serversocket.accept()
             logger.debug(f'received connection request from {address}')
-            handle_ac_communication(ac_socket)
+            asyncio.run( handle_ac_communication(ac_socket) )
             
     return
 

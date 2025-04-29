@@ -172,6 +172,20 @@ def handle_communication():
                 except Exception as e:
                     logger.error(repr(e))
                     return
+            elif config_data[STRs.TYPE.name] == 'go_away':
+                print('Leaving Swarm' )
+                cli_command = f'nmcli connection show --active'
+                res = subprocess.run(cli_command.split(), text=True, stdout=subprocess.PIPE)
+                ap_ssid = ''
+                for line in res.stdout.strip().splitlines():
+                    if DEFAULT_IFNAME in line:
+                        ap_ssid = line.split()[0]
+                cli_command = f'nmcli connection down id {ap_ssid}'
+                subprocess.run(cli_command.split(), text=True)
+                time.sleep(1)
+                cli_command = f'nmcli connection up id {ap_ssid}'
+                subprocess.run(cli_command.split(), text=True)
+                pass
             remote_socket.sendall(bytes( "OK!".encode() ))
             remote_socket.close()
 
@@ -194,7 +208,6 @@ def install_config_no_update_vxlan(config_data):
         process_ret = subprocess.run(command, text=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         if (process_ret.stderr):
             logger.error(f"Error executing command {command}: \n{process_ret.stderr}")
-    return
 
 def install_swarmNode_config(swarmNode_config):
     global last_request_id, join_queue, ACCESS_POINT_IP
