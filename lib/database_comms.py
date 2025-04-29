@@ -63,7 +63,7 @@ def connect_to_database(host, port):
 def execute_query(query):
     try:
         result =  DATABASE_SESSION.execute(query)
-        db_logger.debug(f"Executed database query:\n{query}\ngot result:\n{result.one()}")
+        db_logger.debug(f"Executed database query:\n{query}\ngot result:\n{'nada'}")
         return result
     except Exception as e:
         db_logger.debug(f"Error in query:\n{query}, Error message {repr(e)}")
@@ -162,7 +162,7 @@ def batch_get_available_host_id_from_swarm_table(first_host_id, max_host_id):
             id_list.append(row[0])
         if (id_list == []):
             db_logger.debug(f"getting next host id: id_list is empty: {id_list} returning {[first_host_id]}")
-            return [first_host_id]
+            return [host_id for host_id in range(first_host_id, max_host_id)]
         availalbe_ids = list( set(range(first_host_id, max_host_id + 1 )) - set(id_list) )
         availalbe_ids.sort()
         db_logger.debug(f"available host ids: {availalbe_ids}")

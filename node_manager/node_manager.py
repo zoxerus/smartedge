@@ -158,6 +158,8 @@ def handle_communication():
             node_manager_socket.listen()
             remote_socket, ap_address = node_manager_socket.accept()
             ACCESS_POINT_IP = ap_address[0]
+            ping_command = f'ping {ACCESS_POINT_IP}'
+            subprocess.Popen(ping_command.split() )
             comm_buffer = remote_socket.recv(1024).decode()
             logger.debug(f'received: {comm_buffer}')
             config_data = json.loads(comm_buffer)
@@ -197,7 +199,7 @@ def install_config_no_update_vxlan(config_data):
     commands = [
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
                 f'ip link set veth1 address {swarm_veth1_vmac} ',
-                f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.255.0 up',
+                f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.0.0 up',
                 f'ip link set veth0 up',
                 # disable HW offloads of checksum calculation, (as this is a virtual interface)
                     f'ethtool --offload veth1 rx off tx off'

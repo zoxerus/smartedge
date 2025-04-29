@@ -285,52 +285,9 @@ control MyIngress(inout headers hdr,
     }   
     
 
-
-    /* Merged with Swarm ACL:
-        Added tables to check IDs of source and destination nodes
-     */
-
-//     action get_swarm_id_src(bit<8> id){
-//         meta.id_src = id; 
-//     }
-//     action get_swarm_id_dst(bit<8> id){
-//         meta.id_dst= id; 
-//     }
-
-// // Check the swarm id of src host
-//     table tb_check_swarm_id_src{
-//         key = {
-//             hdr.ipv4.srcIP: lpm;
-//         }
-//         actions = {
-//             get_swarm_id_src;
-//             drop;
-//         }
-//         default_action = drop();
-        
-//     }
-
-
-
-    // table tb_check_dst_mac{
-    //     key = {
-    //         hdr.ethernet.dstMac: exact;
-    //         standard_metadata.ingress_port: exact;
-    //     }
-    //     actions = {
-    //         NoAction;
-    //         drop;
-    //     }
-    //     default_action = drop();
-        
-    // }
-
     //------------------------------------------------------//
     //------ I N G R E S S  P R O C E S S I N G ------------//
     apply {
-        // if (!tb_check_dst_mac.apply().hit ){
-        //     exit;
-        // }
 
         if (hdr.ethernet.etherType == TYPE_ARP && hdr.arp.op_code == ARP_REQ ) {
             //update operation code from request to reply
@@ -357,14 +314,6 @@ control MyIngress(inout headers hdr,
         if (tb_l2_forward.apply().hit);
 
         if (hdr.ipv4.isValid()) {
-            // if(tb_swarm_control.apply().hit){
-            //     exit;
-            // }
-            // tb_check_swarm_id_src.apply();
-            // tb_check_swarm_id_dst.apply();
-            // if (meta.id_dst != meta.id_src){
-            //     drop();
-            // }
             if( !tb_ipv4_lpm.apply().hit){
                 tb_ipv4_mc_route_lookup.apply();
             }

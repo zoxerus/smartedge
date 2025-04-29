@@ -258,9 +258,9 @@ class Swarm_Node_Handler:
     #                     action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
 
          
-async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_nodes, lock):
+async def offboard_node(host_id, uuid, ap_id, node_vip, ap_port, available_nodes, lock):
     SN_UUID = uuid
-    logger.debug(f'Kicking Node {SN_UUID} from Swarm')
+    logger.debug(f'Kicking Node {SN_UUID} ip {node_vip} from Swarm')
     
     # first we get the ip of the access point from the ap list
     ap_ip = get_ap_ip_from_ap_id(ap_id)
@@ -281,11 +281,11 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
     
     config_message = json.dumps(swarmNode_config)
     
-    logger.debug(f'Sending {config_message}')
+    logger.debug(f'Sending {config_message} to {node_vip}')
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             # s.settimeout(5)
-            s.connect((node_s0_ip, cfg.node_manager_tcp_port))
+            s.connect((node_vip, cfg.node_manager_tcp_port))
             s.sendall( bytes( config_message.encode() ) )
             logger.debug(f'sent {config_message} to {SN_UUID}')
             s.close()
@@ -297,33 +297,7 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
                
     except Exception as e:
         logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
-        return 
-    
-    db.insert_node_into_swarm_database(host_id=host_id, this_ap_id=ap_id,
-                                           node_vip= station_vip, node_vmac= station_vmac, node_phy_mac='',
-                                           node_uuid=SN_UUID, status=db.db_defines.SWARM_STATUS.JOINED.value)
-        
-    db.update_art_with_node_info(node_uuid=SN_UUID,node_current_ap=ap_id,
-                                     node_current_swarm=1,node_current_ip=station_vip)
-                    
-    bmv2.add_bmv2_swarm_broadcast_port(instance=instance, thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= ap_port)
-
-    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
-                                                    table_name='MyIngress.tb_ipv4_lpm',
-            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
-            action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT, instance=instance )
-        
-        
-    # insert table entries in the rest of the APs
-    node_ap_ip = ap_ip
-    for key, istc in AP_Dictionary.items():
-        if key != ap_id:
-            # ap_ip = cfg.ap_list[key][0]
-            ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
-            entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
-                                                    table_name='MyIngress.tb_ipv4_lpm',
-                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
-                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT, instance=istc )
+        return
             
 
 async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_nodes, lock):
@@ -475,6 +449,8 @@ async def handle_ac_communication(ac_socket):
             return
         available_host_ids = db.batch_get_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
                     max_host_id=cfg.this_swarm_dhcp_end)
+        
+        print('avialalbe_host_ids: ', available_host_ids)
         available_nodes = []
         lock = asyncio.Lock()
         tasks = []
@@ -504,11 +480,10 @@ async def handle_ac_communication(ac_socket):
         available_nodes_aps = []
         available_nodes_ports = []
         for row in rows:
-            if row.current_swarm == 0:
-                availalbe_nodes_ids.append(row.uuid)
-                available_nodes_ips.append(row.virt_ip)
-                available_nodes_aps.append(row.current_ap)
-                available_nodes_ports.append(row.ap_port)
+            availalbe_nodes_ids.append(row.uuid)
+            available_nodes_ips.append(row.virt_ip)
+            available_nodes_aps.append(row.current_ap)
+            available_nodes_ports.append(row.ap_port)
         num_ips = len(available_nodes_ips)
         if num_ips == 0: 
             return
@@ -523,7 +498,7 @@ async def handle_ac_communication(ac_socket):
             node_s0_ip = available_nodes_ips[i]
             ap_id = available_nodes_aps[i]
             ap_port = available_nodes_ports[i]
-            task = asyncio.create_task( offboard_node( host_id=host_id, uuid=node_uuid, ap_id=ap_id, node_s0_ip=node_s0_ip, 
+            task = asyncio.create_task( offboard_node( host_id=host_id, uuid=node_uuid, ap_id=ap_id, node_vip=node_s0_ip, 
                                       ap_port=ap_port, available_nodes=available_nodes, lock=lock) )
             tasks.append(task)
         
