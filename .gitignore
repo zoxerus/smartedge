@@ -3,3 +3,6 @@ __pycache__
 video_demo
 .vscode
 logs
+*.p4i
+*.tar
+*.tar.gz

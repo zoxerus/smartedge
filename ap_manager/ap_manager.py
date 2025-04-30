@@ -7,74 +7,136 @@ sys.path.append('../..')
 
 import subprocess
 import logging
+import logging.handlers
+
 import threading
 import socket
 import atexit
 import time
 import ipaddress
-import config
+import lib.global_config as cfg
 import psutil
 import sys
 import lib.database_comms as db
 import lib.bmv2_thrift_lib as bmv2
 import os
+import asyncio
+import lib.global_constants as cts
+from lib.helper_functions import *
+import json
+import concurrent.futures
+
+from argparse import ArgumentParser
 
 
+STRs = cts.String_Constants
 
+class SocketStreamHandler(logging.StreamHandler):
+    """Custom StreamHandler to send logs over TCP."""
+    def __init__(self, host, port):
+        super().__init__(sys.stdout)  # StreamHandler needs an output stream
+        self.host = host
+        self.port = port
+        self.sock = None
+        self._connect()
+
+    def _connect(self):
+        """Establish connection to log server."""
+        try:
+            self.sock = socket.create_connection((self.host, self.port))
+        except Exception as e:
+            print(f"Failed to connect to log server: {e}")
+            self.sock = None
+
+    def emit(self, record):
+        """Send log message to log server."""
+        if not self.sock:
+            self._connect()  # Try to reconnect if needed
+            if not self.sock:
+                return  # Drop log if connection fails
+
+        try:
+            msg = self.format(record) + "\n"
+            self.sock.sendall(msg.encode('utf-8'))  # Send log as bytes
+        except Exception as e:
+            print(f"Error sending log: {e}")
+            self.sock = None  # Reset socket on failure
+
+    def close(self):
+        """Close the socket when done."""
+        if self.sock:
+            self.sock.close()
+        super().close()
+
+parser = ArgumentParser()
+parser.add_argument("-l", "--log-level",type=int, default=50, help="set logging level [10, 20, 30, 40, 50]")
+parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq numeric id for node identification")
+args = parser.parse_args()
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+## We use the lo:0 interface to generate the ID of the node
+loopback_if = 'lo:0'
+THIS_AP_UUID = None
+for snic in psutil.net_if_addrs()[loopback_if]:
+    if snic.family == socket.AF_INET:        
+        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) -1 ))
+        THIS_AP_UUID = f'AP:{temp_mac[9:]}'
+if THIS_AP_UUID == None:
+    exit()
+
+# this part handles logging to console and to a file for debugging purposes
 # where to store program logs
-PROGRAM_LOG_FILE_NAME = '../logs/client_monitor.log'
+PROGRAM_LOG_FILE_NAME = './logs/ap.log'
+
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
+logger = logging.getLogger(f'{THIS_AP_UUID}')
 
-# CONSTANTS TO POINT TO THE INDEX OF MAC ADDRESS AND EVENT TYPES IN "iw event" COMMAND
-# example output "wlan0: new station 48:22:54:c7:27:04"
-INDEX_IW_EVENT_MAC_ADDRESS = 3
-INDEX_IW_EVENT_ACTION = 1 
+log_socket_handler = SocketStreamHandler( cfg.logs_server_address[0], cfg.logs_server_address[1] )
+log_info_formatter =  logging.Formatter("%(name)s %(asctime)s [%(levelname)s]:\n%(message)s\n")
+log_socket_handler.setFormatter(log_info_formatter)
+log_socket_handler.setLevel(logging.INFO)
 
-# the physical interface that connects to the backbone network
-# TODO: safely delete this
-DEFAULT_EHTERNET_DEVICE_NAME = config.default_ethernet_device
+client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
+log_debug_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n%(message)s\n")
+client_monitor_log_console_handler.setFormatter(log_debug_formatter)
+client_monitor_log_console_handler.setLevel(args.log_level)
 
-# get primary wlan interface from the config file
-DEFAULT_WLAN_DEVICE_NAME = config.default_wlan_interface
- 
-# This is the interface that connects to the coordinator
-DEFAULT_COORDINATOR_INTERFACE_PEER = config.default_coordinator_device
+logger.setLevel(logging.DEBUG)
+logger.addHandler(log_socket_handler)
+logger.addHandler(client_monitor_log_console_handler)
 
-# String constants to be used with the output of the iw tool
-IW_TOOL_JOINED_STATION_EVENT = 'new'
-IW_TOOL_LEFT_STATION_EVENT = 'del'
+db.db_logger = logger
+bmv2.bmv2_logger = logger
 
-# TODO: move this to the config file, or use an automated implementation
-SWARM_P4_MC_NODE = 1100
-SWARM_P4_MC_GROUP = 1000
 
 
 # a global variable to set the communication protocol with the switch
-p4_control_method = bmv2.P4_CONTROL_METHOD_THRIFT_CLI
+P4CTRL = bmv2.P4_CONTROL_METHOD_THRIFT_CLI
 
-# Set which database the program is going to use
-db_in_use = db.STR_DATABASE_TYPE_CASSANDRA
+INDEX_IW_EVENT_MAC_ADDRESS = 3
+INDEX_IW_EVENT_ACTION = 1 
 
-# string constants
-# TODO: move to a global config file
-STR_NODE_VIP = 'Node_vIP'
-STR_AP_ID = 'AP_ID'
-STR_NODE_VMAC = 'NODE_VMAC'
-STR_CONTROL_UPDATE_ACTION = 'ACTION'
-STR_CONTROL_UPDATE_ACTION_JOIN = 'JOIN'
-STR_CONTROL_UPDATE_ACTION_LEAVE = 'LEAVE'
-
+IW_TOOL_JOINED_STATION_EVENT = 'new'
+IW_TOOL_LEFT_STATION_EVENT = 'del'
 
 # read the swarm subnet from the config file
 # TODO: make this configurable by coordinator
-THIS_SWARM_SUBNET=ipaddress.ip_address( config.this_swarm_subnet )
+THIS_SWARM_SUBNET=ipaddress.ip_address( cfg.this_swarm_subnet )
 
+DEFAULT_SUBNET=ipaddress.ip_address(f'10.0.{args.num_id}.0')
+
+COORDINATOR_S0_IP = f'10.0.{args.num_id}.254'
 
 # a variable to track created host ids
 # TODO: have a database table for this
-current_host_id = config.this_swarm_dhcp_start
-created_host_ids = set([])
-available_host_ids = set([])
+# current_host_id = config.this_swarm_dhcp_start
+created_vxlans = set([])
+
+
+SWARM_P4_MC_NODE = 1100
+SWARM_P4_MC_GROUP = 1000
+
 
 # a list to keep track of connected stations to current AP
 connected_stations = {}
@@ -84,33 +146,15 @@ CONNECTED_STATIONS_VMAC_INDEX = 0
 CONNECTED_STATIONS_VIP_INDEX = 1
 CONNECTED_STATION_VXLAN_INDEX = 2
 
-loopback_if = 'lo:0'
+DEFAULT_WLAN_DEVICE_NAME= cfg.default_wlan_device
 
 
-logger = logging.getLogger('client_monitor_logger')
-
-database_session = db.connect_to_database(db_in_use, config.database_hostname, config.database_port)
-
-def int_to_mac(macint):
-    if type(macint) != int:
-        raise ValueError('invalid integer')
-    return ':'.join(['{}{}'.format(a, b)
-                     for a, b
-                     in zip(*[iter('{:012x}'.format(macint ))]*2)])  # + 2199023255552
-
-THIS_AP_UUID = None
-
-for snic in psutil.net_if_addrs()[loopback_if]:
-    if snic.family == socket.AF_INET:        
-        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) -1 ))
-        THIS_AP_UUID = f'AP:{temp_mac[9:]}'
-if THIS_AP_UUID == None:
-    logger.error("Could not Assign UUID to Node")
-    exit()
-print("AP ID:", THIS_AP_UUID)
+db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
+database_session = db.connect_to_database(cfg.database_hostname, cfg.database_port)
+db.DATABASE_SESSION = database_session
 
 THIS_AP_ETH_MAC = None
-for snic in psutil.net_if_addrs()[config.default_ethernet_device]:
+for snic in psutil.net_if_addrs()[cfg.default_backbone_device]:
     if snic.family == psutil.AF_LINK:        
         THIS_AP_ETH_MAC = snic.address
 if THIS_AP_ETH_MAC == None:
@@ -118,316 +162,445 @@ if THIS_AP_ETH_MAC == None:
     exit()
 
 THIS_AP_WLAN_MAC = None
-for snic in psutil.net_if_addrs()[config.default_wlan_interface]:
+for snic in psutil.net_if_addrs()[cfg.default_wlan_device]:
     if snic.family == psutil.AF_LINK:        
         THIS_AP_WLAN_MAC = snic.address
 if THIS_AP_WLAN_MAC == None:
     logger.error("Could not Connect to backbone, check eth device name in the config file")
     exit()
                          
-def initialize_program():
-    # this part handles logging to console and to a file for debugging purposes
-    client_monitor_log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s]: %(message)s \n")
-    client_monitor_log_file_handler = logging.FileHandler(PROGRAM_LOG_FILE_NAME, mode='w')
-    client_monitor_log_file_handler.setLevel(logging.DEBUG)
-    client_monitor_log_file_handler.setFormatter(client_monitor_log_formatter)
-    client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)  # (sys.stdout)
-    client_monitor_log_console_handler.setLevel(logging.INFO)
-    client_monitor_log_console_handler.setFormatter(client_monitor_log_formatter)
-    logger.setLevel(logging.DEBUG)    
-    logger.addHandler(client_monitor_log_file_handler)
-    logger.addHandler(client_monitor_log_console_handler)
-    
-    
-    # remvoe all configureation from bmv2, start fresh
-    bmv2.send_cli_command_to_bmv2(cli_command="reset_state")
-    
-    # attach the DEFAULT_COORDINATOR_INTERFACE_PEER interface to the bmv2
-    # bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.swarm_coordinator_switch_port}")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.wlan_switch_port}")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {config.ethernet_switch_port}")
-    
-    # bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {DEFAULT_COORDINATOR_INTERFACE_PEER} {config.swarm_coordinator_switch_port}")
-    
-    # bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_wlan_interface} {config.wlan_switch_port}")
-    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {config.default_ethernet_device} {config.ethernet_switch_port}")
-    
-    # bmv2.add_entry_to_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, table_name='MyIngress.tb_check_dst_mac')
-    
-   
-    # handle broadcast
-    # bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}")
-    # bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_create {SWARM_P4_MC_NODE} {config.ap_communication_switch_port}")
-    # bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0")
-    # bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast FF:FF:FF:FF:FF:FF => {SWARM_P4_MC_GROUP}")
-    
+                         
+AP_LIST = bmv2.connect_to_all_switches()
+print(AP_LIST)
 
-    logger.info('Program Initialized Successfully')
+THIS_AP = AP_LIST[THIS_AP_UUID]
+print(f'THIS_AP: {THIS_AP}, it\'s type {type(THIS_AP)}')
+
+def initialize_program():    
+    # remvoe all configureation from bmv2, start fresh
+    bmv2.send_cli_command_to_bmv2(cli_command="reset_state", instance=THIS_AP)
+
+    # attach the backbone interface to the bmv2
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {cfg.swarm_backbone_switch_port}", instance=THIS_AP)
+    bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {cfg.default_backbone_device} {cfg.swarm_backbone_switch_port}", instance=THIS_AP)
+    
+    coordinator_vmac = int_to_mac( int( ipaddress.ip_address(cfg.coordinator_vip)) )
+    print(f'Coordinator MAC { coordinator_vmac}')
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                                            table_name='MyIngress.tb_ipv4_lpm',
+    action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{cfg.coordinator_vip}/32' , 
+    action_params= f'{cfg.swarm_backbone_switch_port} { coordinator_vmac }', instance=THIS_AP)
+    
+    
+    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                                            table_name='MyIngress.tb_ipv4_lpm',
+                            action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{COORDINATOR_S0_IP}/32' , 
+                            action_params= f'{cfg.swarm_backbone_switch_port} { coordinator_vmac }', 
+                            instance= THIS_AP)
+    
+    # handle broadcast
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_mgrp_create {SWARM_P4_MC_GROUP}", instance=THIS_AP)
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_create {SWARM_P4_MC_NODE} {cfg.swarm_backbone_switch_port}", instance=THIS_AP)
+    bmv2.send_cli_command_to_bmv2(cli_command=f"mc_node_associate {SWARM_P4_MC_GROUP} 0", instance=THIS_AP)
+    bmv2.send_cli_command_to_bmv2(cli_command=f"table_add MyIngress.tb_l2_forward ac_l2_broadcast 01:00:00:00:00:00&&&0x010000000000 => {SWARM_P4_MC_GROUP} 100 ", instance=THIS_AP)
+    
+    logger.info(f"AP ID: {THIS_AP_UUID} is up" )
+    print('\n\n\nAP Started')
 
 # a handler to clean exit the programs
 def exit_handler():
-    logger.info('Handling exit')
-    logger.debug(f'Created vxlan ids: {created_host_ids}') 
-               
-    # delete any created vxlans during the program lifetime
-    for vxlan_id in created_host_ids:
-        try:
-            delete_vxlan_shell_command = "ip link del vxlan%s" % vxlan_id
-            result = subprocess.run(delete_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-            
-            
-            db.delete_node_from_swarm_database(database_type=db.STR_DATABASE_TYPE_CASSANDRA, session=database_session,
-                                    node_swarm_id= vxlan_id)
-            logger.debug(f'deleted vxlan{vxlan_id}, feedback {result.stdout.strip() }, errors: {result.stderr.strip() }')
-        except Exception as e:
-            logger.debug(repr(e))
-
+    logger.debug('Handling exit')
+    log_socket_handler.close()
+    for snic in psutil.net_if_addrs():
+        if 'se_vxlan' in snic:
+            shell_command = f"ip link del {snic}"
+            result = subprocess.run(shell_command.split())
 
 # a function for sending the configuration to the swarm node
+# this connects to the TCP server running in the swarm node and sends the configuration as a string
 def send_swarmNode_config(config_messge, node_socket_server_address):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as node_socket_client:
-        node_socket_client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        node_socket_client.settimeout(5)
         try:
+            node_socket_client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            node_socket_client.settimeout(10)
             node_socket_client.connect(node_socket_server_address)
             node_socket_client.sendall( bytes( config_messge.encode() ))
+            response = node_socket_client.recv(1024).decode()
+            if response == "OK!":
+                return 1
+            return -1 
         except Exception as e:
-            print(f'Error sending config to {node_socket_server_address}: {e}')
-    print(f'sent {config_messge}')
-    
+            logger.error(f'Error sending config to {node_socket_server_address}: {e}')
+            return -1
 
 
 def create_vxlan_by_host_id(vxlan_id, remote, port=4789): 
-    try:
-        logger.debug(f'Adding vxlan{vxlan_id}')
-        
-        add_vxlan_shell_command = "ip link add vxlan%s type vxlan id %s dev %s remote %s dstport %s" % (
-            vxlan_id, vxlan_id, DEFAULT_WLAN_DEVICE_NAME, remote, port)
-        
-        result = subprocess.run(add_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                
-        logger.debug(f'\nCreating vxlan {vxlan_id}: {result.stdout} {result.stderr}')
-        created_host_ids.add(vxlan_id)
-        logger.debug(f'\nCreated host IDs: {created_host_ids}')            
-        activate_interface_shell_command = "ip link set vxlan%s up" % vxlan_id
-        subprocess.run(activate_interface_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                
-    except Exception as e:
-        logger.debug(f'\nError creating vxlan {vxlan_id}: {e}')
-        logger.debug(f'\nError creating vxlan {vxlan_id}: {result.stderr}')
+    logger.debug(f'Adding se_vxlan{vxlan_id}')
+    
+    add_vxlan_shell_command = "ip link add se_vxlan%s type vxlan id %s dev %s remote %s dstport %s" % (
+        vxlan_id, vxlan_id, DEFAULT_WLAN_DEVICE_NAME, remote, port)
+
+    result = subprocess.run(add_vxlan_shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if (result.stderr):
+        logger.error(f'\nCould not create se_vxlan{vxlan_id}:\n\t {result.stderr}')
         return -1
+    
+    logger.debug(f'\nCreated se_vxlan{vxlan_id}')
+    created_vxlans.add(int(vxlan_id) )
+    
+    logger.debug(f'\nCreated_vxlans:\n\t {created_vxlans}')            
+    activate_interface_shell_command = "ip link set se_vxlan%s up" % vxlan_id
+    result = subprocess.run(activate_interface_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if (result.stderr):
+        logger.error(f'\nCould not activate interface se_vxlan{vxlan_id}:\n\t {result.stderr}')
+        return -1
+    logger.debug(f'\nActivated interface se_vxlan{vxlan_id}')
     return vxlan_id
         
 
 def delete_vxlan_by_host_id(host_id):
-    vxlan_id = host_id
-    logger.debug(f'\nDeleting vxlan ID: {vxlan_id}')
-    delete_vxlan_shell_command = "ip link del vxlan%s" % (vxlan_id)
-    subprocess.run(delete_vxlan_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    available_host_ids.add(host_id)
-    created_host_ids.remove(host_id)
-    logger.debug(f'\nCreated host IDs: {created_host_ids}')
+    logger.debug(f'\nDeleting se_vxlan{host_id}')
+    delete_vxlan_shell_command = "ip link del se_vxlan%s" % (host_id)
+    result = subprocess.run(delete_vxlan_shell_command.split(), text=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if (result.stderr):
+        logger.error(f'\ncould not delete se_vxlan{host_id}:\n\t {result.stderr}')
+        return
+    logger.debug(f'\nCreated Vxlans before removing {host_id}: {created_vxlans}')
+    if int(host_id) in created_vxlans:
+        created_vxlans.remove( int(host_id) )
+        logger.debug(f'\nCreated Vxlans after removing {host_id}: {created_vxlans}')
 
 
 def get_mac_from_arp_by_physical_ip(ip):
     shell_command = "arp -en"
-    proc = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if (result.stderr):
+        logger.error(f'\nCould run arp for {ip}:\n\t {result.stderr}')
+        return
 
-    for line in proc.stdout.strip().splitlines():
+    for line in result.stdout.strip().splitlines():
         if ip in line:
             return line.split()[2]
+    logger.error(f'\nMAC not found in ARP for {ip}')
     return None
 
-
-# TODO: safely delete this
-def get_next_available_host_id():
-    global current_host_id
-    if (len(available_host_ids) == 0):
-        host_id = current_host_id
-        current_host_id = current_host_id + 1
-        return host_id
-    host_id =  min(available_host_ids)
-    available_host_ids.remove(host_id)
-    return host_id
 
 
 def get_ip_from_arp_by_physical_mac(physical_mac):
     shell_command = "arp -en"
     t0 = time.time()
     while time.time() - t0 < 5:
-        proc = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        for line in proc.stdout.strip().splitlines():
+        result = subprocess.run( shell_command.split(), text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if (result.stderr):
+            logger.error(f'\nCould not run arp for {physical_mac}:\n\t {result.stderr}')
+            return
+        for line in result.stdout.strip().splitlines():
             if physical_mac in line and DEFAULT_WLAN_DEVICE_NAME in line:
-                return line.split()[0]
+                ip = line.split()[0]
+                logger.debug(f'\nIP {ip} was found in ARP for {physical_mac} after {time.time() - t0} Seconds')                
+                return ip
+ 
+
+def get_next_available_vxlan_id():
+    shell_command = "ip -d link show | awk '/vxlan id/ {print $3}' "
+    process_ret = subprocess.run(shell_command, text=True, shell=True, stdout=subprocess.PIPE )
+    id_list_str = process_ret.stdout
+    id_list = list(map(int, id_list_str.split()))
+    result = min(set(range(1, 500 )) - set(id_list)) 
+    return result 
 
 
-def assign_virtual_mac_and_ip_by_host_id(host_id):
-    station_virtual_ip_address = str( THIS_SWARM_SUBNET + host_id )
-    station_virtual_mac_address = int_to_mac(int( THIS_SWARM_SUBNET + host_id ))
+async def handle_new_connected_station(station_physical_mac_address):
+    logger.debug(f"handling newly connected staion {station_physical_mac_address}")
     
-    logger.debug( f'\nStation\'s Virtual IP: {station_virtual_ip_address}' )
-    logger.debug( f'\nStation\'s Virtual MAC: {station_virtual_mac_address}')
     
-    return station_virtual_mac_address, station_virtual_ip_address
-
-
-def handle_new_connected_station(station_physical_mac_address):
     # First Step check if node is already in the Connected Nodes 
     # sometimes an already connected station is randomly detected as connecting again, 
     # this check skips the execution of the rest of the code, as the station is already connected and set up.
     if (station_physical_mac_address in connected_stations.keys() ):
+        
+        logger.warning(f'\nStation {station_physical_mac_address} Connected to {THIS_AP_UUID} but was found already in Connected Stations')
         return
     
     # get the IP of the node from its mac address from the ARP table
     station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
-    # sometimes it takes more than one try to get the ip from the ARP, I don't know why
-    if station_physical_ip_address == None:
-        tries = 2
-        while (tries > 0):
-            station_physical_ip_address = get_ip_from_arp_by_physical_mac(station_physical_mac_address)
-            if station_physical_ip_address != None:
-                break
-            time.sleep(0.05)
-            tries = tries - 1
-        if station_physical_ip_address == None:
-            logger.error(f'Error: Could not get Node Physical IP from ARP table for MAC: {station_physical_mac_address}')
+    if (station_physical_ip_address == None ):
+        logger.error(f'\nIP not found in ARP for {station_physical_mac_address}. Aborting the handling of the node')
+        return
+    logger.info( f'\nNew Station Connected: {station_physical_mac_address} {station_physical_ip_address} at {time.ctime(time.time())}')
+    
+    # 2nd Step: Check if Node belong to a Swarm or Not
+    # to do so we first read the UUID (bottom three bytes of MAC address)
+    SN_UUID = 'SN:' + station_physical_mac_address[9:]
+    
+    # # Then we search the ART  to see if the node is present in there
+    node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
+    node_info = node_db_result.one()
+    logger.debug(f'node_info: {node_info} for {SN_UUID}')    
+    
+    # # in case the node is not present in the ART
+    if ( node_info == None or node_info.current_swarm == 0):
+        logger.debug(f'Configuring Swarm 0 for {SN_UUID}')    
+        
+        command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
+        proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if proc_ret.stderr:
+            logger.error(f"Error running: {command}\nError Message:\n{proc_ret.stdout} ")    
+            logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
             return
         
-    # # 2nd Step: Check if Node belong to a Swarm or Not
-    # # to do so we first read the UUID (bottom three bytes of MAC address)
-    # SN_UUID = 'SN:' + station_physical_mac_address[9:]
-    
-    # # Then we search the TDD to see if the node is present in there
-    # result = db.get_node_info_from_tdd(session=database_session, node_uuid=SN_UUID)
-    # # in case the node is not present in the TDD we add it to the TDD
-    # if (result == None):
-    #     db.insert_into_thing_directory_with_node_info(database_typ=db_in_use, session=database_session,
-    #                                                   node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0)
+        logger.debug(f"ran command: {command}\ngot output:\n{proc_ret.stdout} ")
+        vxlan_id = -1
+        if (proc_ret.stdout == '' ):
+            vxlan_id = get_next_available_vxlan_id()
+        else:
+            vxlan_id = int(proc_ret.stdout)
+            command = f"ip link del se_vxlan{vxlan_id}"
+            proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if (vxlan_id == -1):
+            logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
+            return
         
-    #     # We then add two table entries to route traffic from the node to the coordinator and vice versa.    
-    #     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
-    #     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-    #                                 table_name = 'MyIngress.tb_swarm_control',
-    #                                 action_name = 'MyIngress.ac_send_to_coordinator', 
-    #                                 match_keys = f'{config.wlan_switch_port} {config.coordinator_physical_ip}',
-    #                                 action_params = f'{config.swarm_coordinator_switch_port} {THIS_AP_ETH_MAC} {config.coordinator_physical_mac}' )
+        create_vxlan_by_host_id( vxlan_id= vxlan_id, remote= station_physical_ip_address )
         
-    #     # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
-    #     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-    #                                 table_name = 'MyIngress.tb_swarm_control',
-    #                                 action_name = 'MyIngress.ac_send_to_coordinator', 
-    #                                 match_keys = f'{config.ethernet_switch_port} {station_physical_ip_address}',
-    #                                 action_params = f'{config.wlan_switch_port} {THIS_AP_WLAN_MAC} {station_physical_mac_address}' )
-    # # if node is present in the TDD byt current swarm of the node is 0 meaning it is in the guest network (default swarm or also called swarm zero)
-    # elif (result.node_current_swarm == 0):
-    #     # then we just updated the TDD to indicate that the node has connected to the current AP
-    #     db.update_tdd_with_new_node_status(database_type=db_in_use, session=database_session, 
-    #                                        node_uuid=SN_UUID, node_current_ap=THIS_AP_UUID, node_current_swarm=0)
-    
-
+        
+        
+        
+        dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
+        bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command, instance=THIS_AP)
+        
+        attach_vxlan_to_bmv2_command = "port_add se_vxlan%s %s" % (vxlan_id, vxlan_id)
+        bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command, instance=THIS_AP)
+        
+        node_s0_ip = str(DEFAULT_SUBNET).split('.')[:3]
+        node_s0_ip.append(station_physical_ip_address.split('.')[3])
+        node_s0_ip = '.'.join(node_s0_ip)      
+        
+        node_s0_mac = int_to_mac(int( ipaddress.ip_address(node_s0_ip) ))
+        
+        coordinator_vip = DEFAULT_SUBNET + 254
+        
+        swarmNode_config = {
+            STRs.TYPE.name: STRs.SET_CONFIG.name,
+            STRs.VETH1_VIP.name: node_s0_ip,
+            STRs.VETH1_VMAC.name: node_s0_mac,
+            STRs.VXLAN_ID.name: vxlan_id,
+            STRs.SWARM_ID.name: 0,
+            STRs.COORDINATOR_VIP.name: str(coordinator_vip),
+            STRs.COORDINATOR_TCP_PORT.name: cfg.coordinator_tcp_port,
+            STRs.AP_UUID.name: THIS_AP_UUID
+        }
+        
+        swarmNode_config_message = json.dumps(swarmNode_config)   
+        result = send_swarmNode_config(swarmNode_config_message, (station_physical_ip_address, cfg.node_manager_tcp_port) )
+        if (result == -1): # Node faild to configure itself
+            logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{json.dumps(swarmNode_config, indent = 2 ) }')
+            return
+        else:
+            logger.info(f'AP has sent this config to the Smart Node:\n\t {json.dumps(swarmNode_config, indent = 2 )}')
+            
+        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
+        logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations}")
 
         
-    logger.info( f'\nHandling New Station: {station_physical_mac_address} \t {station_physical_ip_address} at {time.time()}')
-    
-    host_id = db.get_next_available_host_id_from_swarm_table(database_typ=db_in_use,
-                session=database_session, first_host_id=config.this_swarm_dhcp_start,
-                max_host_id=config.this_swarm_dhcp_end)
-    
-    
-    result = assign_virtual_mac_and_ip_by_host_id(host_id)
-    station_vmac= result[0]
-    station_vip = result[1]
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
+        #     result = future.result()  # Get the return value
+            
+        #     if (result == -1): # Node faild to configure itself
+        #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+        #         return
+            
+            
+        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id, node_ip=node_s0_ip)
+        
+        # TODO: verify if bmv2 is updated correctly 
+        entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                            table_name='MyIngress.tb_ipv4_lpm',
+                            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_s0_ip}/32' , 
+                            action_params= f'{str(vxlan_id)}', instance=THIS_AP)
+     
+        node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
+        ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
+        for key, istnc in AP_LIST.items():
+            if key != THIS_AP_UUID:
+                ap_ip = cfg.ap_list[key][0]
+                ap_mac = int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
+                entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                        table_name='MyIngress.tb_ipv4_lpm',
+                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{node_s0_ip}/32' , 
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= bmv2.DEFAULT_THRIFT_PORT, instance=istnc )
+            
 
-    logger.info( f'\nStation {station_physical_mac_address}\t{station_physical_ip_address}\n\t' +  
-                f'assigned vIP: {station_vip} and vMAC: {station_vmac}')
+        
+    else :
+        logger.info(f'node {SN_UUID} is part of swarm {node_info.current_swarm}')
+        command = f"ip -d link show | awk '/remote {station_physical_ip_address}/ {{print $3}}' "
+        proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if proc_ret.stderr:
+            logger.error(f"Error running: {command}\nError Message:\n{proc_ret.stdout} ")    
+            logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
+            return
+        
+        logger.debug(f"ran command: {command}\ngot output:\n{proc_ret.stdout} ")
+        vxlan_id = -1
+        if (proc_ret.stdout == '' ):
+            vxlan_id = get_next_available_vxlan_id()
+        else:
+            vxlan_id = int(proc_ret.stdout)
+            command = f"ip link del se_vxlan{vxlan_id}"
+            proc_ret = subprocess.run(command, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if (vxlan_id == -1):
+            logger.error(f"Something wrong with assigning vxlan to {SN_UUID} ")
+            return
+        
+        create_vxlan_by_host_id( vxlan_id= vxlan_id, remote= station_physical_ip_address )
     
-    vxlan_id = create_vxlan_by_host_id( vxlan_id= host_id, remote= station_physical_ip_address )
-       
-    dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
-    bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command)
-    
-    attach_vxlan_to_bmv2_command = "port_add vxlan%s %s" % (vxlan_id, vxlan_id)
-    bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command)
-    
-    # We then add two table entries to route traffic from the node to the coordinator and vice versa.
-    # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
-    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                table_name = 'MyIngress.tb_swarm_control',
-                                action_name = 'MyIngress.ac_send_to_coordinator', 
-                                match_keys = f'{vxlan_id} {config.coordinator_vip}',
-                                action_params = f'{config.swarm_coordinator_switch_port}' )
-    
-    # THIS ENTRY ONLY ALLOWES TRAFFIC TO COORDINATOR TCP PORT FROM THE NEW JOINED NODE
-    entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                table_name = 'MyIngress.tb_swarm_control',
-                                action_name = 'MyIngress.ac_send_to_coordinator', 
-                                match_keys = f'{config.swarm_coordinator_switch_port} {station_vip}',
-                                action_params = f'{vxlan_id}' )
-       
-    # Add the newly connected station to the list of connected stations
-    connected_stations[station_physical_mac_address] = [ station_vmac ,station_vip, vxlan_id]
-    
-    # Now we should insert the new connected station in the swarm database
-    db.insert_node_into_swarm_database(database_type=db_in_use, session= database_session, this_ap_id= THIS_AP_UUID,
-                                    host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, node_phy_mac=station_physical_mac_address)
-    
-    logger.info(f'station: {station_vmac} {station_vip} joined AP {THIS_AP_UUID} at {time.time()}')
-    
-    # connect to the swarm node manager and send the  required configuration for the communication with the coordinator
-    swarmNode_config_message = f'setConfig {vxlan_id} {station_vip} {station_vmac} {config.coordinator_vip} {config.coordinator_tcp_port} {THIS_AP_UUID}'
-    threading.Thread(target= send_swarmNode_config, args= (swarmNode_config_message,
-                                                           (station_physical_ip_address, config.node_manager_tcp_port ), ) 
-    ).start()
-
+        dettach_vxlan_from_bmv2_command = "port_remove %s" % (vxlan_id)
+        bmv2.send_cli_command_to_bmv2(cli_command=dettach_vxlan_from_bmv2_command, instance=THIS_AP)
+        
+        attach_vxlan_to_bmv2_command = "port_add se_vxlan%s %s" % (vxlan_id, vxlan_id)
+        bmv2.send_cli_command_to_bmv2(cli_command=attach_vxlan_to_bmv2_command, instance=THIS_AP)
+        
+        
+        host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
+                    max_host_id=cfg.this_swarm_dhcp_end, uuid=SN_UUID)
+        
+        result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
+        station_vmac= result[0]
+        station_vip = result[1]
+        
+        logger.info( f'\nStation {station_physical_mac_address}\t{station_physical_ip_address}\n\t' +  
+                    f'assigned vIP: {station_vip} and vMAC: {station_vmac}')
+        
+        
+        
+        swarmNode_config = {
+            STRs.TYPE.name                  : STRs.UPDAET_CONFIG.name,
+            STRs.VETH1_VIP.name             : station_vip,
+            STRs.VETH1_VMAC.name            : station_vmac,
+            STRs.VXLAN_ID.name              : vxlan_id,
+            STRs.SWARM_ID.name              : node_info.current_swarm,
+            STRs.COORDINATOR_VIP.name       : cfg.coordinator_vip,
+            STRs.COORDINATOR_TCP_PORT.name  : cfg.coordinator_tcp_port,
+            STRs.AP_UUID.name               : THIS_AP_UUID
+        }
+        
+        swarmNode_config_message = json.dumps(swarmNode_config)
+        result = send_swarmNode_config(swarmNode_config_message, (station_physical_ip_address, cfg.node_manager_tcp_port)  )
+        if (result == -1): # Node faild to configure itself
+            logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+            return
+            
+        # swarmNode_config_message = f'setConfig_01 {station_vip} {station_vmac} {vxlan_id} {cfg.coordinator_phyip} {cfg.coordinator_tcp_port} {THIS_AP_UUID}'
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
+        #     result = future.result()  # Get the return value
+            
+        #     if (result == -1): # Node faild to configure itself
+        #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
+        #         return
+        # TODO: update the bmv2
+        
+        connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,station_vip, vxlan_id]
+        
+        logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations.keys()}")
+        
+        db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=node_info.current_swarm, ap_port=vxlan_id, node_ip=station_vip)
+        db.insert_node_into_swarm_database(node_uuid=SN_UUID, this_ap_id= THIS_AP_UUID,
+                                        host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
+                                        node_phy_mac=station_physical_mac_address, status=db.db_defines.SWARM_STATUS.JOINED.value)
+        
+        bmv2.add_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=vxlan_id, instance=THIS_AP)
+        
+        entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                            table_name='MyIngress.tb_ipv4_lpm',
+                            action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
+                            action_params= f'{str(vxlan_id)}', instance=THIS_AP)
+     
+        node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
+        ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
+        for key, istnc in cfg.ap_list.items():
+            if key != THIS_AP_UUID:
+                ap_ip = cfg.ap_list[key][0]
+                ap_mac = int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
+                entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
+                        table_name='MyIngress.tb_ipv4_lpm',
+                        action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, instance=istnc )
 
                     
-def handle_disconnected_station(station_physical_mac_address):
-    # sometimes when the program is started there are already connected nodes to the AP.
-    # so if one of these nodes disconnectes for the AP whre a disconnection is detected but the 
-    # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
-    print(f'Handling disconnected Node: {station_physical_mac_address}')
-    if (station_physical_mac_address not in connected_stations.keys()):
-        logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations')
-        return
+async def handle_disconnected_station(station_physical_mac_address):
+    try: 
+        # sometimes when the program is started there are already connected nodes to the AP.
+        # so if one of these nodes disconnectes from the AP whre a disconnection is detected but the 
+        # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
+        # logger.info(f'Disconnected Node: {station_physical_mac_address} Waiting for {cfg.ap_wait_time_for_disconnected_station_in_seconds} seconds' + 
+        #             '\n\t before removing it.')
+        SN_UUID = 'SN:' + station_physical_mac_address[9:]
+        node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
+        node_info = node_db_result.one()
+        node_ap = THIS_AP_UUID
+        if (node_info != None):
+            node_ap = node_info.current_ap
+        if (station_physical_mac_address not in connected_stations.keys() or node_ap != THIS_AP_UUID ):
+            logger.warning(f'\nStation {station_physical_mac_address} disconnected from AP but was not found in connected stations: {connected_stations.keys()}')
+            return
+        # Wait for some time configured by the variable in cfg before considering that the node has actually disconnected
+        t0 = time.time()
+        while time.time() - t0 < cfg.ap_wait_time_for_disconnected_station_in_seconds:
+            cli_command = "iw wlan0 station dump | grep Station | awk '{print $2}'"
+            proc_res = subprocess.run(cli_command,shell=True, text=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if (proc_res.stderr):
+                logger.error(f"Error running command: {cli_command}\nError Message: {proc_res.stderr}")
+            if (station_physical_mac_address in proc_res.stdout):
+                return
+            cli_command = f"ping -c 1 { get_ip_from_arp_by_physical_mac(station_physical_mac_address)}"
+            proc_res = subprocess.run(cli_command.split(), shell=False,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            time.sleep(1)
+        
+        node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
+        node_info = node_db_result.one()
+        if ( node_info == None or node_info.current_ap != THIS_AP_UUID):
+            bmv2.remove_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=node_info.ap_port, instance=THIS_AP)
+            try:
+                logger.debug(f"Connected Stations List before removing {station_physical_mac_address}: {connected_stations}")                
+                del connected_stations[station_physical_mac_address]
+                logger.debug(f"Connected Stations List after removing {station_physical_mac_address}: {connected_stations}")
+            except:
+                logger.error(f'could not delete station from connected station set {repr(e)}')
+            return
+        logger.info(f'Removing disconnected Node: {station_physical_mac_address}')
+        logger.debug(f"Connected Stations List before removing {station_physical_mac_address}: {connected_stations}")                
     
-    
-    print(f'Removing disconnected Node: {station_physical_mac_address}')    
-    # station_physical_ip_address = get_ip_from_arp(station_physical_mac_address)
-    station_virtual_ip_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VIP_INDEX]
-    station_virtual_mac_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VMAC_INDEX]
-    station_vxlan_id = connected_stations[station_physical_mac_address][CONNECTED_STATION_VXLAN_INDEX]
+        # station_physical_ip_address = get_ip_from_arp(station_physical_mac_address)
+        station_virtual_ip_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VIP_INDEX]
+        station_virtual_mac_address = connected_stations[station_physical_mac_address][CONNECTED_STATIONS_VMAC_INDEX]
+        station_vxlan_id = connected_stations[station_physical_mac_address][CONNECTED_STATION_VXLAN_INDEX]
 
-    # delete the station from the connected stations
-    del connected_stations[station_physical_mac_address]
-       
-       
-    # delete the forwarding entries that point to this station from the rest of the Access Points.
-    # TODO: move this functionality to the coordinator.
-    for key in config.ap_list.keys():
-        ap_ip = config.ap_list[key][0]
-        print('deleting entries from: ' + ap_ip)
-        bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                          table_name='MyIngress.tb_ipv4_lpm', key=f'{station_virtual_ip_address}/32',
-                                          thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
-        bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
-                                          table_name='MyIngress.tb_l2_forward', key=station_virtual_mac_address,
-                                          thrift_ip=ap_ip, thrift_port=bmv2.DEFAULT_THRIFT_PORT)
+        # delete the station from the connected stations
+        del connected_stations[station_physical_mac_address]
+        logger.debug(f"Connected Stations List after removing {station_physical_mac_address}: {connected_stations}")
+        
+        
+        logger.debug(f'deleting entries for: {station_physical_mac_address}')
+        for _, istnc in AP_LIST.items():
+            bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
+                                            table_name='MyIngress.tb_ipv4_lpm', key=f'{station_virtual_ip_address}/32',
+                                            instance=istnc )
 
+        # delete the corresponding switch port
+        bmv2.remove_bmv2_swarm_broadcast_port(switch_port=node_info.ap_port, instance=THIS_AP)
+        delete_vxlan_from_bmv2_command = "port_remove %s" % station_vxlan_id
+        bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command, instance=THIS_AP)
+        
+        db.delete_node_from_art(uuid=SN_UUID)  # also deletes from swarm database
     
-    # delete the corresponding switch port
-    delete_vxlan_from_bmv2_command = "port_remove %s" % station_vxlan_id
-    bmv2.send_cli_command_to_bmv2(delete_vxlan_from_bmv2_command)
-    
-    
-    # delete the node from the database
-    db.delete_node_from_swarm_database(database_type=db.STR_DATABASE_TYPE_CASSANDRA, session=database_session,
-                                    node_swarm_id= station_vxlan_id)
+        logger.info(f'station: {station_virtual_ip_address} left {THIS_AP_UUID}')
+        delete_vxlan_by_host_id(station_vxlan_id)
+    except Exception as e:
+        logger.error(f"Error handling disconnected station {SN_UUID}: {repr(e)}")
 
-    
-    logger.info(f'station: {station_virtual_ip_address} left AP {THIS_AP_UUID}')
-       
-    delete_vxlan_by_host_id(station_vxlan_id)
-    
 
 def monitor_stations():
     # this command is run in the shell to monitor wireless events using the iw tool
@@ -442,39 +615,31 @@ def monitor_stations():
             continue
         previous_line = output_line
         output_line_as_word_array = output_line.split()
-        logger.debug( '\noutput_line: ' + output_line )
+        logger.debug( 'WiFi Event: ' + output_line )
         
         if output_line_as_word_array[INDEX_IW_EVENT_ACTION] == IW_TOOL_JOINED_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
-            logger.info( '\nNew Station MAC: ' + station_physical_mac_address )
+            logger.debug( 'New Station MAC: ' + station_physical_mac_address )
             
-            handle_new_connected_station(station_physical_mac_address=station_physical_mac_address)
+            asyncio.run( handle_new_connected_station(station_physical_mac_address=station_physical_mac_address) )
 
         elif output_line_as_word_array[INDEX_IW_EVENT_ACTION] ==   IW_TOOL_LEFT_STATION_EVENT:
             station_physical_mac_address = output_line_as_word_array[INDEX_IW_EVENT_MAC_ADDRESS]
-            logger.info( '\nDisconnected Station MAC: ' + station_physical_mac_address )
-            try:
-                handle_disconnected_station(station_physical_mac_address=station_physical_mac_address)
-            except Exception as e:
-                logger.error(f'Error handling disconnected station: {station_physical_mac_address}')
-                logger.error(e)
+            logger.info( 'Disconnected Station MAC: ' + station_physical_mac_address )
+            asyncio.run(  handle_disconnected_station(station_physical_mac_address=station_physical_mac_address) )
 
 
 
 def ap_id_to_vxlan_id(access_point_id):
-    vxlan_id = config.vxlan_ids[access_point_id]
+    vxlan_id = cfg.vxlan_ids[access_point_id]
     return vxlan_id
 
         
                
 def main():
-    logger.debug("Program Started")
+    print("AP Starting")
     initialize_program()
-    
-    
-    # thread for monitoring connected devices to the AP WiFi network
-    monitor_stations_on_thread = threading.Thread(target=monitor_stations, args=()).start()
-    
+    monitor_stations()
 
             
     

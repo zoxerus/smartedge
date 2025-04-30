@@ -1,100 +1,179 @@
-import logging
-import subprocess
 import sys
+# setting path
+sys.path.append('.')
+sys.path.append('..')
+sys.path.append('../..')
+sys.path.append('./lib/bmv2_pylibs')
+
+import subprocess
 import re
 import os
+import lib.global_config as cfg
+import io 
+
+from lib.bmv2_pylibs import *
+from lib.bmv2_pylibs.sswitch_CLI import runtime_CLI, SimpleSwitchAPI
+from contextlib import redirect_stdout 
+
 
 SWITCH_RESPONSE_ERROR = -1
 SWITCH_RESPONSE_INVALID = -2
 SWITCH_RESPONSE_LAST_LINE_INDEX = -2
 P4_CONTROL_METHOD_THRIFT_CLI = 'THRIFT_CLI'
 P4_CONTROL_METHOD_P4RT_GRPC = 'P4RT_GRPC'
-BMV2_LOG_FILE_NAME = './logs/bmv2_log.log'
 
 BMV2_DOCKER_CONTAINER_NAME = 'bmv2smartedge'
 
-bmv2_logger = logging.getLogger('bmv2_logger')
-os.makedirs(os.path.dirname(BMV2_LOG_FILE_NAME), exist_ok=True)
 
-bmv2_lib_log_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s]: %(message)s \n")
-
-bmv2_file_handler = logging.FileHandler(BMV2_LOG_FILE_NAME, mode='w')
-bmv2_file_handler.setLevel(logging.DEBUG)
-bmv2_file_handler.setFormatter(bmv2_lib_log_formatter)
-
-bmv2_console_handler = logging.StreamHandler(sys.stdout)
-bmv2_console_handler.setLevel(logging.INFO)
-bmv2_console_handler.setFormatter(bmv2_lib_log_formatter)
-
-bmv2_logger.setLevel(logging.DEBUG)
-bmv2_logger.addHandler(bmv2_console_handler)
-bmv2_logger.addHandler(bmv2_file_handler)
+bmv2_logger = None
 
 DEFAULT_THRIFT_PORT = 9090
 
-def send_cli_command_to_bmv2(cli_command, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
-    command_as_word_array = ['docker','exec',BMV2_DOCKER_CONTAINER_NAME,'sh', '-c', f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {thrift_ip} --thrift-port {thrift_port}"  ]
+
+def extract_numbers(lst):
+    """
+    Extracts numbers from a list of strings using regular expressions.
+    """
+    # Compile a regular expression pattern to match digits
+    pattern = re.compile(r'\d+')
+     
+    # Use the pattern to extract all digits from each string in the list
+    extracted_numbers = [pattern.findall(s) for s in lst]
+     
+    # Convert the extracted numbers from strings to integers
+    return [int(x) for sublist in extracted_numbers for x in sublist]
+
+
+def connect_to_all_switches():
+    switch_cli_instances = {}
+    
+    # args = runtime_CLI.get_parser().parse_args()
+    pre = runtime_CLI.PreType.SimplePreLAG
+    services = runtime_CLI.RuntimeAPI.get_thrift_services(pre)
+    services.extend(SimpleSwitchAPI.get_thrift_services())
+
+    for ap in cfg.ap_list.keys():
+        THRIFT_IP = cfg.ap_list[ap][0]
+        try:
+            standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
+            THRIFT_IP, 9090, services)
+            runtime_CLI.load_json_config(standard_client) #   , args.json)
+            cli_instance = SimpleSwitchAPI(pre, standard_client, mc_client, sswitch_client)
+            switch_cli_instances[ap] = cli_instance
+            bmv2_logger.debug(f'thrift connected to {ap}')
+        except Exception as e:
+            bmv2_logger.warning(e)
+    return switch_cli_instances
+
+
+output_capture = io.StringIO()
+def run_cli_command(command, instance):
+    bmv2_logger.debug(f'sending command to bmv2: \n{command}')
+    command_output = ""
+    with redirect_stdout(output_capture):
+        instance.onecmd(command)
+    command_output = output_capture.getvalue()
+    output_capture.truncate(0)
+    bmv2_logger.debug(f"response from switch: {command_output}")
+    return command_output
+
+
+
+def send_cli_command_to_bmv2(cli_command, instance, thrift_ip='0.0.0.0', thrift_port=DEFAULT_THRIFT_PORT ):
+    return run_cli_command(command=cli_command, instance=instance)
+    command_as_word_array = ['docker','exec',BMV2_DOCKER_CONTAINER_NAME,'sh', '-c',
+                             f"echo \'{cli_command}\' | simple_switch_CLI --thrift-ip {args.thrift_ip} --thrift-port {args.thrift_port}"  ]
 
     proc = subprocess.run(command_as_word_array, text=True, stdout=subprocess.PIPE , stderr=subprocess.PIPE)
     if (proc.stderr):
         bmv2_logger.error(f'\nBMV2ERROR:\nsending command:\n{cli_command}\nERROR MESSAGE:\n{proc.stderr}')
-    
     response = proc.stdout.strip()
 
-    print(response)
+    bmv2_logger.debug(f'Sent command "{cli_command}" to bmv2\nResponse Received:\n{response}')
     return response
     
 
-def add_entry_to_bmv2(communication_protocol, table_name, action_name, match_keys, action_params, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT,):
+# this updates the list of broadcast ports in bmv2
+def add_bmv2_swarm_broadcast_port(switch_port, instance, thrift_ip='0.0.0.0', thrift_port=DEFAULT_THRIFT_PORT):
+        res = send_cli_command_to_bmv2(cli_command='mc_dump', instance=instance, thrift_ip=thrift_ip, thrift_port=thrift_port)
+        res_lines = res.splitlines()
+        i = 0        
+        for line in res_lines:
+            if 'mgrp(' in line:
+                port_list = set(extract_numbers([ res_lines[i+1].split('ports=[')[1].split(']')[0] ]))
+                port_list.add(switch_port)
+                broadcast_ports =  ' '.join( str(port) for port in port_list)
+                send_cli_command_to_bmv2(cli_command=f"mc_node_update 0 {broadcast_ports} ", thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance )  
+            i = i + 1
+
+def remove_bmv2_swarm_broadcast_port(switch_port, instance, thrift_ip='0.0.0.0', thrift_port=DEFAULT_THRIFT_PORT):
+        res = send_cli_command_to_bmv2(cli_command='mc_dump', thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
+        res_lines = res.splitlines()
+        i = 0
+        for line in res_lines:
+            if 'mgrp(' in line:
+                port_list = set(extract_numbers([ res_lines[i+1].split('ports=[')[1].split(']')[0] ]))
+                if (switch_port in port_list):
+                    port_list.remove(switch_port)
+                    broadcast_ports =  ' '.join( str(port) for port in port_list)
+                    send_cli_command_to_bmv2(cli_command=f"mc_node_update 0 {broadcast_ports} ", thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance )  
+            else:
+                bmv2_logger.debug(f'Port {switch_port} is not in swarm boradcast ports')
+            i = i + 1
+
+
+def add_entry_to_bmv2(communication_protocol, instance, table_name, action_name, match_keys, action_params, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
         cli_command = f'table_dump_entry_from_key {table_name} {match_keys}'
-        response = send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port)
+        response = send_cli_command_to_bmv2(cli_command=cli_command, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
         # print(f'Sent command: {cli_command} \nresponse: {response}')
         if 'Invalid table operation (BAD_MATCH_KEY)' in response: # entry doesn't exist
             cli_command = "table_add " + table_name + ' ' + action_name + ' ' + match_keys + ' => ' + action_params
-            response = send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port)
-            bmv2_logger.debug('\nresponse received: ' + response )
+            response = send_cli_command_to_bmv2(cli_command=cli_command, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
+            # bmv2_logger.debug('\nresponse received: ' + response )
             response_as_lines = response.splitlines()
-            if ( 'Error' in response_as_lines[SWITCH_RESPONSE_LAST_LINE_INDEX] ):
-                bmv2_logger.error( f'P4 Command Error:\n {cli_command} \nResponse Obtained: {response} ')
-                return SWITCH_RESPONSE_ERROR
-            elif 'Invalid' in response_as_lines[SWITCH_RESPONSE_LAST_LINE_INDEX]:
-                bmv2_logger.error( f'P4 Command Invalid:\n {cli_command} \nResponse Obtained: {response} ')
-                return SWITCH_RESPONSE_INVALID
-            elif response_as_lines[-2].startswith("Entry has been added with handle"):
-                handle = [int(s) for s in response_as_lines[4] if s.isdigit()][0]
-                bmv2_logger.debug("add entry with handle %d " % handle)
-                return handle
+            for line in response_as_lines:
+                if ( 'Error' in line ):
+                    bmv2_logger.error( f'P4 Command Error:\n {cli_command} \nResponse Obtained: {response} ')
+                    return SWITCH_RESPONSE_ERROR
+                elif 'Invalid' in line:
+                    bmv2_logger.error( f'P4 Command Invalid:\n {cli_command} \nResponse Obtained: {response} ')
+                    return SWITCH_RESPONSE_INVALID
+                elif line.startswith("Entry has been added with handle"):
+                    handle =  re.findall(r'\b\d+\b', line, re.I)[0]
+                    bmv2_logger.debug(f"Added entry with handle {handle} detected from line: {line} ")
+                    return handle
         else:
             for line in response.splitlines():
                 if 'Dumping entry' in line:
                     entry_handle = int( re.findall(r'0x[0-9A-F]+', line, re.I)[0] , 16  )
-                    bmv2_logger.debug(f'entr_handle exists: {entry_handle}')
+                    bmv2_logger.debug(f'entry_handle exists: {entry_handle}')
                     cli_command = f'table_modify {table_name} {action_name} {entry_handle} {action_params}'
+                    send_cli_command_to_bmv2(cli_command=cli_command,  thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
                     break
             
              
 
 
-def get_entry_handle(table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
+def get_entry_handle(table_name, instance, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     command = f'table_dump_entry_from_key {table_name} {key}'
-    response = send_cli_command_to_bmv2(command, thrift_ip, thrift_port)
-    bmv2_logger.debug(f'getting entry handle from bmv2 for: {key}\n {response}')
+    response = send_cli_command_to_bmv2(cli_command=command, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
+    bmv2_logger.debug(f'Getting entry handle from bmv2 for: {key}\n {response}')
     for line in response.splitlines():
         if 'Dumping entry' in line:
             handle = int( re.findall(r'0x[0-9A-F]+', line, re.I)[0] , 16 )
-            bmv2_logger.debug(f'handle is: {handle}')
+            bmv2_logger.debug(f'Found handle for key: {key} is: {handle}')
             return handle
-    bmv2_logger.debug(f'could not find entry handle')
+    bmv2_logger.debug(f'Could not find entry handle for key: {key}')
     return None
 
 
 def delete_forwarding_entry_from_bmv2(
-    communication_protocol, table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT ):
+    communication_protocol, instance, table_name, key, thrift_ip = '0.0.0.0', thrift_port = DEFAULT_THRIFT_PORT):
     if communication_protocol == P4_CONTROL_METHOD_THRIFT_CLI:
-        handle = get_entry_handle(table_name, key, thrift_ip, thrift_port)
+        handle = get_entry_handle(table_name=table_name, key=key, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
         if handle != None:
             cli_command = f'table_delete {table_name} {handle}'
-            send_cli_command_to_bmv2(cli_command, thrift_ip, thrift_port)
+            send_cli_command_to_bmv2(cli_command=cli_command, thrift_ip=thrift_ip, thrift_port=thrift_port, instance=instance)
             return
-        bmv2_logger.error(f'Entry Handle is None for table: {table_name}, and key: {key}')
+        bmv2_logger.debug(f'Entry Handle is None for table: {table_name}, and key: {key}')

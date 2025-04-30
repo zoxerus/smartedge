@@ -1,40 +1,76 @@
-# the ID of the current Access Point
+# This is the global config file, all variables can be configured from here
 
-this_swarm_id = '1000'
 
+
+#TODO: Configure this IP list, physical IPs of access points
+ap_list = {
+    # ID of AP              IP of eth0           IP smartedge-bb 
+    # identification     for control update    for packet forwarding
+    'AP:00:00:03':      ['192.168.137.103',      '192.168.100.3'],
+    'AP:00:00:04':      ['192.168.137.104',      '192.168.100.4'],
+    'AP:00:00:05':      ['192.168.137.105',      '192.168.100.5']
+    }
+
+
+COORDINATOR_IP = '192.168.137.106'
+
+backbone_subnet='192.168.100.0'  #smartedge-bb
+backbone_subnetmask='/24'
+
+
+
+database_hostname = COORDINATOR_IP
+logs_server_address = (COORDINATOR_IP, 5000)
+
+
+
+
+
+# these are the L3 port numbers on which the databases listen
+REDIS_PORT = 6379
+CASSANDRA_PORT = 9042
+
+# This is the number of the bmv2 port that is attached to the backbone network
+# the backbone network is the network that connects the APs to the coordinator
 swarm_backbone_switch_port = 510
 
-REDIS_PORT = 6379
-CASSANDRA_PORT = 9402
+## This is the interface at which the traffic is forwarded between the APs and the coordinator
+## we created an overlay network as attaching the eth0 directly to bmv2 leads to performance degredation
+## due to the high amount of background traffic genereted from the university network
+default_backbone_device = 'smartedge-bb'
+default_wlan_device = 'wlan0'
+
+
+
+
+ap_wait_time_for_disconnected_station_in_seconds= 0
 
 # here configure the subnet range that need to be allocated to the swarm
 # here we assume a /24 subnet mask
-this_swarm_subnet='10.0.1.0'  ## this is the subnet to use for the swarm
-this_swarm_dhcp_start = 2         # this is the first IP to be assigned to the swarm node e.g: 192.168.10.2
-this_swarm_dhcp_end  = 200        # last IP to be assigned e.g: 192.168.10.200  so it supports 199 nodes (arbitrary number can be changed to any)
+this_swarm_subnet='10.1.0.0'      ## this is the subnet to use for the swarm
+this_swarm_subnet_mask='/24'
+this_swarm_dhcp_start = 1         # this is the first IP to be assigned to the swarm node e.g: 10.0.1.1
+this_swarm_dhcp_end  = 253        # last IP to be assigned e.g: 10.0.1.253, we leave the last IP for the coordinator
 
 
-# This is the ip and port number of the database
+# default_subnet= "10.0.3.0"
+# default_subnet_ap4= "10.0.4.0"
+
+
+
 ## This is the IP of the database, in my implementation the DB is running on the same node as the coordinator
-## so for the coordinator, this is an internal IP on the docker network.
-## in case of Access Points (and the DB is running on the coordinator node) this would be the IP of the coordinator (IP of the smartedge-bb interface of the coordinator)
-## e.g 192.168.100.6
-database_hostname = '10.0.0.5'  
-database_port = 9042
+## It uses the physical IP of the eth0 interface of the coordinator for consistency, and ease of routing
 
-# This IP is used by the access points to reach the coordinator,
-# this IP is the one configured on the smartedge-bb vxlan interface of the coordinator
-coordinator_physical_ip = '10.0.0.5'
+#TODO: configure this ip, physical IP where the database is running
 
-# this is the mac that is of the  smartedge-bb of the coordinator
-coordinator_physical_mac = '02:00:00:00:00:06'  
-
+database_port = CASSANDRA_PORT
 
 # this IP is used to reach the coordinator by the swarm nodes
 # this IP is also configured on the smartedge-bb interface of the coordinator
-coordinator_vip='10.0.1.254'
+# it is sent to the swarm node when it connects to the AP
 
-
+coordinator_vip='10.1.255.254'        # swarm virtual ip
+coordinator_phyip='192.168.100.254' # physical ip of device 
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
 coordinator_tcp_port = 29997
@@ -43,13 +79,14 @@ coordinator_tcp_port = 29997
 # in order to send the swarm config
 node_manager_tcp_port = 29997
 
-# this is the default thrift port used for configuring the P4 switches in the network
-default_thrift_port = 9090
 
 # list of access points in the network, used to propagate configuration changes
-# this list of IPs and MACs are the ones configured on the smartedge-bb on each access point
-ap_list = {
-    # ID of AP       MAC of smartedge-bb    IP of smartedge-bb
-    'AP:00:00:03': ['10.0.0.3'],
-    'AP:00:00:04': ['10.0.0.4']
-    }
+# this list of IPs are the ones configured on the smartedge-bb on each access point
+# it is a different subnet from the one used by the swarm
+
+
+
+## currently unused
+SWARM_P4_MC_NODE = 1100
+SWARM_P4_MC_GROUP = 1000
+
