@@ -74,8 +74,9 @@ parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq
 args = parser.parse_args()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-loopback_if = 'lo:0'
 
+## We use the lo:0 interface to generate the ID of the node
+loopback_if = 'lo:0'
 THIS_AP_UUID = None
 for snic in psutil.net_if_addrs()[loopback_if]:
     if snic.family == socket.AF_INET:        

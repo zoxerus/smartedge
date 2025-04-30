@@ -67,10 +67,28 @@ NUMID=$(echo "$HOST_NAME" | grep -oE '[0-9]+' | head -n 1)
 
 # generate the IP addresses for the node
 
+l0_ip=$(ip addr show lo:0 | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+# Split the IP address into its four octets (bytes) using IFS
+
+IFS='.' read -r octet1 octet2 octet3 octet4 <<< "$l0_ip"
+
+# Validate each octet is between 0 and 255
+for octet in $octet1 $octet2 $octet3 $octet4; do
+    # Check if it's purely numeric and within the valid range
+    if ! [[ "$octet" =~ ^[0-9]+$ ]] || [ "$octet" -lt 0 ] || [ "$octet" -gt 255 ]; then
+        echo "Error: Invalid octet value '$octet' in IP address. Each octet must be between 0 and 255."
+        exit 1
+    fi
+done
 
 
+# Convert the lowest three bytes (octets 2, 3, and 4) to an integer
+# The formula is: (octet2 * 256^2) + (octet3 * 256^1) + (octet4 * 256^0)
+# which simplifies to: (octet2 * 65536) + (octet3 * 256) + octet4
+# Bash arithmetic expansion $((...)) is used for the calculation.
 
-l0_ip=$(nextip 127.0.0.1 $NUMID)
+NUMID=$(( (octet2 * 65536) + (octet3 * 256) + octet4 ))
+
 
 [[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
 
@@ -87,12 +105,14 @@ if [ $INVENV -eq "0" ]; then
         . ./.venv/bin/activate
     echo -e "Installing Python Modules"
     fi
-    pip install aenum cassandra-driver psutil
-    source ~/.bashrc
     alias python='$VIRTUAL_ENV/bin/python'
+    alias pip= '$VIRTUAL_ENV/bin/pip'
     alias sudo='sudo '
+    sudo pip install aenum cassandra-driver psutil
+    source ~/.bashrc
 else
     alias python='$VIRTUAL_ENV/bin/python'
+    alias pip= '$VIRTUAL_ENV/bin/pip'
     alias sudo='sudo '
 fi 
 
