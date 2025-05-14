@@ -533,7 +533,7 @@ def adaptive_coordinator_handler(HOST, HIGHER_PORT):
         iter = 0
         while True:
             iter = iter + 1
-            logger.debug(f'AC server waiting for requests, iteration {iter} ... ')
+            logger.debug(f'Listening on {HOST}:{HIGHER_PORT} waiting for requests from Adaptive Coordinator, iteration {iter}')
             (ac_socket, address) = serversocket.accept()
             logger.debug(f'received connection request from {address}')
             asyncio.run( handle_ac_communication(ac_socket) )

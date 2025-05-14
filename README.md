@@ -1,4 +1,8 @@
-
+# instlling python requirements
+- tested with python 3.11: install python venv module
+```
+sudo apt install python3-venv
+```
 
 # installing dependencies
 1- run ./shell_scripts/install_requirements.
@@ -57,3 +61,31 @@ to run node as access point do ```source run.sh ap 10```
 to run node as smart node do ```source run.sh ap 10```
 
 
+# integration with TUB
+- The Swarm coordinator can be reached on the TCP port 9999.
+
+- message format for requesting nodes to join is :
+```
+message = {'Type': 'Type of message',
+           'nids': ['id1', 'id2'] 
+           }
+```
+ 
+Where Type can be 'njl' for node joinning list or 'nll' for nodes leaving list.
+
+
+- message format for requesting nodes to join is :
+```
+message = {'Type': 'njl',
+           'nids': ['SN:00:00:02', 'SN:00:00:03'] 
+           }
+```
+
+
+- message format for requesting nodes to be kicked out is :
+```
+message = {'Type': 'nll',
+           'nids': ['SN:00:00:02', 'SN:00:00:03'] 
+           }
+
+```
