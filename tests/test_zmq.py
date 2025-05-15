@@ -22,6 +22,7 @@ print(f"Default interface: {iface}")
 def node_task():
     # Create a Pyre node with a unique name
     node = Pyre("NODE_" + str(int(time.time())))
+    node.set_interface( get_default_iface_name_linux() )
     node.start()
     node.join("TEST_GROUP")  # Join discovery group
     
