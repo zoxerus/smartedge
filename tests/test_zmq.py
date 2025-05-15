@@ -144,7 +144,7 @@ if __name__ == '__main__':
     group_id = "my_network"  # Define a group ID for your network
     interface = get_default_iface_name_linux()
     ip = get_interface_ip(interface)
-    node = Node(group_id, interface=ip)
+    node = Node(group_id)
     try:
         node.start()
     except KeyboardInterrupt:
