@@ -55,6 +55,7 @@ def get_interface_ip(interface_name):
         return None
 
 
+
 class Node:
     def __init__(self, group_id, interface='*', port=5000):
         self.node_id = str(uuid.uuid4())
@@ -144,7 +145,7 @@ if __name__ == '__main__':
     group_id = "my_network"  # Define a group ID for your network
     interface = get_default_iface_name_linux()
     ip = get_interface_ip(interface)
-    node = Node(group_id)
+    node = Node(group_id, interface=ip)
     try:
         node.start()
     except KeyboardInterrupt:
