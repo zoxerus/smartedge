@@ -1,6 +1,6 @@
 # This is the global config file, all variables can be configured from here
 
-
+group_id = "se_backbone"  # Define a group ID for your network
 
 #TODO: Configure this IP list, physical IPs of access points
 ap_list = {

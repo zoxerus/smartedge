@@ -25,7 +25,7 @@ import threading
 import lib.bmv2_thrift_lib as bmv2
 import lib.database_comms as db
 import lib.global_constants as cts
-from lib.helper_functions import *
+import lib.helper_functions as utils
 from argparse import ArgumentParser
 
 STRs = cts.String_Constants
@@ -34,6 +34,8 @@ parser = ArgumentParser()
 parser.add_argument("-l", "--log-level",type=int, default=50, help="set logging level [10, 20, 30, 40, 50]")
 parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq numeric id for node identification")
 args = parser.parse_args()
+
+
 
 
 class SocketStreamHandler(logging.StreamHandler):
@@ -75,13 +77,10 @@ class SocketStreamHandler(logging.StreamHandler):
 
 loopback_if = 'lo:0'
 
-THIS_NODE_UUID = None
-for snic in psutil.net_if_addrs()[loopback_if]:
-    if snic.family == socket.AF_INET:        
-        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) -1 ))
-        THIS_NODE_UUID = f'AP:{temp_mac[9:]}'
-if THIS_NODE_UUID == None:
-    exit()
+## We use the lo:0 interface to generate the ID of the node
+loopback_if = 'lo:0'
+NODE_TYPE='CO'
+THIS_NODE_UUID = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -181,81 +180,6 @@ class Swarm_Node_Handler:
             
     def reject_join_request(self):
         pass
-        #TODO
-        # db.delete_node_from_swarm_database(self.node_swarm_id)
-        # self.node_socket.send( bytes( f'Rejected: {self.req_id}'.encode() ) )
-        # print(f'Rejected node {self.node_uuid} with request {self.req_id}')
-        
-        
-        
-    # def accept_join_request(self):
-    #     # TODO: make this automatic
-
-    #     SN_UUID = self.node_request[STRs.NODE_UUID.name]
-        
-    #     logger.debug(f'Accepted Node {SN_UUID} in Swarm')
-        
-    #     # first we get the ip of the access point from the ap list
-    #     ap_ip = get_ap_ip_from_ap_id(self.node_request[STRs.AP_UUID.name] )
-    #     if (ap_ip == None):
-    #         logger.error(f'Error: could not find IP of access point {self.node_request[STRs.AP_UUID.name]}')
-    #         return
-        
-        
-    #     host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
-    #                 max_host_id=cfg.this_swarm_dhcp_end, uuid=SN_UUID)
-        
-    #     result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
-        
-    #     station_vmac= result[0]
-    #     station_vip = result[1]
-        
-    #     logger.debug(f'assigning vIP: {station_vip} vMAC: {station_vmac} to {SN_UUID}')
-    #     swarmNode_config = {
-    #         STRs.TYPE.name: STRs.JOIN_REQUEST.name,
-    #         STRs.VETH1_VIP.name: station_vip,
-    #         STRs.VETH1_VMAC.name: station_vmac,
-    #         STRs.VXLAN_ID.name: self.node_request[STRs.VXLAN_ID.name],
-    #         STRs.SWARM_ID.name: 1,
-    #         STRs.COORDINATOR_VIP.name: cfg.coordinator_vip,
-    #         STRs.COORDINATOR_TCP_PORT.name: cfg.coordinator_tcp_port
-    #     }
-    #     config_message = json.dumps(swarmNode_config)
-        
-    #     logger.debug(f'Sending {config_message}')
-    #     try:    
-    #         self.node_socket.sendall( bytes( config_message.encode() ) )
-    #         logger.debug(f'Accepted node {SN_UUID} with request {self.node_request[STRs.REQUIST_ID.name]}')
-    #     except Exception as e:
-    #         logger.error(f"Error Sending confing to Node {SN_UUID}: {repr(e)}")
-    #         return 
-        
-        
-    #     db.insert_node_into_swarm_database(host_id=host_id, this_ap_id=self.node_request[STRs.AP_UUID.name],
-    #                                        node_vip= station_vip, node_vmac= station_vmac, node_phy_mac='',
-    #                                        node_uuid=SN_UUID, status=db.db_defines.SWARM_STATUS.JOINED.value)
-        
-    #     db.update_art_with_node_info(node_uuid=SN_UUID,node_current_ap=self.node_request[STRs.AP_UUID.name],
-    #                                  node_current_swarm=1,node_current_ip=station_vip)
-                    
-    #     bmv2.add_bmv2_swarm_broadcast_port(ap_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= self.node_request[STRs.VXLAN_ID.name])
-
-    #     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
-    #                                                 table_name='MyIngress.tb_ipv4_lpm',
-    #         action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
-    #         action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
-        
-        
-    #     # insert table entries in the rest of the APs
-    #     node_ap_ip = cfg.ap_list[self.node_request[STRs.AP_UUID.name]][0]
-    #     for key in cfg.ap_list.keys():
-    #         if key != self.node_request[STRs.AP_UUID.name]:
-    #             ap_ip = cfg.ap_list[key][0]
-    #             ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
-    #             entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
-    #                                                 table_name='MyIngress.tb_ipv4_lpm',
-    #                     action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
-    #                     action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT )
 
          
 async def offboard_node(host_id, uuid, ap_id, node_vip, ap_port, available_nodes, lock):
@@ -268,13 +192,7 @@ async def offboard_node(host_id, uuid, ap_id, node_vip, ap_port, available_nodes
     if (ap_ip == None):
         logger.error(f'Error: could not find IP of access point {ap_id}')
         return
-    
-    # result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
-    
-    # station_vmac= result[0]
-    # station_vip = result[1]
-    
-    # logger.debug(f'assigning vIP: {station_vip} vMAC: {station_vmac} to {SN_UUID}')
+
     swarmNode_config = {
         STRs.TYPE.name: 'go_away'
     }
@@ -311,7 +229,7 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
         logger.error(f'Error: could not find IP of access point {ap_id}')
         return
     
-    result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
+    result = utils.assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
     
     station_vmac= result[0]
     station_vip = result[1]
@@ -366,7 +284,7 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
     for key, istc in AP_Dictionary.items():
         if key != ap_id:
             # ap_ip = cfg.ap_list[key][0]
-            ap_mac = int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
+            ap_mac = utils.int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
             entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 

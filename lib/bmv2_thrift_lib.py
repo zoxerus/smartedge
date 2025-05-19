@@ -14,7 +14,7 @@ import io
 from lib.bmv2_pylibs import *
 from lib.bmv2_pylibs.sswitch_CLI import runtime_CLI, SimpleSwitchAPI
 from contextlib import redirect_stdout 
-
+from thrift.transport.TTransport import TTransportException
 
 SWITCH_RESPONSE_ERROR = -1
 SWITCH_RESPONSE_INVALID = -2
@@ -44,26 +44,29 @@ def extract_numbers(lst):
     return [int(x) for sublist in extracted_numbers for x in sublist]
 
 
-def connect_to_all_switches():
-    switch_cli_instances = {}
-    
-    # args = runtime_CLI.get_parser().parse_args()
-    pre = runtime_CLI.PreType.SimplePreLAG
-    services = runtime_CLI.RuntimeAPI.get_thrift_services(pre)
-    services.extend(SimpleSwitchAPI.get_thrift_services())
-
-    for ap in cfg.ap_list.keys():
-        THRIFT_IP = cfg.ap_list[ap][0]
-        try:
-            standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
-            THRIFT_IP, 9090, services)
-            runtime_CLI.load_json_config(standard_client) #   , args.json)
-            cli_instance = SimpleSwitchAPI(pre, standard_client, mc_client, sswitch_client)
-            switch_cli_instances[ap] = cli_instance
-            bmv2_logger.debug(f'thrift connected to {ap}')
-        except Exception as e:
-            bmv2_logger.warning(e)
-    return switch_cli_instances
+def connect_to_switch(switch):
+    switch_cli_instance = None
+    try:                
+        # args = runtime_CLI.get_parser().parse_args()
+        pre = runtime_CLI.PreType.SimplePreLAG
+        services = runtime_CLI.RuntimeAPI.get_thrift_services(pre)
+        services.extend(SimpleSwitchAPI.get_thrift_services())
+        
+        standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
+        switch['address'], 9090, services)
+        
+        runtime_CLI.load_json_config(standard_client) #   , args.json)
+        
+        cli_instance = SimpleSwitchAPI(pre, standard_client, mc_client, sswitch_client)
+        
+        switch_cli_instance = cli_instance
+        
+        bmv2_logger.debug(f'thrift connected to {id}')
+        
+    except Exception as e:
+        bmv2_logger.warning(e)
+        
+    return switch_cli_instance
 
 
 output_capture = io.StringIO()
@@ -71,7 +74,10 @@ def run_cli_command(command, instance):
     bmv2_logger.debug(f'sending command to bmv2: \n{command}')
     command_output = ""
     with redirect_stdout(output_capture):
-        instance.onecmd(command)
+        try:
+            instance.onecmd(command)
+        except:
+            return -1
     command_output = output_capture.getvalue()
     output_capture.truncate(0)
     bmv2_logger.debug(f"response from switch: {command_output}")

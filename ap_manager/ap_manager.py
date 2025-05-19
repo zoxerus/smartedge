@@ -22,10 +22,10 @@ import lib.bmv2_thrift_lib as bmv2
 import os
 import asyncio
 import lib.global_constants as cts
-from lib.helper_functions import *
+import lib.helper_functions as utils
 import json
 import concurrent.futures
-
+from lib.node_discovery import se_net
 from argparse import ArgumentParser
 
 
@@ -77,13 +77,18 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 ## We use the lo:0 interface to generate the ID of the node
 loopback_if = 'lo:0'
-THIS_AP_UUID = None
-for snic in psutil.net_if_addrs()[loopback_if]:
-    if snic.family == socket.AF_INET:        
-        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) -1 ))
-        THIS_AP_UUID = f'AP:{temp_mac[9:]}'
-if THIS_AP_UUID == None:
-    exit()
+NODE_TYPE='AP'
+THIS_AP_UUID = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
+
+
+## Group ID is for discovery
+group_id = cfg.group_id
+## interface is the network interface on which the discovery happens
+interface = utils.get_default_iface_name_linux()
+ip = utils.get_interface_ip(interface)
+## Here we start the discovery using the group id and the subnet of the ethernet interface
+SE_NODE = se_net.Node(group_id, interface=ip)
+
 
 # this part handles logging to console and to a file for debugging purposes
 # where to store program logs
@@ -376,7 +381,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         node_s0_ip.append(station_physical_ip_address.split('.')[3])
         node_s0_ip = '.'.join(node_s0_ip)      
         
-        node_s0_mac = int_to_mac(int( ipaddress.ip_address(node_s0_ip) ))
+        node_s0_mac = utils.int_to_mac(int( ipaddress.ip_address(node_s0_ip) ))
         
         coordinator_vip = DEFAULT_SUBNET + 254
         
@@ -402,15 +407,6 @@ async def handle_new_connected_station(station_physical_mac_address):
         connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,node_s0_ip, vxlan_id]
         logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations}")
 
-        
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
-        #     result = future.result()  # Get the return value
-            
-        #     if (result == -1): # Node faild to configure itself
-        #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
-        #         return
-            
             
         db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id, node_ip=node_s0_ip)
         
@@ -425,7 +421,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         for key, istnc in AP_LIST.items():
             if key != THIS_AP_UUID:
                 ap_ip = cfg.ap_list[key][0]
-                ap_mac = int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
+                ap_mac = utils.int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                         table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{node_s0_ip}/32' , 
@@ -466,7 +462,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         host_id = db.get_next_available_host_id_from_swarm_table(first_host_id=cfg.this_swarm_dhcp_start,
                     max_host_id=cfg.this_swarm_dhcp_end, uuid=SN_UUID)
         
-        result = assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
+        result = utils.assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
         station_vmac= result[0]
         station_vip = result[1]
         
@@ -638,6 +634,8 @@ def ap_id_to_vxlan_id(access_point_id):
                
 def main():
     print("AP Starting")
+    SE_NODE.start()
+        
     initialize_program()
     monitor_stations()
 

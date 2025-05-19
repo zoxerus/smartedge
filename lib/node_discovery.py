@@ -1,71 +1,23 @@
-import socket
+import zmq
+import time
 import threading
 import json
-import netifaces
-import time
+import socket
+import lib.bmv2_thrift_lib as bmv2
 
 # Configuration
 PORT = 5000  # Port to listen on
-GROUP_ID = "my_group"  # Group identifier
 DISCOVERY_INTERVAL = 5  # Seconds between discovery messages
 
-
-def get_default_iface_name_linux():
-    route = "/proc/net/route"
-    with open(route) as f:
-        for line in f.readlines():
-            try:
-                iface, dest, _, flags, _, _, _, _, _, _, _, = line.strip().split()
-                if dest != '00000000' or not int(flags, 16) & 2:
-                    continue
-                return iface  # This is the default interface name (e.g., 'eth0', 'enp3s0')
-            except:
-                continue
-
-iface = get_default_iface_name_linux()
-print(f"Default interface: {iface}")
-
-
-
-def get_interface_ip(interface_name):
-    """
-    Gets the IPv4 address of a specified network interface.
-
-    Args:
-        interface_name (str): The name of the network interface (e.g., 'eth0', 'en0', 'Wi-Fi').
-
-    Returns:
-        str: The IPv4 address of the interface, or None if not found.
-    """
-    try:
-        # Get all addresses for the specified interface
-        addresses = netifaces.ifaddresses(interface_name)
-        # Check if AF_INET (IPv4) addresses exist for this interface
-        if netifaces.AF_INET in addresses:
-            # Return the first IPv4 address found
-            # addresses[netifaces.AF_INET] is a list of dicts, each dict has an 'addr' key
-            return addresses[netifaces.AF_INET][0]['addr']
-        else:
-            print(f"No IPv4 address found for interface {interface_name}.")
-            return None
-    except ValueError:
-        print(f"Interface {interface_name} not found or is invalid.")
-        return None
-    except KeyError:
-        print(f"No 'addr' key found for IPv4 address on interface {interface_name}.")
-        return None
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-
-
 class Node:
-    def __init__(self, node_type, node_uuid, node_sebackbone_ip):
+    def __init__(self, node_type, node_uuid, node_sebackbone_ip, group_id):
         self.node_name = socket.gethostname()
         self.node_type = node_type
         self.uuid = node_uuid
+        self.group_id = group_id
         self.node_sebackbone_ip = node_sebackbone_ip
-        self.known_nodes = {self.node_name: self.get_ip()}  # Known nodes in the network
+        self.known_aps = {self.node_name: self.get_ip()}  # Known nodes in the network
+        self.known_coordinators = {}
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', PORT))
         self.lock = threading.Lock()  # To protect shared resources
@@ -86,19 +38,41 @@ class Node:
             s.close()
         return IP
 
+
     def listen(self):
         """Listen for incoming messages."""
         while True:
             try:
                 data, addr = self.sock.recvfrom(1024)
                 message = json.loads(data.decode('utf-8'))
-                if message['group_id'] == GROUP_ID:
+                if message['group_id'] == self.group_id:
+                    type = message['type']
+                    uuid = message['uuid']
                     node_name = message['node_name']
-                    node_ip = message['node_ip']
-                    with self.lock:
-                        if node_name not in self.known_nodes:
-                            self.known_nodes[node_name] = node_ip
+                    node_ip = message['address']
+                    node_sebackbone_ip = message['sebackbone_ip']
+                    if type == 'AP' and uuid not in self.known_aps:    
+                        switch = {  'name': node_name, 
+                                    'type': type, 
+                                    'address': node_ip,
+                                    'node_sebackbone_ip': node_sebackbone_ip
+                                    }
+                        if bmv2.connect_to_switch(switch) == None: 
+                            continue
+                        with self.lock:
+                            self.known_aps[uuid] =  switch
                             print(f"Discovered node: {node_name} at {node_ip}")
+                                
+                    elif type == 'CO' and uuid not in self.known_coordinators:
+                        with self.lock:
+                            self.known_coordinators[uuid] = { 
+                                                         'name': node_name, 
+                                                         'type': type, 
+                                                         'address': node_ip,
+                                                         'sebackbone_ip': node_sebackbone_ip
+                                                    }
+                            print(f"Discovered node: {node_name} at {node_ip}")
+                        
             except Exception as e:
                 print(f"Error receiving data: {e}")
 
@@ -106,7 +80,10 @@ class Node:
         """Announce presence periodically."""
         while True:
             message = {
-                'group_id': GROUP_ID,
+                'group_id': self.group_id,
+                'type': self.node_type,
+                'uuid': self.uuid,
+                'node_sebackbone_ip': self.node_sebackbone_ip,
                 'node_name': self.node_name,
                 'node_ip': self.get_ip()
             }
@@ -137,7 +114,3 @@ class Node:
                 time.sleep(1)  # Keep the main thread alive
         except KeyboardInterrupt:
             print("Exiting.")
-
-if __name__ == "__main__":
-    node = Node()
-    node.start()

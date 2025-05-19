@@ -1,7 +1,68 @@
 import json
 import re
+import psutil
+import socket 
+import ipaddress
+import netifaces
+
+def get_default_iface_name_linux():
+    route = "/proc/net/route"
+    with open(route) as f:
+        for line in f.readlines():
+            try:
+                iface, dest, _, flags, _, _, _, _, _, _, _, = line.strip().split()
+                if dest != '00000000' or not int(flags, 16) & 2:
+                    continue
+                return iface  # This is the default interface name (e.g., 'eth0', 'enp3s0')
+            except:
+                continue
+
+iface = get_default_iface_name_linux()
+print(f"Default interface: {iface}")
 
 
+def get_interface_ip(interface_name):
+    """
+    Gets the IPv4 address of a specified network interface.
+
+    Args:
+        interface_name (str): The name of the network interface (e.g., 'eth0', 'en0', 'Wi-Fi').
+
+    Returns:
+        str: The IPv4 address of the interface, or None if not found.
+    """
+    try:
+        # Get all addresses for the specified interface
+        addresses = netifaces.ifaddresses(interface_name)
+        # Check if AF_INET (IPv4) addresses exist for this interface
+        if netifaces.AF_INET in addresses:
+            # Return the first IPv4 address found
+            # addresses[netifaces.AF_INET] is a list of dicts, each dict has an 'addr' key
+            return addresses[netifaces.AF_INET][0]['addr']
+        else:
+            print(f"No IPv4 address found for interface {interface_name}.")
+            return None
+    except ValueError:
+        print(f"Interface {interface_name} not found or is invalid.")
+        return None
+    except KeyError:
+        print(f"No 'addr' key found for IPv4 address on interface {interface_name}.")
+        return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+
+
+def generate_uuid_from_lo(loopback_if, node_type):
+    THIS_AP_UUID = None
+    lo0_ip = get_interface_ip(loopback_if)
+    if lo0_ip == None:
+        raise ValueError("Error Generating UUID, lo:0 IP problem")
+    lo0_ip = ipaddress.ip_address(lo0_ip)
+    temp_mac = int_to_mac(int(lo0_ip))
+    THIS_AP_UUID = f'{node_type}:{temp_mac[9:]}'.replace(':','')
+    return THIS_AP_UUID, lo0_ip
 
 def enum_dictionary_to_json_string(dic_obj):
     return json.dumps({key.value: value for key, value in dic_obj.items()})
