@@ -75,7 +75,7 @@ class Node:
                                                          'address': node_ip,
                                                          'sebackbone_ip': node_sebackbone_ip
                                                     }
-                            print(f"Discovered node: {node_name} at {node_ip}")
+                            print(f"Discovered {type}: {uuid} at {node_ip}")
                         
             except Exception as e:
                 print(f"Error receiving data: {e}")
