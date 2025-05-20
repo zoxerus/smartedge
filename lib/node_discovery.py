@@ -89,7 +89,7 @@ class Node:
                 'uuid': self.uuid,
                 'sebackbone_ip': self.node_sebackbone_ip,
                 'name': self.node_name,
-                'address': self.get_ip()
+                'address': str( self.get_ip() ) 
             }
             message_json = json.dumps(message)
             try:
