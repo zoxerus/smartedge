@@ -187,7 +187,7 @@ case $ROLE in
 
     # get current mac and check if its the same as the one to be assigned
     wlan0_OldMac=$(cat /sys/class/net/wlan0/address)
-    if [ "$wlan0_OldMac" != "$final_mac" ] 
+    if [[ "$wlan0_OldMac" != "$final_mac" ]];
     then
         echo "Setting Mac of wlan0"
         sudo ip link set dev wlan0 down
