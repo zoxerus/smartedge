@@ -191,9 +191,9 @@ case $ROLE in
     if [ "$wlan0_OldMac" != "$final_mac" ] 
     then
         echo "Setting Mac of Wlan0"
-        # sudo ip link set dev wlan0 down
+        sudo ip link set dev wlan0 down
         sudo ip link set dev wlan0 address $final_mac
-        # sudo ip link set dev wlan0 up
+        sudo ip link set dev wlan0 up
     fi
     sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
     sudo .venv/bin/python ./node_manager/node_manager.py --log-level $LOGLEVEL
