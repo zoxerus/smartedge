@@ -187,6 +187,13 @@ case $ROLE in
 
     # get current mac and check if its the same as the one to be assigned
     wlan0_OldMac=$(cat /sys/class/net/wlan0/address)
+
+    echo -e "NUMID $NUMID"
+    echo -e "wlan0_OldMac $wlan0_OldMac"
+    echo -e "final_mac $final_mac"
+    
+
+
     if [[ "$wlan0_OldMac" != "$final_mac" ]];
     then
         echo "Setting Mac of wlan0"

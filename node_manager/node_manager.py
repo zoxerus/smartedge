@@ -277,7 +277,7 @@ def monitor_wifi_status():
     last_connection_timestamp = 0
     wait_time_before_requesting_new_config = 5
     # this command is run in the shell to monitor wireless events using the iw tool
-    monitoring_command = 'nmcli device monitor wlan0'
+    monitoring_command = f"nmcli device monitor {DEFAULT_IFNAME}"
     # python runs the shell command and monitors the output in the terminal
     process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE, text = True)
     previous_line = ''
