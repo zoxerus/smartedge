@@ -61,7 +61,7 @@ def connect_to_switch(switch):
         
         switch_cli_instance = cli_instance
         
-        bmv2_logger.debug(f'thrift connected to {switch['address']}')
+        bmv2_logger.debug(f"thrift connected to {switch['address']}")
         
     except Exception as e:
         bmv2_logger.warning(e)
