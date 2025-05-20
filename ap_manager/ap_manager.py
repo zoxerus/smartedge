@@ -172,8 +172,8 @@ if THIS_AP_WLAN_MAC == None:
 group_id = cfg.group_id
 ## interface is the network interface on which the discovery happens
 interface = utils.get_default_iface_name_linux()
-eth_ip = utils.get_interface_ip(interface)
-se_bb_ip = utils.get_interface_ip('smartedge-bb')
+eth_ip = str( utils.get_interface_ip(interface) )
+se_bb_ip = str( utils.get_interface_ip('smartedge-bb') )
 
 ## Here we start the discovery using the group id and the subnet of the ethernet interface
 SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_AP_UUID, 
@@ -183,8 +183,8 @@ SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_AP_UUID,
 
 switch = {  'name': socket.gethostname(), 
             'type': NODE_TYPE, 
-            'address': str(eth_ip),
-            'node_sebackbone_ip': str(se_bb_ip)
+            'address': eth_ip,
+            'node_sebackbone_ip': se_bb_ip
             }
 
 THIS_AP = bmv2.connect_to_switch(switch)
