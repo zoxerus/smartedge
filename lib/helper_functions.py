@@ -55,14 +55,14 @@ def get_interface_ip(interface_name):
 
 
 def generate_uuid_from_lo(loopback_if, node_type):
-    THIS_AP_UUID = None
+    THIS_UUID = None
     lo0_ip = get_interface_ip(loopback_if)
     if lo0_ip == None:
         raise ValueError("Error Generating UUID, lo:0 IP problem")
     lo0_ip = ipaddress.ip_address(lo0_ip)
     temp_mac = int_to_mac(int(lo0_ip))
-    THIS_AP_UUID = f'{node_type}:{temp_mac[9:]}'.replace(':','')
-    return THIS_AP_UUID, lo0_ip
+    THIS_UUID = f'{node_type}:{temp_mac[9:]}'.replace(':','')
+    return THIS_UUID, lo0_ip
 
 def enum_dictionary_to_json_string(dic_obj):
     return json.dumps({key.value: value for key, value in dic_obj.items()})

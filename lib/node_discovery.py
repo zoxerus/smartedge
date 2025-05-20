@@ -65,7 +65,7 @@ class Node:
                         switch['cli_instance'] = cli_instance
                         with self.lock:
                             self.known_aps[uuid] =  switch
-                            print(f"Discovered node: {node_name} at {node_ip}")
+                            print(f"Discovered {type}: {uuid} at {node_ip}")
                                 
                     elif type == 'CO' and uuid not in self.known_coordinators:
                         with self.lock:
