@@ -183,8 +183,8 @@ SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_AP_UUID,
 
 switch = {  'name': socket.gethostname(), 
             'type': NODE_TYPE, 
-            'address': eth_ip,
-            'node_sebackbone_ip': se_bb_ip
+            'address': str(eth_ip),
+            'node_sebackbone_ip': str(se_bb_ip)
             }
 
 THIS_AP = bmv2.connect_to_switch(switch)
