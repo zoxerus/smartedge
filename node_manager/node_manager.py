@@ -20,6 +20,7 @@ import json
 import lib.global_config as cfg
 from lib.helper_functions import *
 import lib.global_constants as cts
+import lib.helper_functions as utils
 
 STRs = cts.String_Constants 
 
@@ -56,36 +57,12 @@ logger.addHandler(log_console_handler)
 DEFAULT_IFNAME = 'wlan0'
 
 loopback_if = 'lo:0'
-def int_to_mac(macint):
-    if type(macint) != int:
-        raise ValueError('invalid integer')
-    return ':'.join(['{}{}'.format(a, b)
-                     for a, b
-                     in zip(*[iter('{:012x}'.format(macint + 2199023255552))]*2)])  
+NODE_TYPE = 'SN'
+THIS_NODE_UUID = utils.generate_uuid_from_lo(loopback_if, NODE_TYPE)
 
-THIS_NODE_UUID = None
-
-for snic in psutil.net_if_addrs()[loopback_if]:
-    if snic.family == socket.AF_INET:        
-        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) - 1))
-        THIS_NODE_UUID = f'SN:{temp_mac[9:]}'
-if THIS_NODE_UUID == None:
-    logger.error("Could not Assign UUID to Node")
-    exit()
-print("UUID:", THIS_NODE_UUID)
-
-
-if THIS_NODE_UUID == None:
-    print('Error: Could not assign UUID')
-    exit()
-
-print('Assign Node UUID:', THIS_NODE_UUID)
-
-
+print('Assigned Node UUID:', THIS_NODE_UUID)
 
 ACCESS_POINT_IP = ''
-
-
 
 q_to_coordinator = queue.Queue()
 q_to_mgr = queue.Queue()

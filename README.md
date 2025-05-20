@@ -1,4 +1,7 @@
 
+.venv/bin/pip install aenum cassandra-driver psutil netifaces thrift==0.13.0
+
+sudo apt install python3-dev
 
 # installing dependencies
 1- run ./shell_scripts/install_requirements.
@@ -15,7 +18,7 @@
 
 1- add a lo:0 interface on each of the nodes each with a unique ip. this is used to generate the IDs of the nodes. for example use the following to add a device with ID 2.
 ```
-sudo ip addr add 127.0.0.2/32 dev lo label lo:0
+sudo ip addr add 127.1.0.2/32 dev lo label lo:0
 ```
 
 keep all the ids low integers preferably start at 2, 3, 4, ...

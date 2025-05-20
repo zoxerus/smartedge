@@ -100,22 +100,10 @@ if [ $INVENV -eq "0" ]; then
         source ./.venv/bin/activate
         
     else 
-        echo -e "Creating a new Virtual Environment"
-        python3 -m venv .venv
-        source ./.venv/bin/activate
-        # source ~/.bashrc
-        echo -e "Installing Python Modules"
-        .venv/bin/pip install aenum cassandra-driver psutil netifaces thrift==0.13.0
+        echo -e "Create and setup a Virtual Environment first"
+        exit 1
+        
     fi
-    alias python='.venv/bin/python'
-    alias pip='.venv/bin/pip'
-    alias sudo='sudo '
-    .venv/bin/pip install aenum cassandra-driver psutil netifaces thrift==0.13.0
-
-else
-    alias python='.venv/bin/python'
-    alias pip='.venv/bin/pip'
-    alias sudo='sudo '
 fi 
 
 

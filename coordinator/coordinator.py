@@ -135,7 +135,7 @@ eth_ip = str( utils.get_interface_ip(interface) )
 se_bb_ip = str( utils.get_interface_ip('smartedge-bb') )
 
 ## Here we start the discovery using the group id and the subnet of the ethernet interface
-SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_AP_UUID, 
+SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_NODE_UUID, 
                       node_sebackbone_ip=se_bb_ip, group_id=cfg.group_id)
 
 
@@ -471,6 +471,7 @@ def exit_handler():
 def main():
     atexit.register(exit_handler)
     logger.info('Coordinator Starting')
+    SE_NODE.start()
     node_thread = threading.Thread(target=node_handler, args=(HOST, NODE_PORT))
     ap_thread = threading.Thread(target=ap_handler, args=(HOST, AP_PORT ))
     ac_thread = threading.Thread(target=adaptive_coordinator_handler, args=(HOST, HIGHER_PORT))

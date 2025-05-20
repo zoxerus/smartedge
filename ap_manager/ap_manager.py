@@ -344,7 +344,7 @@ async def handle_new_connected_station(station_physical_mac_address):
     
     # 2nd Step: Check if Node belong to a Swarm or Not
     # to do so we first read the UUID (bottom three bytes of MAC address)
-    SN_UUID = 'SN:' + station_physical_mac_address[9:]
+    SN_UUID = f"SN{station_physical_mac_address[9:]}".replace(':','')
     
     # # Then we search the ART  to see if the node is present in there
     node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
@@ -495,16 +495,7 @@ async def handle_new_connected_station(station_physical_mac_address):
             logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
             return
             
-        # swarmNode_config_message = f'setConfig_01 {station_vip} {station_vmac} {vxlan_id} {cfg.coordinator_phyip} {cfg.coordinator_tcp_port} {THIS_AP_UUID}'
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     future = executor.submit(send_swarmNode_config, swarmNode_config_message )  # Run function in thread
-        #     result = future.result()  # Get the return value
-            
-        #     if (result == -1): # Node faild to configure itself
-        #         logger.error(f'Smart Node {station_physical_ip_address} could not handle config:\n{swarmNode_config_message}')
-        #         return
-        # TODO: update the bmv2
-        
+       
         connected_stations[station_physical_mac_address] = [ station_physical_mac_address ,station_vip, vxlan_id]
         
         logger.debug(f"Connected Stations List after Adding {station_physical_mac_address}: {connected_stations.keys()}")
@@ -540,7 +531,8 @@ async def handle_disconnected_station(station_physical_mac_address):
         # node is not found in the list of connected nodes, this check skips the execution of the rest of the code.
         # logger.info(f'Disconnected Node: {station_physical_mac_address} Waiting for {cfg.ap_wait_time_for_disconnected_station_in_seconds} seconds' + 
         #             '\n\t before removing it.')
-        SN_UUID = 'SN:' + station_physical_mac_address[9:]
+        SN_UUID = f"SN{station_physical_mac_address[9:]}".replace(':','')
+        
         node_db_result = db.get_node_info_from_art(node_uuid=SN_UUID)
         node_info = node_db_result.one()
         node_ap = THIS_AP_UUID
@@ -587,10 +579,10 @@ async def handle_disconnected_station(station_physical_mac_address):
         
         
         logger.debug(f'deleting entries for: {station_physical_mac_address}')
-        for _, istnc in AP_LIST.items():
+        for _, sw_data in SE_NODE.get_aps_dict().items():
             bmv2.delete_forwarding_entry_from_bmv2(communication_protocol=bmv2.P4_CONTROL_METHOD_THRIFT_CLI, 
                                             table_name='MyIngress.tb_ipv4_lpm', key=f'{station_virtual_ip_address}/32',
-                                            instance=istnc )
+                                            instance=sw_data['cli_instance'] )
 
         # delete the corresponding switch port
         bmv2.remove_bmv2_swarm_broadcast_port(switch_port=node_info.ap_port, instance=THIS_AP)
@@ -641,8 +633,7 @@ def ap_id_to_vxlan_id(access_point_id):
                
 def main():
     print("AP Starting")
-    SE_NODE.start()
-        
+    SE_NODE.start()        
     initialize_program()
     monitor_stations()
 
