@@ -210,7 +210,7 @@ def install_swarmNode_config(swarmNode_config):
                 'ip link add veth0 type veth peer name veth1',
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
                 f'ip link set veth1 address {swarm_veth1_vmac} ',
-                f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.255.0 up',
+                f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.0.0 up',
                 f'ip link set veth0 up',
                 # disable HW offloads of checksum calculation, (as this is a virtual interface)
                     f'ethtool --offload veth1 rx off tx off'

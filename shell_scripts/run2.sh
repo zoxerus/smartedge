@@ -89,14 +89,6 @@ done
 
 NUMID=$(( (octet2 * 65536) + (octet3 * 256) + octet4 ))
 
-
-echo -e "lo:0_ip $l0_ip"
-echo -e "octet2 $octet2"
-echo -e "octet3 $octet3"
-echo -e "octet4 $octet4"
-echo -e "NUMID $NUMID"
-
-
 [[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
 
 if [ $INVENV -eq "0" ]; then
@@ -193,11 +185,6 @@ case $ROLE in
 
     # get current mac and check if its the same as the one to be assigned
     wlan0_OldMac=$(cat /sys/class/net/wlan0/address)
-
-    echo -e "NUMID $NUMID"
-    echo -e "wlan0_OldMac $wlan0_OldMac"
-    echo -e "final_mac $final_mac"
-    
 
 
     if [[ "$wlan0_OldMac" != "$final_mac" ]];
