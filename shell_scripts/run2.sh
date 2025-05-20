@@ -89,6 +89,8 @@ done
 
 NUMID=$(( (octet2 * 65536) + (octet3 * 256) + octet4 ))
 
+
+echo -e "lo:0_ip $l0_ip"
 echo -e "octet2 $octet2"
 echo -e "octet3 $octet3"
 echo -e "octet4 $octet4"
