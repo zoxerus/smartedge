@@ -113,8 +113,8 @@ class Node:
         announce_thread.start()
 
         print("Node started. Press Ctrl+C to exit.")
-        try:
-            while True:
-                time.sleep(1)  # Keep the main thread alive
-        except KeyboardInterrupt:
-            print("Exiting.")
+        # try:
+        #     while True:
+        #         time.sleep(1)  # Keep the main thread alive
+        # except KeyboardInterrupt:
+        #     print("Exiting.")
