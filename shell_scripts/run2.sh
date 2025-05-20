@@ -151,7 +151,7 @@ case $ROLE in
     rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
-    sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
+    # sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
     # Start the hotspot
     if  nmcli connection show | grep -q 'SmartEdgeHotspot'; then
         echo -e "Connection SmartEdgeHotspot exists: starting wifi hotspot"
@@ -179,7 +179,6 @@ case $ROLE in
 
     sudo ip link add veth0 type veth peer name veth1
 
-    
     # Genereate the MAC address
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
@@ -190,12 +189,12 @@ case $ROLE in
     wlan0_OldMac=$(cat /sys/class/net/wlan0/address)
     if [ "$wlan0_OldMac" != "$final_mac" ] 
     then
-        echo "Setting Mac of Wlan0"
+        echo "Setting Mac of wlan0"
         sudo ip link set dev wlan0 down
         sudo ip link set dev wlan0 address $final_mac
         sudo ip link set dev wlan0 up
     fi
-    sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
+    # sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
     sudo .venv/bin/python ./node_manager/node_manager.py --log-level $LOGLEVEL
     ;;
 
