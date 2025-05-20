@@ -105,12 +105,12 @@ if [ $INVENV -eq "0" ]; then
         source ./.venv/bin/activate
         # source ~/.bashrc
         echo -e "Installing Python Modules"
-        sudo .venv/bin/pip install aenum cassandra-driver psutil thrift==0.13.0
+        .venv/bin/pip install aenum cassandra-driver psutil netifaces thrift==0.13.0
     fi
     alias python='.venv/bin/python'
     alias pip='.venv/bin/pip'
     alias sudo='sudo '
-    sudo pip install aenum cassandra-driver psutil thrift==0.13.0
+    .venv/bin/pip install aenum cassandra-driver psutil netifaces thrift==0.13.0
 
 else
     alias python='.venv/bin/python'

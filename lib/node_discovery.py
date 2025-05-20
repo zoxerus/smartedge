@@ -1,4 +1,3 @@
-import zmq
 import time
 import threading
 import json
@@ -16,14 +15,17 @@ class Node:
         self.uuid = node_uuid
         self.group_id = group_id
         self.node_sebackbone_ip = node_sebackbone_ip
-        self.known_aps = {self.node_name: self.get_ip()}  # Known nodes in the network
+        self.known_aps = {}
         self.known_coordinators = {}
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', PORT))
         self.lock = threading.Lock()  # To protect shared resources
-        
-    def get_known_nodes(self):
-        return self.known_nodes
+    
+    def get_aps_dict(self):
+        ap_dict = {}
+        with self.lock:
+            ap_dict = self.known_aps
+        return ap_dict
 
     def get_ip(self):
         """Get the IP address of the current device."""
@@ -48,17 +50,19 @@ class Node:
                 if message['group_id'] == self.group_id:
                     type = message['type']
                     uuid = message['uuid']
-                    node_name = message['node_name']
+                    node_name = message['name']
                     node_ip = message['address']
                     node_sebackbone_ip = message['sebackbone_ip']
                     if type == 'AP' and uuid not in self.known_aps:    
                         switch = {  'name': node_name, 
                                     'type': type, 
                                     'address': node_ip,
-                                    'node_sebackbone_ip': node_sebackbone_ip
+                                    'sebackbone_ip': node_sebackbone_ip
                                     }
-                        if bmv2.connect_to_switch(switch) == None: 
+                        cli_instance = bmv2.connect_to_switch(switch)
+                        if cli_instance == None: 
                             continue
+                        switch['cli_instance'] = cli_instance
                         with self.lock:
                             self.known_aps[uuid] =  switch
                             print(f"Discovered node: {node_name} at {node_ip}")
@@ -83,9 +87,9 @@ class Node:
                 'group_id': self.group_id,
                 'type': self.node_type,
                 'uuid': self.uuid,
-                'node_sebackbone_ip': self.node_sebackbone_ip,
-                'node_name': self.node_name,
-                'node_ip': self.get_ip()
+                'sebackbone_ip': self.node_sebackbone_ip,
+                'name': self.node_name,
+                'address': self.get_ip()
             }
             message_json = json.dumps(message)
             try:

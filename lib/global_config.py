@@ -3,13 +3,13 @@
 group_id = "se_backbone"  # Define a group ID for your network
 
 #TODO: Configure this IP list, physical IPs of access points
-ap_list = {
-    # ID of AP              IP of eth0           IP smartedge-bb 
-    # identification     for control update    for packet forwarding
-    'AP:00:00:03':      ['192.168.137.103',      '192.168.100.3'],
-    'AP:00:00:04':      ['192.168.137.104',      '192.168.100.4'],
-    'AP:00:00:05':      ['192.168.137.105',      '192.168.100.5']
-    }
+# ap_list = {
+#     # ID of AP              IP of eth0           IP smartedge-bb 
+#     # identification     for control update    for packet forwarding
+#     'AP:00:00:03':      ['192.168.137.103',      '192.168.100.3'],
+#     'AP:00:00:04':      ['192.168.137.104',      '192.168.100.4'],
+#     'AP:00:00:05':      ['192.168.137.105',      '192.168.100.5']
+#     }
 
 
 COORDINATOR_IP = '192.168.137.106'

@@ -25,7 +25,10 @@ import lib.global_constants as cts
 import lib.helper_functions as utils
 import json
 import concurrent.futures
-from lib.node_discovery import se_net
+
+
+import lib.node_discovery as se_net
+
 from argparse import ArgumentParser
 
 
@@ -68,27 +71,18 @@ class SocketStreamHandler(logging.StreamHandler):
             self.sock.close()
         super().close()
 
-parser = ArgumentParser()
-parser.add_argument("-l", "--log-level",type=int, default=50, help="set logging level [10, 20, 30, 40, 50]")
-parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq numeric id for node identification")
-args = parser.parse_args()
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
 ## We use the lo:0 interface to generate the ID of the node
 loopback_if = 'lo:0'
 NODE_TYPE='AP'
 THIS_AP_UUID = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
 
 
-## Group ID is for discovery
-group_id = cfg.group_id
-## interface is the network interface on which the discovery happens
-interface = utils.get_default_iface_name_linux()
-ip = utils.get_interface_ip(interface)
-## Here we start the discovery using the group id and the subnet of the ethernet interface
-SE_NODE = se_net.Node(group_id, interface=ip)
+parser = ArgumentParser()
+parser.add_argument("-l", "--log-level",type=int, default=50, help="set logging level [10, 20, 30, 40, 50]")
+parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq numeric id for node identification")
+args = parser.parse_args()
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 # this part handles logging to console and to a file for debugging purposes
 # where to store program logs
@@ -173,13 +167,27 @@ for snic in psutil.net_if_addrs()[cfg.default_wlan_device]:
 if THIS_AP_WLAN_MAC == None:
     logger.error("Could not Connect to backbone, check eth device name in the config file")
     exit()
-                         
-                         
-AP_LIST = bmv2.connect_to_all_switches()
-print(AP_LIST)
 
-THIS_AP = AP_LIST[THIS_AP_UUID]
-print(f'THIS_AP: {THIS_AP}, it\'s type {type(THIS_AP)}')
+## Group ID is for discovery
+group_id = cfg.group_id
+## interface is the network interface on which the discovery happens
+interface = utils.get_default_iface_name_linux()
+eth_ip = utils.get_interface_ip(interface)
+se_bb_ip = utils.get_interface_ip('smartedge-bb')
+
+## Here we start the discovery using the group id and the subnet of the ethernet interface
+SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_AP_UUID, 
+                      node_sebackbone_ip=se_bb_ip, group_id=cfg.group_id)
+
+
+
+switch = {  'name': socket.gethostname(), 
+            'type': NODE_TYPE, 
+            'address': eth_ip,
+            'node_sebackbone_ip': se_bb_ip
+            }
+
+THIS_AP = bmv2.connect_to_switch(switch)
 
 def initialize_program():    
     # remvoe all configureation from bmv2, start fresh
@@ -189,7 +197,7 @@ def initialize_program():
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_remove {cfg.swarm_backbone_switch_port}", instance=THIS_AP)
     bmv2.send_cli_command_to_bmv2(cli_command=f"port_add {cfg.default_backbone_device} {cfg.swarm_backbone_switch_port}", instance=THIS_AP)
     
-    coordinator_vmac = int_to_mac( int( ipaddress.ip_address(cfg.coordinator_vip)) )
+    coordinator_vmac = utils.int_to_mac( int( ipaddress.ip_address(cfg.coordinator_vip)) )
     print(f'Coordinator MAC { coordinator_vmac}')
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                             table_name='MyIngress.tb_ipv4_lpm',
@@ -416,16 +424,15 @@ async def handle_new_connected_station(station_physical_mac_address):
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_s0_ip}/32' , 
                             action_params= f'{str(vxlan_id)}', instance=THIS_AP)
      
-        node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
-        ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
-        for key, istnc in AP_LIST.items():
-            if key != THIS_AP_UUID:
-                ap_ip = cfg.ap_list[key][0]
-                ap_mac = utils.int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
+        
+        for uuid, sw_data in SE_NODE.get_aps_dict().items():
+            if uuid != THIS_AP_UUID:
+                ap_address = sw_data['address']
+                ap_mac = utils.int_to_mac( int(ipaddress.ip_address(sw_data['sebackbone_ip'])) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                         table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{node_s0_ip}/32' , 
-                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= bmv2.DEFAULT_THRIFT_PORT, instance=istnc )
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_address, thrift_port= bmv2.DEFAULT_THRIFT_PORT, instance=sw_data['cli_instance'] )
             
 
         
@@ -516,14 +523,14 @@ async def handle_new_connected_station(station_physical_mac_address):
      
         node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
         ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
-        for key, istnc in cfg.ap_list.items():
-            if key != THIS_AP_UUID:
-                ap_ip = cfg.ap_list[key][0]
-                ap_mac = int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
+        for uuid, sw_data in SE_NODE.get_aps_dict().items():
+            if uuid != THIS_AP_UUID:
+                ap_ip = sw_data['address']
+                ap_mac = utils.int_to_mac( int(ipaddress.ip_address(ap_ip_for_mac_derivation)) )
                 entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                         table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
-                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, instance=istnc )
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, instance=sw_data['cli_instance'] )
 
                     
 async def handle_disconnected_station(station_physical_mac_address):
