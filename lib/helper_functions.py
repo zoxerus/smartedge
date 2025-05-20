@@ -63,7 +63,7 @@ def generate_uuid_from_lo(loopback_if, node_type):
     lo0_ip = ipaddress.ip_address(lo0_ip)
     temp_mac = int_to_mac(int(lo0_ip))
     THIS_UUID = f'{node_type}:{temp_mac[9:]}'.replace(':','')
-    return THIS_UUID, lo0_ip
+    return THIS_UUID
 
 def enum_dictionary_to_json_string(dic_obj):
     return json.dumps({key.value: value for key, value in dic_obj.items()})

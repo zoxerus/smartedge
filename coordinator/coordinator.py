@@ -82,7 +82,7 @@ loopback_if = 'lo:0'
 ## We use the lo:0 interface to generate the ID of the node
 loopback_if = 'lo:0'
 NODE_TYPE='CO'
-THIS_NODE_UUID, _ = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
+THIS_NODE_UUID = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
