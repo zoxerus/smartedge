@@ -67,7 +67,7 @@ export LOGLEVEL=$2
 
 # generate the IP addresses for the node
 
-l0_ip=$(ip addr show lo:0 | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+l0_ip=$(ifconfig lo:0 | grep "inet " | awk '{print $2}' | cut -d/ -f1)
 # Split the IP address into its four octets (bytes) using IFS
 
 IFS='.' read -r octet1 octet2 octet3 octet4 <<< "$l0_ip"
