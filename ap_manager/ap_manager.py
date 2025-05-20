@@ -125,7 +125,7 @@ THIS_SWARM_SUBNET=ipaddress.ip_address( cfg.this_swarm_subnet )
 
 DEFAULT_SUBNET=ipaddress.ip_address(f'10.0.{args.num_id}.0')
 
-COORDINATOR_S0_IP = f'10.0.{args.num_id}.254'
+COORDINATOR_S0_IP = cfg.COORDINATOR_S0_IP #f'10.0.{args.num_id}.254'
 
 # a variable to track created host ids
 # TODO: have a database table for this
@@ -391,7 +391,7 @@ async def handle_new_connected_station(station_physical_mac_address):
         
         node_s0_mac = utils.int_to_mac(int( ipaddress.ip_address(node_s0_ip) ))
         
-        coordinator_vip = DEFAULT_SUBNET + 254
+        # coordinator_vip = DEFAULT_SUBNET + 254
         
         swarmNode_config = {
             STRs.TYPE.name: STRs.SET_CONFIG.name,
@@ -399,7 +399,7 @@ async def handle_new_connected_station(station_physical_mac_address):
             STRs.VETH1_VMAC.name: node_s0_mac,
             STRs.VXLAN_ID.name: vxlan_id,
             STRs.SWARM_ID.name: 0,
-            STRs.COORDINATOR_VIP.name: str(coordinator_vip),
+            STRs.COORDINATOR_VIP.name: str(COORDINATOR_S0_IP),
             STRs.COORDINATOR_TCP_PORT.name: cfg.coordinator_tcp_port,
             STRs.AP_UUID.name: THIS_AP_UUID
         }
@@ -418,7 +418,6 @@ async def handle_new_connected_station(station_physical_mac_address):
             
         db.insert_into_art(node_uuid=SN_UUID, current_ap=THIS_AP_UUID, swarm_id=0, ap_port=vxlan_id, node_ip=node_s0_ip)
         
-        # TODO: verify if bmv2 is updated correctly 
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                             table_name='MyIngress.tb_ipv4_lpm',
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{node_s0_ip}/32' , 

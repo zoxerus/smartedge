@@ -60,8 +60,8 @@ export LOGLEVEL=$2
 
 
 # Get Node ID from hostname
-HOST_NAME=$(cat /etc/hostname)
-NUMID=$(echo "$HOST_NAME" | grep -oE '[0-9]+' | head -n 1)
+# HOST_NAME=$(cat /etc/hostname)
+# NUMID=$(echo "$HOST_NAME" | grep -oE '[0-9]+' | head -n 1)
 
 
 
@@ -90,6 +90,7 @@ done
 NUMID=$(( (octet2 * 65536) + (octet3 * 256) + octet4 ))
 
 
+
 [[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
 
 if [ $INVENV -eq "0" ]; then
@@ -112,41 +113,38 @@ case $ROLE in
     co)
     echo "Role is set to Coordinator"
     /bin/bash ./shell_scripts/run_cassandra_docker.sh
-    /bin/bash ./shell_scripts/run_bmv2_docker.sh co
-    sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
 
     # Genereate the MAC address for the Coordinator
     # SWARM_IP=$(nextip $SWARM_SUBNET 254)
+    
     SWARM_IP=10.1.255.254
-    BACKBONE_IP=$(nextip $BACKBONE_SUBNET 254)
+    # BACKBONE_IP=$(nextip $BACKBONE_SUBNET 254)
     oldMAC=00:00:00:00:00:00
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
     rawOldMac=$(echo $oldMAC | tr -d ':')
     rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
 
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
-
+    
+    sudo ip link delete smartedge-bb
     sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
     sudo ip address flush smartedge-bb
-    sudo ip address add 10.0.1.254/24 dev smartedge-bb
-    sudo ip address add 10.0.2.254/24 dev smartedge-bb
-    sudo ip address add 10.0.3.254/24 dev smartedge-bb
-    sudo ip address add 10.0.4.254/24 dev smartedge-bb
-    sudo ip address add 10.0.5.254/24 dev smartedge-bb
-
+    
+    sudo ip address add 10.0.255.254/16 dev smartedge-bb
     sudo ip address add 10.1.255.254/16 dev smartedge-bb
+
     sudo ip link set dev smartedge-bb address $final_mac
     sudo ip link set dev smartedge-bb up
 
     # Run the python script for the coordinator
-    sudo .venv/bin/python ./coordinator/coordinator.py --log-level $LOGLEVEL --num-id $NUMID
+    sudo .venv/bin/python ./coordinator/coordinator.py --log-level $LOGLEVEL --num-id $octet4
     ;;
 # Access Point: 
     ap)
     echo "Role is set as Access Point"
     /bin/bash ./shell_scripts/run_bmv2_docker.sh
     # Genereate the MAC and IP address for the AP
-    BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
+    BACKBONE_IP=$(nextip $BACKBONE_SUBNET $octet4)
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
@@ -160,7 +158,7 @@ case $ROLE in
         sudo nmcli con up SmartEdgeHotspot
     else
         echo -e "Connection SmartEdgeHotspot does not exists: \n\tcreating connection and starting wifi hotspot"
-        sudo nmcli con add type wifi ifname wlan0 con-name SmartEdgeHotspot autoconnect yes ssid R${NUMID}AP
+        sudo nmcli con add type wifi ifname wlan0 con-name SmartEdgeHotspot autoconnect yes ssid R${octet4}AP
         sudo nmcli con modify SmartEdgeHotspot 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
         sudo nmcli con modify SmartEdgeHotspot wifi-sec.key-mgmt wpa-psk
         sudo nmcli con modify SmartEdgeHotspot wifi-sec.psk "123456123"
@@ -173,7 +171,7 @@ case $ROLE in
     sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
-    sudo .venv/bin/python ./ap_manager/ap_manager.py --log-level $LOGLEVEL --num-id $NUMID
+    sudo .venv/bin/python ./ap_manager/ap_manager.py --log-level $LOGLEVEL --num-id $octet4
     ;;
 # Smart Node
     sn)
@@ -198,7 +196,7 @@ case $ROLE in
         # sudo ip link set dev wlan0 up
     fi
     sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
-    sudo .venv/bin/python ./node_manager/node_manager.py --log-level $LOGLEVEL --num-id $NUMID
+    sudo .venv/bin/python ./node_manager/node_manager.py --log-level $LOGLEVEL
     ;;
 
     *)

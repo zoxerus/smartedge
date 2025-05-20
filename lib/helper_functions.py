@@ -17,10 +17,6 @@ def get_default_iface_name_linux():
             except:
                 continue
 
-iface = get_default_iface_name_linux()
-print(f"Default interface: {iface}")
-
-
 def get_interface_ip(interface_name):
     """
     Gets the IPv4 address of a specified network interface.
@@ -52,7 +48,12 @@ def get_interface_ip(interface_name):
         print(f"An error occurred: {e}")
         return None
 
-
+def auto_gen_uuid(node_type):
+    iface = get_default_iface_name_linux()
+    ip = get_interface_ip(iface)
+    octect4 = int(ip.split('.')[3])
+    formatted_number = "{:03d}".format(octect4)
+    return f"{node_type}{formatted_number}"
 
 def generate_uuid_from_lo(loopback_if, node_type):
     THIS_UUID = None
