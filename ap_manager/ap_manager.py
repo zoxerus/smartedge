@@ -74,7 +74,7 @@ class SocketStreamHandler(logging.StreamHandler):
 ## We use the lo:0 interface to generate the ID of the node
 loopback_if = 'lo:0'
 NODE_TYPE='AP'
-THIS_AP_UUID = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
+THIS_AP_UUID, _ = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
 
 
 parser = ArgumentParser()
@@ -181,7 +181,7 @@ SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_AP_UUID,
 
 
 
-switch = {  'name': socket.gethostname(), 
+switch = {  'name': str(socket.gethostname() ), 
             'type': NODE_TYPE, 
             'address': eth_ip,
             'node_sebackbone_ip': se_bb_ip
