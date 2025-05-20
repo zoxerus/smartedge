@@ -70,6 +70,7 @@ database_port = CASSANDRA_PORT
 # it is sent to the swarm node when it connects to the AP
 
 coordinator_vip='10.1.255.254'        # swarm virtual ip
+COORDINATOR_S0_IP='10.0.255.254'
 coordinator_phyip='192.168.100.254' # physical ip of device 
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
