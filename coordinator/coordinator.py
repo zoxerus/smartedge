@@ -26,6 +26,8 @@ import lib.bmv2_thrift_lib as bmv2
 import lib.database_comms as db
 import lib.global_constants as cts
 import lib.helper_functions as utils
+import lib.node_discovery as se_net
+
 from argparse import ArgumentParser
 
 STRs = cts.String_Constants
@@ -125,7 +127,16 @@ db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
 database_session = db.init_database('0.0.0.0', cfg.database_port)
 db.DATABASE_SESSION = database_session
 
-AP_Dictionary = bmv2.connect_to_all_switches()
+## Group ID is for discovery
+group_id = cfg.group_id
+## interface is the network interface on which the discovery happens
+interface = utils.get_default_iface_name_linux()
+eth_ip = str( utils.get_interface_ip(interface) )
+se_bb_ip = str( utils.get_interface_ip('smartedge-bb') )
+
+## Here we start the discovery using the group id and the subnet of the ethernet interface
+SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_AP_UUID, 
+                      node_sebackbone_ip=se_bb_ip, group_id=cfg.group_id)
 
 
 # a function to parse a string and extract integers
@@ -188,7 +199,8 @@ async def offboard_node(host_id, uuid, ap_id, node_vip, ap_port, available_nodes
     
     # first we get the ip of the access point from the ap list
     ap_ip = get_ap_ip_from_ap_id(ap_id)
-    instance = AP_Dictionary[ap_id]
+    # instance = SE_NODE.known_aps[ap_id]['cli_instance']
+    
     if (ap_ip == None):
         logger.error(f'Error: could not find IP of access point {ap_id}')
         return
@@ -222,13 +234,8 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
     SN_UUID = uuid
     logger.debug(f'Accepted Node {SN_UUID} in Swarm')
     
-    # first we get the ip of the access point from the ap list
-    ap_ip = get_ap_ip_from_ap_id(ap_id)
-    instance = AP_Dictionary[ap_id]
-    if (ap_ip == None):
-        logger.error(f'Error: could not find IP of access point {ap_id}')
-        return
-    
+    instance = SE_NODE.known_aps[ap_id]['cli_instance']
+
     result = utils.assign_virtual_mac_and_ip_by_host_id(subnet= THIS_SWARM_SUBNET, host_id=host_id)
     
     station_vmac= result[0]
@@ -271,24 +278,23 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
     db.update_art_with_node_info(node_uuid=SN_UUID,node_current_ap=ap_id,
                                      node_current_swarm=1,node_current_ip=station_vip)
                     
-    bmv2.add_bmv2_swarm_broadcast_port(instance=instance, thrift_ip= ap_ip, thrift_port=DEFAULT_THRIFT_PORT, switch_port= ap_port)
+    bmv2.add_bmv2_swarm_broadcast_port(instance=instance, switch_port= ap_port)
 
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
-            action_params= str(host_id), thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT, instance=instance )
+            action_params= str(host_id), instance=instance )
         
         
     # insert table entries in the rest of the APs
-    node_ap_ip = ap_ip
-    for key, istc in AP_Dictionary.items():
-        if key != ap_id:
+    for uuid, sw_data in SE_NODE.get_aps_dict().items():
+        if uuid != ap_id:
             # ap_ip = cfg.ap_list[key][0]
-            ap_mac = utils.int_to_mac( int(ipaddress.ip_address(node_ap_ip)) )
+            ap_mac = utils.int_to_mac( int(ipaddress.ip_address(sw_data['sebackbone_ip'])) )
             entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
-                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', thrift_ip= ap_ip, thrift_port= DEFAULT_THRIFT_PORT, instance=istc )
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', instance=sw_data[uuid]['cli_instance'] )
     
 
 # a function to configure the keep alive of the tcp connection
