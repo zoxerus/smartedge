@@ -88,7 +88,7 @@ done
 # Bash arithmetic expansion $((...)) is used for the calculation.
 
 NUMID=$(( (octet2 * 65536) + (octet3 * 256) + octet4 ))
-
+echo -e "NUMID $NUMID"
 
 
 [[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
