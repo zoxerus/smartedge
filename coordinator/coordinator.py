@@ -283,7 +283,7 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
     entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
-            action_params= str(host_id), instance=instance )
+            action_params= str(ap_port), instance=instance )
         
         
     # insert table entries in the rest of the APs

@@ -112,7 +112,7 @@ class Node:
         announce_thread = threading.Thread(target=self.announce, daemon=True)
         announce_thread.start()
 
-        print("Node started. Press Ctrl+C to exit.")
+        print("Node started")
         # try:
         #     while True:
         #         time.sleep(1)  # Keep the main thread alive
