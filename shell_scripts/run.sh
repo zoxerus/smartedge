@@ -124,7 +124,7 @@ case $ROLE in
 
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
     
-    sudo ip link delete smartedge-bb
+    # sudo ip link delete smartedge-bb
     sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
     sudo ip address flush smartedge-bb
     
