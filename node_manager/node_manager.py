@@ -20,6 +20,7 @@ import json
 import lib.global_config as cfg
 from lib.helper_functions import *
 import lib.global_constants as cts
+import lib.helper_functions as utils
 
 STRs = cts.String_Constants 
 
@@ -27,7 +28,7 @@ STRs = cts.String_Constants
 from argparse import ArgumentParser
 parser = ArgumentParser()
 parser.add_argument("-l", "--log-level",type=int, default=50, help="set logging level [10, 20, 30, 40, 50]")
-parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq numeric id for node identification")
+# parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq numeric id for node identification")
 args = parser.parse_args()
 
 
@@ -56,36 +57,12 @@ logger.addHandler(log_console_handler)
 DEFAULT_IFNAME = 'wlan0'
 
 loopback_if = 'lo:0'
-def int_to_mac(macint):
-    if type(macint) != int:
-        raise ValueError('invalid integer')
-    return ':'.join(['{}{}'.format(a, b)
-                     for a, b
-                     in zip(*[iter('{:012x}'.format(macint + 2199023255552))]*2)])  
+NODE_TYPE = 'SN'
+THIS_NODE_UUID = utils.generate_uuid_from_lo(loopback_if, NODE_TYPE)
 
-THIS_NODE_UUID = None
-
-for snic in psutil.net_if_addrs()[loopback_if]:
-    if snic.family == socket.AF_INET:        
-        temp_mac = int_to_mac(int(ipaddress.ip_address(snic.address) - 1))
-        THIS_NODE_UUID = f'SN:{temp_mac[9:]}'
-if THIS_NODE_UUID == None:
-    logger.error("Could not Assign UUID to Node")
-    exit()
-print("UUID:", THIS_NODE_UUID)
-
-
-if THIS_NODE_UUID == None:
-    print('Error: Could not assign UUID')
-    exit()
-
-print('Assign Node UUID:', THIS_NODE_UUID)
-
-
+print('Assigned Node UUID:', THIS_NODE_UUID)
 
 ACCESS_POINT_IP = ''
-
-
 
 q_to_coordinator = queue.Queue()
 q_to_mgr = queue.Queue()
@@ -233,7 +210,7 @@ def install_swarmNode_config(swarmNode_config):
                 'ip link add veth0 type veth peer name veth1',
                 # add the vmac and vip (received from the AP manager) to the veth1 interface,
                 f'ip link set veth1 address {swarm_veth1_vmac} ',
-                f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.255.0 up',
+                f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.0.0 up',
                 f'ip link set veth0 up',
                 # disable HW offloads of checksum calculation, (as this is a virtual interface)
                     f'ethtool --offload veth1 rx off tx off'
@@ -300,7 +277,7 @@ def monitor_wifi_status():
     last_connection_timestamp = 0
     wait_time_before_requesting_new_config = 5
     # this command is run in the shell to monitor wireless events using the iw tool
-    monitoring_command = 'nmcli device monitor wlan0'
+    monitoring_command = f"nmcli device monitor {DEFAULT_IFNAME}"
     # python runs the shell command and monitors the output in the terminal
     process = subprocess.Popen( monitoring_command.split() , stdout=subprocess.PIPE, text = True)
     previous_line = ''

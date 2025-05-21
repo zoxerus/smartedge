@@ -1,19 +1,13 @@
 # This is the global config file, all variables can be configured from here
 
+# this ID is used for the automatic discovery of the backbone node (Coordinators and Access Points)
+group_id = "se_backbone_swarm1"  
 
-
-#TODO: Configure this IP list, physical IPs of access points
-ap_list = {
-    # ID of AP              IP of eth0           IP smartedge-bb 
-    # identification     for control update    for packet forwarding
-    'AP:00:00:03':      ['192.168.137.103',      '192.168.100.3'],
-    'AP:00:00:04':      ['192.168.137.104',      '192.168.100.4'],
-    'AP:00:00:05':      ['192.168.137.105',      '192.168.100.5']
-    }
-
-
+# TODO: remove the need for this.
+# currently only the IP of the coordinator needs to be set here
 COORDINATOR_IP = '192.168.137.106'
 
+# this subnet is used to connect APs for forwarding swarm traffic only
 backbone_subnet='192.168.100.0'  #smartedge-bb
 backbone_subnetmask='/24'
 
@@ -21,10 +15,6 @@ backbone_subnetmask='/24'
 
 database_hostname = COORDINATOR_IP
 logs_server_address = (COORDINATOR_IP, 5000)
-
-
-
-
 
 # these are the L3 port numbers on which the databases listen
 REDIS_PORT = 6379
@@ -39,9 +29,6 @@ swarm_backbone_switch_port = 510
 ## due to the high amount of background traffic genereted from the university network
 default_backbone_device = 'smartedge-bb'
 default_wlan_device = 'wlan0'
-
-
-
 
 ap_wait_time_for_disconnected_station_in_seconds= 0
 
@@ -61,8 +48,6 @@ this_swarm_dhcp_end  = 253        # last IP to be assigned e.g: 10.0.1.253, we l
 ## This is the IP of the database, in my implementation the DB is running on the same node as the coordinator
 ## It uses the physical IP of the eth0 interface of the coordinator for consistency, and ease of routing
 
-#TODO: configure this ip, physical IP where the database is running
-
 database_port = CASSANDRA_PORT
 
 # this IP is used to reach the coordinator by the swarm nodes
@@ -70,6 +55,7 @@ database_port = CASSANDRA_PORT
 # it is sent to the swarm node when it connects to the AP
 
 coordinator_vip='10.1.255.254'        # swarm virtual ip
+COORDINATOR_S0_IP='10.0.255.254'
 coordinator_phyip='192.168.100.254' # physical ip of device 
 
 # this is a tcp port number used to reach the coordinator from the swarm nodes
@@ -83,8 +69,6 @@ node_manager_tcp_port = 29997
 # list of access points in the network, used to propagate configuration changes
 # this list of IPs are the ones configured on the smartedge-bb on each access point
 # it is a different subnet from the one used by the swarm
-
-
 
 ## currently unused
 SWARM_P4_MC_NODE = 1100

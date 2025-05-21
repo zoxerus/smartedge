@@ -20,4 +20,4 @@ export ROLE=$1
 # export NUMID=$2
 export LOG_LEVEL=$2
 
-source ./shell_scripts/run2.sh $ROLE $LOG_LEVEL
+source ./shell_scripts/run.sh $ROLE $LOG_LEVEL

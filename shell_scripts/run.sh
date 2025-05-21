@@ -1,6 +1,7 @@
 #!/bin/bash
 
-ln -s $(which python3) /usr/bin/python
+
+SE_BB_VXLAN_ID=10000
 
 ### Function Definitions
 ### this function extracts a string between quotations from the provided input
@@ -48,7 +49,7 @@ done < ./lib/global_config.py
 if [ "$#" != '2' ] || [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
     echo -e "\e[32mError:\e[0m"
     echo -e "Script must be sourced with parameters: \nparam1 Script Type: [ap, co, nd] \nparam2 Log LeveL: [10,20,30,40,50] where 10 is for Debug, 20 for info, 30 for warning, 40 for Error, and 50 is for Critical"
-    echo -e "for example:\nsource ./run ap 1\n"
+    echo -e "for example:\nsource ./run.sh ap 1\n"
     return
 fi
 
@@ -59,113 +60,116 @@ export LOGLEVEL=$2
 
 
 # Get Node ID from hostname
-HOST_NAME=$(cat /etc/hostname)
-NUMID=$(echo "$HOST_NAME" | grep -oE '[0-9]+' | head -n 1)
+# HOST_NAME=$(cat /etc/hostname)
+# NUMID=$(echo "$HOST_NAME" | grep -oE '[0-9]+' | head -n 1)
 
 
 
 # generate the IP addresses for the node
 
+l0_ip=$(ifconfig lo:0 | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+# Split the IP address into its four octets (bytes) using IFS
+
+IFS='.' read -r octet1 octet2 octet3 octet4 <<< "$l0_ip"
+
+# Validate each octet is between 0 and 255
+for octet in $octet1 $octet2 $octet3 $octet4; do
+    # Check if it's purely numeric and within the valid range
+    if ! [[ "$octet" =~ ^[0-9]+$ ]] || [ "$octet" -lt 0 ] || [ "$octet" -gt 255 ]; then
+        echo "Error: Invalid octet value '$octet' in IP address. Each octet must be between 0 and 255."
+        exit 1
+    fi
+done
 
 
+# Convert the lowest three bytes (octets 2, 3, and 4) to an integer
+# The formula is: (octet2 * 256^2) + (octet3 * 256^1) + (octet4 * 256^0)
+# which simplifies to: (octet2 * 65536) + (octet3 * 256) + octet4
+# Bash arithmetic expansion $((...)) is used for the calculation.
 
-l0_ip=$(nextip 127.0.0.1 $NUMID)
+NUMID=$(( (octet2 * 65536) + (octet3 * 256) + octet4 ))
 
-# [[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
+[[ "$VIRTUAL_ENV" == "" ]]; INVENV=$?
 
-# if [ $INVENV -eq "0" ]; then
-#     echo -e "Virtual Environment not sourced"
-#     if [ -d ".venv"  ]; then
-#         echo "sourcing from .venv"
+if [ $INVENV -eq "0" ]; then
+    echo -e "Virtual Environment not sourced"
+    if [ -d ".venv"  ]; then
+        echo "sourcing from .venv"
 
-#         . ./.venv/bin/activate
+        source ./.venv/bin/activate
         
-#     else 
-#         echo -e "Creating a new Virtual Environment"
-#         python -m venv .venv
-#         . ./.venv/bin/activate
-#     echo -e "Installing Python Modules"
-#     fi
-#     pip install aenum cassandra-driver psutil
-#     source ~/.bashrc
-#     alias python='$VIRTUAL_ENV/bin/python'
-#     alias sudo='sudo '
-# else
-#     alias python='$VIRTUAL_ENV/bin/python'
-#     alias sudo='sudo '
-# fi 
+    else 
+        echo -e "Create and setup a Virtual Environment first"
+        exit 1
+        
+    fi
+fi 
 
 
 case $ROLE in
 # Coordinator:
     co)
     echo "Role is set to Coordinator"
-    # /bin/bash ./run_cassandra_docker.sh
-    # /bin/bash ./run_bmv2_docker.sh co
-    sleep 5
-    
+    /bin/bash ./shell_scripts/run_cassandra_docker.sh
+
     # Genereate the MAC address for the Coordinator
-    SWARM_IP=$(nextip $SWARM_SUBNET 254)
-    # BACKBONE_IP=$(nextip $BACKBONE_SUBNET $NUMID)
+    # SWARM_IP=$(nextip $SWARM_SUBNET 254)
+    
+    SWARM_IP=10.1.255.254
+    # BACKBONE_IP=$(nextip $BACKBONE_SUBNET 254)
     oldMAC=00:00:00:00:00:00
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $SWARM_IP | sed -e 's/\./ /g'`)
     rawOldMac=$(echo $oldMAC | tr -d ':')
     rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
 
     final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
-
-    sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
+    
+    # sudo ip link delete smartedge-bb
+    sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
     sudo ip address flush smartedge-bb
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
-    sudo ip address add ${SWARM_IP}${SWARM_SUBNET_MASK} dev smartedge-bb
-    sud ip address add 10.0.0.0/16 dev smartedge-bb
+    
+    sudo ip address add 10.0.255.254/16 dev smartedge-bb
+    sudo ip address add 10.1.255.254/16 dev smartedge-bb
+
     sudo ip link set dev smartedge-bb address $final_mac
     sudo ip link set dev smartedge-bb up
 
     # Run the python script for the coordinator
-    ./coordinator/coordinator.py --log-level $LOGLEVEL
+    sudo .venv/bin/python ./coordinator/coordinator.py --log-level $LOGLEVEL --num-id $octet4
     ;;
 # Access Point: 
     ap)
     echo "Role is set as Access Point"
-    # /bin/bash ./run_bmv2_docker.sh
-    sleep 5
-
+    /bin/bash ./shell_scripts/run_bmv2_docker.sh
     # Genereate the MAC and IP address for the AP
-    BACKBONE_IP=$(nextip 10.0.0.0 $NUMID)
+    BACKBONE_IP=$(nextip $BACKBONE_SUBNET $octet4)
     IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $BACKBONE_IP | sed -e 's/\./ /g'`)
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
     rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
-    final_mac_bb=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
+    final_mac=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
 
-    oldMAC=00:01:00:00:00:00
-    rawOldMac=$(echo $oldMAC | tr -d ':')
-    rawNewMac=$(( 0x$rawOldMac + 0x$IP_HEX ))
-    final_mac_wlan0=$(printf "%012x" $rawNewMac | sed 's/../&:/g;s/:$//')
-
-    sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
+    # sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
     # Start the hotspot
     if  nmcli connection show | grep -q 'SmartEdgeHotspot'; then
         echo -e "Connection SmartEdgeHotspot exists: starting wifi hotspot"
         sudo nmcli con up SmartEdgeHotspot
     else
         echo -e "Connection SmartEdgeHotspot does not exists: \n\tcreating connection and starting wifi hotspot"
-        sudo nmcli con add type wifi ifname wlan0 con-name SmartEdgeHotspot autoconnect yes ssid R${NUMID}AP
+        sudo nmcli con add type wifi ifname wlan0 con-name SmartEdgeHotspot autoconnect yes ssid R${octet4}AP
         sudo nmcli con modify SmartEdgeHotspot 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method shared
         sudo nmcli con modify SmartEdgeHotspot wifi-sec.key-mgmt wpa-psk
         sudo nmcli con modify SmartEdgeHotspot wifi-sec.psk "123456123"
         sudo nmcli con up SmartEdgeHotspot
     fi
 
-    sudo ip link add smartedge-bb type vxlan id 1000 group 239.1.1.1 dstport 0 dev eth0
-    sudo ip link set dev smartedge-bb address $final_mac_bb
-    sudo ip link set dev wlan0 address $final_mac_wlan0
+    sudo ip link add smartedge-bb type vxlan id $SE_BB_VXLAN_ID group 239.1.1.1 dstport 0 dev eth0
+    sudo ip link set dev smartedge-bb address $final_mac
     
-    # sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
+    sudo ip address add ${BACKBONE_IP}${BACKBONE_MASK} dev smartedge-bb
     sudo ip link set dev smartedge-bb up
 
-    sudo python ./ap_manager/ap_manager.py --log-level $LOGLEVEL
+    sudo .venv/bin/python ./ap_manager/ap_manager.py --log-level $LOGLEVEL --num-id $octet4
     ;;
 # Smart Node
     sn)
@@ -173,7 +177,6 @@ case $ROLE in
 
     sudo ip link add veth0 type veth peer name veth1
 
-    
     # Genereate the MAC address
     oldMAC=00:00:00:00:00:00
     rawOldMac=$(echo $oldMAC | tr -d ':')
@@ -182,15 +185,17 @@ case $ROLE in
 
     # get current mac and check if its the same as the one to be assigned
     wlan0_OldMac=$(cat /sys/class/net/wlan0/address)
-    if [ "$wlan0_OldMac" != "$final_mac" ] 
+
+
+    if [[ "$wlan0_OldMac" != "$final_mac" ]];
     then
-        echo "Setting Mac of Wlan0"
-        # sudo ip link set dev wlan0 down
+        echo "Setting Mac of wlan0"
+        sudo ip link set dev wlan0 down
         sudo ip link set dev wlan0 address $final_mac
-        # sudo ip link set dev wlan0 up
+        sudo ip link set dev wlan0 up
     fi
-    sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
-    sudo python ./node_manager/node_manager.py --log-level $LOGLEVEL
+    # sudo ifconfig lo:0 $l0_ip netmask 255.255.255.255 up
+    sudo .venv/bin/python ./node_manager/node_manager.py --log-level $LOGLEVEL
     ;;
 
     *)
