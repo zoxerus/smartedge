@@ -202,7 +202,7 @@ control MyIngress(inout headers hdr,
         // that since the operands are unsigned integers, the result
         // cannot wrap around below 0 back to the maximum possible
         // value, the way the result of the - operator can.
-        hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
     } 
 
     table tb_ipv4_mc_route_lookup {
@@ -225,20 +225,20 @@ control MyIngress(inout headers hdr,
         standard_metadata.egress_spec = port;
         // hdr.ethernet.srcMac = hdr.ethernet.dstMac;
         hdr.ethernet.dstMac = dMac;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     action ac_ipv4_forward_mac_from_dst_ip(egressSpec_t port) {
         standard_metadata.egress_spec = port;
         // hdr.ethernet.srcMac = hdr.ethernet.dstMac;
         hdr.ethernet.dstMac = (bit<48>) hdr.ipv4.dstIP;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     /* Experimental; forward WTHOUT setting MAC address */
     action ac_ipv4_forward(egressSpec_t port) {
         standard_metadata.egress_spec = port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     table tb_ipv4_lpm {

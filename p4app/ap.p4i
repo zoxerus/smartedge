@@ -1043,7 +1043,7 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     counter (1, CounterType.packets) mcast_counter;
-    // counter(32w1, CounterType.packets) unicast_counter;
+    counter(32w1, CounterType.packets) unicast_counter;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -1085,7 +1085,7 @@ control MyIngress(inout headers hdr,
         // that since the operands are unsigned integers, the result
         // cannot wrap around below 0 back to the maximum possible
         // value, the way the result of the - operator can.
-        hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
     }
 
     table tb_ipv4_mc_route_lookup {
@@ -1108,20 +1108,20 @@ control MyIngress(inout headers hdr,
         standard_metadata.egress_spec = port;
         // hdr.ethernet.srcMac = hdr.ethernet.dstMac;
         hdr.ethernet.dstMac = dMac;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     action ac_ipv4_forward_mac_from_dst_ip(egressSpec_t port) {
         standard_metadata.egress_spec = port;
         // hdr.ethernet.srcMac = hdr.ethernet.dstMac;
         hdr.ethernet.dstMac = (bit<48>) hdr.ipv4.dstIP;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     /* Experimental; forward WTHOUT setting MAC address */
     action ac_ipv4_forward(egressSpec_t port) {
         standard_metadata.egress_spec = port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     table tb_ipv4_lpm {
@@ -1168,52 +1168,9 @@ control MyIngress(inout headers hdr,
     }
 
 
-
-    /* Merged with Swarm ACL:
-        Added tables to check IDs of source and destination nodes
-     */
-
-//     action get_swarm_id_src(bit<8> id){
-//         meta.id_src = id; 
-//     }
-//     action get_swarm_id_dst(bit<8> id){
-//         meta.id_dst= id; 
-//     }
-
-// // Check the swarm id of src host
-//     table tb_check_swarm_id_src{
-//         key = {
-//             hdr.ipv4.srcIP: lpm;
-//         }
-//         actions = {
-//             get_swarm_id_src;
-//             drop;
-//         }
-//         default_action = drop();
-
-//     }
-
-
-
-    // table tb_check_dst_mac{
-    //     key = {
-    //         hdr.ethernet.dstMac: exact;
-    //         standard_metadata.ingress_port: exact;
-    //     }
-    //     actions = {
-    //         NoAction;
-    //         drop;
-    //     }
-    //     default_action = drop();
-
-    // }
-
     //------------------------------------------------------//
     //------ I N G R E S S  P R O C E S S I N G ------------//
     apply {
-        // if (!tb_check_dst_mac.apply().hit ){
-        //     exit;
-        // }
 
         if (hdr.ethernet.etherType == TYPE_ARP && hdr.arp.op_code == ARP_REQ ) {
             //update operation code from request to reply
@@ -1237,18 +1194,10 @@ control MyIngress(inout headers hdr,
             exit;
         }
 
-        if (tb_l2_forward.apply().hit) exit;
+        if (tb_l2_forward.apply().hit);
 
         if (hdr.ipv4.isValid()) {
-            if(tb_swarm_control.apply().hit){
-                exit;
-            }
-            // tb_check_swarm_id_src.apply();
-            // tb_check_swarm_id_dst.apply();
-            // if (meta.id_dst != meta.id_src){
-            //     drop();
-            // }
-            else if( !tb_ipv4_lpm.apply().hit){
+            if( !tb_ipv4_lpm.apply().hit){
                 tb_ipv4_mc_route_lookup.apply();
             }
         }
