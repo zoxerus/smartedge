@@ -236,7 +236,6 @@ def initialize_program():
 # a handler to clean exit the programs
 def exit_handler():
     logger.debug('Handling exit')
-    log_socket_handler.close()
     for snic in psutil.net_if_addrs():
         if 'se_vxlan' in snic:
             shell_command = f"ip link del {snic}"

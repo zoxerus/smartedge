@@ -466,7 +466,7 @@ def adaptive_coordinator_handler(HOST, HIGHER_PORT):
 
 
 def exit_handler():
-    log_socket_handler.close()
+    pass
 
 def main():
     atexit.register(exit_handler)
