@@ -190,14 +190,14 @@ def initialize_program():
         time.sleep(1)
         
     logger.warning(f'Known Coordinators {SE_NODE.known_coordinators}')
-    db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
-    db.DATABASE_SESSION = db.connect_to_database(SE_NODE.known_coordinators[0]['address'], cfg.database_port)
     try:
         first_key = next(iter(SE_NODE.known_coordinators))
         log_socket_handler = SocketStreamHandler( SE_NODE.known_coordinators[first_key]['address'], cfg.logs_server_address[1] )
         log_socket_handler.setFormatter(log_info_formatter)
         log_socket_handler.setLevel(logging.INFO)
         logger.addHandler(log_socket_handler)
+        db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
+        db.DATABASE_SESSION = db.connect_to_database(SE_NODE.known_coordinators[first_key]['address'], cfg.database_port)
     except Exception as e:
         logger.warning(f"Could not connect to log server {SE_NODE.known_coordinators[0]['address']}:{cfg.logs_server_address[1]}: {e}")
         log_socket_handler = None
