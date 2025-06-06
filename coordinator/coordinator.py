@@ -294,7 +294,7 @@ async def onboard_node(host_id, uuid, ap_id, node_s0_ip, ap_port, available_node
             entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                                                     table_name='MyIngress.tb_ipv4_lpm',
                         action_name='MyIngress.ac_ipv4_forward_mac', match_keys=f'{station_vip}/32' , 
-                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', instance=sw_data[uuid]['cli_instance'] )
+                        action_params= f'{cfg.swarm_backbone_switch_port} {ap_mac}', instance=sw_data['cli_instance'] )
     
 
 # a function to configure the keep alive of the tcp connection
