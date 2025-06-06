@@ -524,8 +524,8 @@ async def handle_new_connected_station(station_physical_mac_address):
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
                             action_params= f'{str(vxlan_id)}', instance=THIS_AP)
      
-        node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
-        ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
+        # node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
+        ap_ip_for_mac_derivation = SE_NODE.get_aps_dict()[THIS_AP_UUID]['sebackbone_ip']
         for uuid, sw_data in SE_NODE.get_aps_dict().items():
             if uuid != THIS_AP_UUID:
                 ap_ip = sw_data['address']
