@@ -183,7 +183,7 @@ switch = {  'name': str(socket.gethostname() ),
             'node_sebackbone_ip': se_bb_ip
             }
 
-THIS_AP = bmv2.connect_to_switch(switch)
+THIS_AP = bmv2.connect_to_switch(switch['address'])
 
 def initialize_program():
     while not SE_NODE.known_coordinators:
