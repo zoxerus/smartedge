@@ -23,12 +23,8 @@ import os
 import asyncio
 import lib.global_constants as cts
 import lib.helper_functions as utils
-import lib.helper_functions as utils
 import json
 import concurrent.futures
-
-
-import lib.node_discovery as se_net
 
 
 import lib.node_discovery as se_net
@@ -74,12 +70,6 @@ class SocketStreamHandler(logging.StreamHandler):
         if self.sock:
             self.sock.close()
         super().close()
-
-## We use the lo:0 interface to generate the ID of the node
-loopback_if = 'lo:0'
-NODE_TYPE='AP'
-THIS_AP_UUID = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
-
 
 ## We use the lo:0 interface to generate the ID of the node
 loopback_if = 'lo:0'
