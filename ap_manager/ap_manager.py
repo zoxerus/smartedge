@@ -198,7 +198,7 @@ def initialize_program():
         log_socket_handler.setLevel(logging.INFO)
         logger.addHandler(log_socket_handler)
     except Exception as e:
-        logger.warning(f'Could not connect to log server {SE_NODE.known_coordinators[0]['address']}:{cfg.logs_server_address[1]}: {e}')
+        logger.warning(f"Could not connect to log server {SE_NODE.known_coordinators[0]['address']}:{cfg.logs_server_address[1]}: {e}")
         log_socket_handler = None
 
     
