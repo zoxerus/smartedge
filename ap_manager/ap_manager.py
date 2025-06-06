@@ -199,7 +199,7 @@ def initialize_program():
         db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
         db.DATABASE_SESSION = db.connect_to_database(SE_NODE.known_coordinators[first_key]['address'], cfg.database_port)
     except Exception as e:
-        logger.warning(f"Could not connect to log server {SE_NODE.known_coordinators[0]['address']}:{cfg.logs_server_address[1]}: {e}")
+        logger.warning(f"Could not connect to log server {SE_NODE.known_coordinators[first_key]['address']}:{cfg.logs_server_address[1]}: {e}")
         log_socket_handler = None
 
     

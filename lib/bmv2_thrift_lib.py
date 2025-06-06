@@ -77,7 +77,8 @@ def run_cli_command(command, instance):
         try:
             instance.onecmd(command)
         except:
-            return -1
+            bmv2_logger.warning(f'Error running command: {command}')
+            return ''
     command_output = output_capture.getvalue()
     output_capture.truncate(0)
     bmv2_logger.debug(f"response from switch: {command_output}")
