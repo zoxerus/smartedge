@@ -59,7 +59,7 @@ class Node:
                                     'address': node_ip,
                                     'sebackbone_ip': node_sebackbone_ip
                                     }
-                        cli_instance = bmv2.connect_to_switch(switch)
+                        cli_instance = bmv2.connect_to_switch(node_ip)
                         if cli_instance == None: 
                             continue
                         switch['cli_instance'] = cli_instance

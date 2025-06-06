@@ -44,7 +44,7 @@ def extract_numbers(lst):
     return [int(x) for sublist in extracted_numbers for x in sublist]
 
 
-def connect_to_switch(switch):
+def connect_to_switch(address):
     switch_cli_instance = None
     try:                
         # args = runtime_CLI.get_parser().parse_args()
@@ -53,7 +53,7 @@ def connect_to_switch(switch):
         services.extend(SimpleSwitchAPI.get_thrift_services())
         
         standard_client, mc_client, sswitch_client = runtime_CLI.thrift_connect(
-        switch['address'], 9090, services)
+        address, 9090, services)
         
         runtime_CLI.load_json_config(standard_client) #   , args.json)
         
@@ -61,7 +61,7 @@ def connect_to_switch(switch):
         
         switch_cli_instance = cli_instance
         
-        bmv2_logger.debug(f"thrift connected to  {switch['address']}")
+        bmv2_logger.debug(f"thrift connected to  {address}")
         
     except Exception as e:
         bmv2_logger.warning(e)
@@ -77,7 +77,8 @@ def run_cli_command(command, instance):
         try:
             instance.onecmd(command)
         except:
-            return -1
+            bmv2_logger.warning(f'Error running command: {command}')
+            return ''
     command_output = output_capture.getvalue()
     output_capture.truncate(0)
     bmv2_logger.debug(f"response from switch: {command_output}")

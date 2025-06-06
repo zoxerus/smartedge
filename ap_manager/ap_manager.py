@@ -23,8 +23,12 @@ import os
 import asyncio
 import lib.global_constants as cts
 import lib.helper_functions as utils
+import lib.helper_functions as utils
 import json
 import concurrent.futures
+
+
+import lib.node_discovery as se_net
 
 
 import lib.node_discovery as se_net
@@ -77,6 +81,12 @@ NODE_TYPE='AP'
 THIS_AP_UUID = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
 
 
+## We use the lo:0 interface to generate the ID of the node
+loopback_if = 'lo:0'
+NODE_TYPE='AP'
+THIS_AP_UUID = utils.generate_uuid_from_lo(loopback_if=loopback_if, node_type=NODE_TYPE)
+
+
 parser = ArgumentParser()
 parser.add_argument("-l", "--log-level",type=int, default=50, help="set logging level [10, 20, 30, 40, 50]")
 parser.add_argument("-n", "--num-id",type=int, default=50, help="sequential uniq numeric id for node identification")
@@ -91,18 +101,16 @@ PROGRAM_LOG_FILE_NAME = './logs/ap.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger(f'{THIS_AP_UUID}')
 
-log_socket_handler = SocketStreamHandler( cfg.logs_server_address[0], cfg.logs_server_address[1] )
 log_info_formatter =  logging.Formatter("%(name)s %(asctime)s [%(levelname)s]:\n%(message)s\n")
-log_socket_handler.setFormatter(log_info_formatter)
-log_socket_handler.setLevel(logging.INFO)
+
 
 client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
 log_debug_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n%(message)s\n")
 client_monitor_log_console_handler.setFormatter(log_debug_formatter)
 client_monitor_log_console_handler.setLevel(args.log_level)
-
+log_socket_handler = None
 logger.setLevel(logging.DEBUG)
-logger.addHandler(log_socket_handler)
+
 logger.addHandler(client_monitor_log_console_handler)
 
 db.db_logger = logger
@@ -148,9 +156,7 @@ CONNECTED_STATION_VXLAN_INDEX = 2
 DEFAULT_WLAN_DEVICE_NAME= cfg.default_wlan_device
 
 
-db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
-database_session = db.connect_to_database(cfg.database_hostname, cfg.database_port)
-db.DATABASE_SESSION = database_session
+
 
 THIS_AP_ETH_MAC = None
 for snic in psutil.net_if_addrs()[cfg.default_backbone_device]:
@@ -187,9 +193,26 @@ switch = {  'name': str(socket.gethostname() ),
             'node_sebackbone_ip': se_bb_ip
             }
 
-THIS_AP = bmv2.connect_to_switch(switch)
+THIS_AP = bmv2.connect_to_switch(switch['address'])
 
-def initialize_program():    
+def initialize_program():
+    while not SE_NODE.known_coordinators:
+        time.sleep(1)
+        
+    logger.warning(f'Known Coordinators {SE_NODE.known_coordinators}')
+    try:
+        first_key = next(iter(SE_NODE.known_coordinators))
+        log_socket_handler = SocketStreamHandler( SE_NODE.known_coordinators[first_key]['address'], cfg.logs_server_address[1] )
+        log_socket_handler.setFormatter(log_info_formatter)
+        log_socket_handler.setLevel(logging.INFO)
+        logger.addHandler(log_socket_handler)
+        db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
+        db.DATABASE_SESSION = db.connect_to_database(SE_NODE.known_coordinators[first_key]['address'], cfg.database_port)
+    except Exception as e:
+        logger.warning(f"Could not connect to log server {SE_NODE.known_coordinators[first_key]['address']}:{cfg.logs_server_address[1]}: {e}")
+        log_socket_handler = None
+
+    
     # remvoe all configureation from bmv2, start fresh
     bmv2.send_cli_command_to_bmv2(cli_command="reset_state", instance=THIS_AP)
 
@@ -223,7 +246,6 @@ def initialize_program():
 # a handler to clean exit the programs
 def exit_handler():
     logger.debug('Handling exit')
-    log_socket_handler.close()
     for snic in psutil.net_if_addrs():
         if 'se_vxlan' in snic:
             shell_command = f"ip link del {snic}"
@@ -504,15 +526,15 @@ async def handle_new_connected_station(station_physical_mac_address):
                                         host_id=host_id, node_vip=station_vip, node_vmac=station_vmac, 
                                         node_phy_mac=station_physical_mac_address, status=db.db_defines.SWARM_STATUS.JOINED.value)
         
-        bmv2.add_bmv2_swarm_broadcast_port(ap_ip='0.0.0.0', thrift_port=9090, switch_port=vxlan_id, instance=THIS_AP)
+        bmv2.add_bmv2_swarm_broadcast_port(switch_port=vxlan_id, instance=THIS_AP)
         
         entry_handle = bmv2.add_entry_to_bmv2(communication_protocol= bmv2.P4_CONTROL_METHOD_THRIFT_CLI,
                             table_name='MyIngress.tb_ipv4_lpm',
                             action_name='MyIngress.ac_ipv4_forward_mac_from_dst_ip', match_keys=f'{station_vip}/32' , 
                             action_params= f'{str(vxlan_id)}', instance=THIS_AP)
      
-        node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
-        ap_ip_for_mac_derivation = cfg.ap_list[THIS_AP_UUID][1]
+        # node_ap_ip = cfg.ap_list[THIS_AP_UUID][0]
+        ap_ip_for_mac_derivation = SE_NODE.get_aps_dict()[THIS_AP_UUID]['sebackbone_ip']
         for uuid, sw_data in SE_NODE.get_aps_dict().items():
             if uuid != THIS_AP_UUID:
                 ap_ip = sw_data['address']
