@@ -189,6 +189,7 @@ def initialize_program():
     while SE_NODE.known_coordinators == []:
         time.sleep(1)
         
+    logger.warning(f'Known Coordinators {SE_NODE.known_coordinators}')
     db.DATABASE_IN_USE = db.STR_DATABASE_TYPE_CASSANDRA
     db.DATABASE_SESSION = db.connect_to_database(SE_NODE.known_coordinators[0]['address'], cfg.database_port)
     try:
