@@ -92,7 +92,7 @@ PROGRAM_LOG_FILE_NAME = './logs/coordinator.log'
 os.makedirs(os.path.dirname(PROGRAM_LOG_FILE_NAME), exist_ok=True)
 logger = logging.getLogger(THIS_NODE_UUID)
 
-log_socket_handler = SocketStreamHandler( cfg.logs_server_address[0], cfg.logs_server_address[1] )
+log_socket_handler = SocketStreamHandler( '127.0.0.1', cfg.logs_server_address[1] )
 log_info_formatter =  logging.Formatter("%(name)s %(asctime)s [%(levelname)s]:\n%(message)s\n")
 log_socket_handler.setFormatter(log_info_formatter)
 log_socket_handler.setLevel(logging.INFO)

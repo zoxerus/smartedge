@@ -14,7 +14,7 @@ backbone_subnetmask='/24'
 
 
 # database_hostname = COORDINATOR_IP
-# logs_server_address = (COORDINATOR_IP, 5000)
+logs_server_address = (COORDINATOR_IP, 5000)
 
 # these are the L3 port numbers on which the databases listen
 REDIS_PORT = 6379
