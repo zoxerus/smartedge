@@ -186,7 +186,7 @@ switch = {  'name': str(socket.gethostname() ),
 THIS_AP = bmv2.connect_to_switch(switch)
 
 def initialize_program():
-    while SE_NODE.known_coordinators == []:
+    while not SE_NODE.known_coordinators:
         time.sleep(1)
         
     logger.warning(f'Known Coordinators {SE_NODE.known_coordinators}')
