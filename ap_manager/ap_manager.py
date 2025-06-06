@@ -98,7 +98,7 @@ client_monitor_log_console_handler = logging.StreamHandler(sys.stdout)
 log_debug_formatter = logging.Formatter("Line:%(lineno)d at %(asctime)s [%(levelname)s] Thread: %(threadName)s File: %(filename)s :\n%(message)s\n")
 client_monitor_log_console_handler.setFormatter(log_debug_formatter)
 client_monitor_log_console_handler.setLevel(args.log_level)
-
+log_socket_handler = None
 logger.setLevel(logging.DEBUG)
 
 logger.addHandler(client_monitor_log_console_handler)
