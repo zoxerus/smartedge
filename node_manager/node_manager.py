@@ -182,6 +182,8 @@ def install_config_no_update_vxlan(config_data):
                 f'ip link set veth1 address {swarm_veth1_vmac} ',
                 f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.0.0 up',
                 f'ip link set veth0 up',
+                f'ip route replace default dev veth1',
+                f'ip link set dev veth1 mtu 1400',
                 # disable HW offloads of checksum calculation, (as this is a virtual interface)
                     f'ethtool --offload veth1 rx off tx off'
                 ]
@@ -212,6 +214,8 @@ def install_swarmNode_config(swarmNode_config):
                 f'ip link set veth1 address {swarm_veth1_vmac} ',
                 f'ifconfig veth1 {swarm_veth1_vip} netmask 255.255.0.0 up',
                 f'ip link set veth0 up',
+                f'ip route replace default dev veth1',
+                f'ip link set dev veth1 mtu 1400',
                 # disable HW offloads of checksum calculation, (as this is a virtual interface)
                     f'ethtool --offload veth1 rx off tx off'
                 ]

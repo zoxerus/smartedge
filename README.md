@@ -6,7 +6,7 @@ For this run from the main directory
 ```
 Then make sure to install the following packages
 ```
-sudo apt install python3-venv python3-dev net-tools
+sudo apt install python3-venv python3-dev net-tools screen
 ```
 Now create a virtual environment running the command
 ```
@@ -44,7 +44,7 @@ Check the script
 ### 4- For Smart Nodes only, a P4 ebpf software switch is needed
 First make sure to install the following packages
 ```
-sudo apt install python3-venv python3-dev net-tools
+sudo apt install python3-venv python3-dev net-tools screen
 ```
 
 The switch can be installed from the link:  

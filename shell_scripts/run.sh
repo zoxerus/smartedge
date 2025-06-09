@@ -145,7 +145,7 @@ case $ROLE in
 
     case $ARCH in
         x86_64|i386|i686)
-            sudo simple_switch ./p4app/ap.json
+            sudo simple_switch ./p4app/ap.json &
             ;;
         arm*|aarch64|armv7l|arm64)
             /bin/bash ./shell_scripts/run_bmv2_docker.sh
