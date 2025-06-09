@@ -1088,16 +1088,16 @@ control MyIngress(inout headers hdr,
         // hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
     }
 
-    table tb_ipv4_mc_route_lookup {
-        key = {
-            hdr.ipv4.dstIP: lpm;
-        }
-        actions = {
-            ac_set_mcast_grp;
-            drop;
-        }
-        const default_action = drop;
-    }
+    // table tb_ipv4_mc_route_lookup {
+    //     key = {
+    //         hdr.ipv4.dstIP: lpm;
+    //     }
+    //     actions = {
+    //         ac_set_mcast_grp;
+    //         drop;
+    //     }
+    //     const default_action = drop;
+    // }
 
 
     //------------------------------------------------------//
@@ -1194,12 +1194,12 @@ control MyIngress(inout headers hdr,
             exit;
         }
 
-        if (tb_l2_forward.apply().hit);
+        if (tb_l2_forward.apply().hit){
+            exit;
+        }
 
         if (hdr.ipv4.isValid()) {
-            if( !tb_ipv4_lpm.apply().hit){
-                tb_ipv4_mc_route_lookup.apply();
-            }
+            tb_ipv4_lpm.apply();
         }
 
 
@@ -1259,11 +1259,6 @@ control MyDeparser(packet_out packet, in headers hdr) {
         packet.emit(hdr.ethernet);
         packet.emit(hdr.arp);
         packet.emit(hdr.ipv4);
-        // packet.emit(hdr.udp);
-        // packet.emit(hdr.shim);
-        // packet.emit(hdr.int_header);
-        // packet.emit(hdr.sw_data);
-        // packet.emit(hdr.sw_traces);
     }
 }
 

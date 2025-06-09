@@ -131,8 +131,8 @@ COORDINATOR_S0_IP = cfg.COORDINATOR_S0_IP #f'10.0.{args.num_id}.254'
 created_vxlans = set([])
 
 
-SWARM_P4_MC_NODE = 1100
-SWARM_P4_MC_GROUP = 1000
+SWARM_P4_MC_NODE = 0
+SWARM_P4_MC_GROUP = 1
 
 
 # a list to keep track of connected stations to current AP
