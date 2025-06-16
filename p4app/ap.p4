@@ -122,7 +122,6 @@ parser MyParser(packet_in packet,
         transition select(hdr.ethernet.etherType) {
             TYPE_IPV4: parse_ipv4;
             TYPE_ARP: parse_arp;
-
             default: accept;
         }
     }
