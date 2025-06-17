@@ -107,8 +107,8 @@ header ros_metadata_t {
 // Header stack for multiple RTPS submessages
 struct headers_t {
     ethernet_t              ethernet;
-    ipv4_t                  ipv4;
     arp_t                   arp;
+    ipv4_t                  ipv4;
     udp_t                   udp;
     rtps_header_t           rtps_header;
     rtps_submessage_header_t rtps_submsg_hdr;
@@ -374,7 +374,7 @@ action ac_default_response_to_arp() {
 
         //update ethernet header
         hdr.ethernet.dst_addr = hdr.ethernet.src_addr;
-        hdr.ethernet.src_addr = (bit<48>) hdr.arp.dst_ip;
+        hdr.ethernet.src_addr = hdr.arp.src_mac;
 
         //send it back to the same port
         standard_metadata.egress_spec = standard_metadata.ingress_port;
@@ -396,7 +396,7 @@ action ac_default_response_to_arp() {
 
         //update ethernet header
         hdr.ethernet.dst_addr = hdr.ethernet.src_addr;
-        hdr.ethernet.src_addr = (bit<48>) hdr.arp.dst_ip;
+        hdr.ethernet.src_addr = requested_mac;
 
         //send it back to the same port
         standard_metadata.egress_spec = standard_metadata.ingress_port;
@@ -493,6 +493,7 @@ control MyComputeChecksum(inout headers_t hdr, inout metadata_t meta) {
 control MyDeparser(packet_out packet, in headers_t hdr) {
     apply {
         packet.emit(hdr.ethernet);
+        packet.emit(hdr.arp);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.udp);
         packet.emit(hdr.rtps_header);

@@ -48,8 +48,23 @@
       ]
     },
     {
-      "name" : "ipv4_t",
+      "name" : "arp_t",
       "id" : 3,
+      "fields" : [
+        ["h_type", 16, false],
+        ["p_type", 16, false],
+        ["h_len", 8, false],
+        ["p_len", 8, false],
+        ["op_code", 16, false],
+        ["src_mac", 48, false],
+        ["src_ip", 32, false],
+        ["dst_mac", 48, false],
+        ["dst_ip", 32, false]
+      ]
+    },
+    {
+      "name" : "ipv4_t",
+      "id" : 4,
       "fields" : [
         ["version", 4, false],
         ["ihl", 4, false],
@@ -63,21 +78,6 @@
         ["hdr_checksum", 16, false],
         ["src_addr", 32, false],
         ["dst_addr", 32, false]
-      ]
-    },
-    {
-      "name" : "arp_t",
-      "id" : 4,
-      "fields" : [
-        ["h_type", 16, false],
-        ["p_type", 16, false],
-        ["h_len", 8, false],
-        ["p_len", 8, false],
-        ["op_code", 16, false],
-        ["src_mac", 48, false],
-        ["src_ip", 32, false],
-        ["dst_mac", 48, false],
-        ["dst_ip", 32, false]
       ]
     },
     {
@@ -166,16 +166,16 @@
       "pi_omit" : true
     },
     {
-      "name" : "ipv4",
+      "name" : "arp",
       "id" : 3,
-      "header_type" : "ipv4_t",
+      "header_type" : "arp_t",
       "metadata" : false,
       "pi_omit" : true
     },
     {
-      "name" : "arp",
+      "name" : "ipv4",
       "id" : 4,
-      "header_type" : "arp_t",
+      "header_type" : "ipv4_t",
       "metadata" : false,
       "pi_omit" : true
     },
