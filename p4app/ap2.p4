@@ -148,7 +148,7 @@ parser MyParser(packet_in packet,
     }
 
     state parse_arp {
-      packet.extract(hdr.arp);
+        packet.extract(hdr.arp);
         transition accept;
     }
 
@@ -216,11 +216,9 @@ control MyIngress(inout headers_t hdr,
                   inout metadata_t meta,
                   inout standard_metadata_t standard_metadata) {
 
-    counter (1, CounterType.packets) mcast_counter;
-    counter(32w1, CounterType.packets) unicast_counter;
-    counter(32w1, CounterType.packets) arp_req_counter;
-
-
+    counter(1, CounterType.packets) mcast_counter;
+    counter(1, CounterType.packets) unicast_counter;
+    
     action drop() {
         mark_to_drop(standard_metadata);
         exit;
@@ -359,7 +357,6 @@ control MyIngress(inout headers_t hdr,
     }
 
 action ac_default_response_to_arp() {
-    arp_req_counter.count(0);
         //update operation code from request to reply
         hdr.arp.op_code = ARP_REPLY;
         
@@ -381,7 +378,6 @@ action ac_default_response_to_arp() {
     }
 
     action ac_respond_to_arp(bit<48> requested_mac) {
-        arp_req_counter.count(0);
         //update operation code from request to reply
         hdr.arp.op_code = ARP_REPLY;
         
@@ -402,6 +398,7 @@ action ac_default_response_to_arp() {
         standard_metadata.egress_spec = standard_metadata.ingress_port;
     }
 
+    direct_counter(CounterType.packets) arp_req_counter;
 
     table tb_arp {
         key = {
@@ -413,6 +410,7 @@ action ac_default_response_to_arp() {
         }
         size = 1024;
         default_action = ac_default_response_to_arp();
+        counters = arp_req_counter;
     }
 
     // Main processing logic
@@ -420,7 +418,7 @@ action ac_default_response_to_arp() {
 
         if (hdr.ethernet.ether_type == TYPE_ARP && hdr.arp.op_code == ARP_REQ ) {
             tb_arp.apply();
-            exit;
+            // exit;
         } 
 
         if (tb_l2_forward.apply().hit){
