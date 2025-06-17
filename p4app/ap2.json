@@ -568,7 +568,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "./ap2.p4",
-        "line" : 461,
+        "line" : 458,
         "column" : 8,
         "source_fragment" : "MyDeparser"
       },
@@ -610,7 +610,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "./ap2.p4",
-        "line" : 443,
+        "line" : 440,
         "column" : 8,
         "source_fragment" : "update_checksum( ..."
       },
@@ -1526,7 +1526,7 @@
           ],
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 423,
+            "line" : 420,
             "column" : 8,
             "source_fragment" : "hdr.ros_meta.timestamp = (bit<32>)standard_metadata.egress_global_timestamp"
           }
@@ -1534,7 +1534,7 @@
       ]
     },
     {
-      "name" : "ap2l435",
+      "name" : "ap2l432",
       "id" : 19,
       "runtime_data" : [],
       "primitives" : [
@@ -1548,7 +1548,7 @@
           ],
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 435,
+            "line" : 432,
             "column" : 20,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -1664,52 +1664,12 @@
           }
         },
         {
-          "name" : "MyIngress.tb_ipv4_lpm",
+          "name" : "tbl_extract_domain_info",
           "id" : 3,
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 251,
-            "column" : 10,
-            "source_fragment" : "tb_ipv4_lpm"
-          },
-          "key" : [
-            {
-              "match_type" : "lpm",
-              "name" : "hdr.ipv4.dst_addr",
-              "target" : ["ipv4", "dst_addr"],
-              "mask" : null
-            }
-          ],
-          "match_type" : "lpm",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [6, 4, 5, 2, 0],
-          "actions" : ["MyIngress.ac_ipv4_forward", "MyIngress.ac_ipv4_forward_mac", "MyIngress.ac_ipv4_forward_mac_from_dst_ip", "MyIngress.drop", "NoAction"],
-          "base_default_next" : "node_8",
-          "next_tables" : {
-            "MyIngress.ac_ipv4_forward" : "node_8",
-            "MyIngress.ac_ipv4_forward_mac" : "node_8",
-            "MyIngress.ac_ipv4_forward_mac_from_dst_ip" : "node_8",
-            "MyIngress.drop" : "node_8",
-            "NoAction" : "node_8"
-          },
-          "default_entry" : {
-            "action_id" : 0,
-            "action_const" : false,
-            "action_data" : [],
-            "action_entry_const" : false
-          }
-        },
-        {
-          "name" : "tbl_extract_domain_info",
-          "id" : 4,
-          "source_info" : {
-            "filename" : "./ap2.p4",
-            "line" : 401,
-            "column" : 12,
+            "line" : 397,
+            "column" : 16,
             "source_fragment" : "extract_domain_info()"
           },
           "key" : [],
@@ -1721,9 +1681,9 @@
           "direct_meters" : null,
           "action_ids" : [14],
           "actions" : ["MyIngress.extract_domain_info"],
-          "base_default_next" : "node_10",
+          "base_default_next" : "node_9",
           "next_tables" : {
-            "MyIngress.extract_domain_info" : "node_10"
+            "MyIngress.extract_domain_info" : "node_9"
           },
           "default_entry" : {
             "action_id" : 14,
@@ -1734,7 +1694,7 @@
         },
         {
           "name" : "MyIngress.dds_discovery_handling",
-          "id" : 5,
+          "id" : 4,
           "source_info" : {
             "filename" : "./ap2.p4",
             "line" : 353,
@@ -1777,7 +1737,7 @@
         },
         {
           "name" : "MyIngress.ros_qos_policy",
-          "id" : 6,
+          "id" : 5,
           "source_info" : {
             "filename" : "./ap2.p4",
             "line" : 340,
@@ -1819,7 +1779,7 @@
         },
         {
           "name" : "MyIngress.ros_topic_forwarding",
-          "id" : 7,
+          "id" : 6,
           "source_info" : {
             "filename" : "./ap2.p4",
             "line" : 325,
@@ -1856,6 +1816,46 @@
           },
           "default_entry" : {
             "action_id" : 15,
+            "action_const" : false,
+            "action_data" : [],
+            "action_entry_const" : false
+          }
+        },
+        {
+          "name" : "MyIngress.tb_ipv4_lpm",
+          "id" : 7,
+          "source_info" : {
+            "filename" : "./ap2.p4",
+            "line" : 251,
+            "column" : 10,
+            "source_fragment" : "tb_ipv4_lpm"
+          },
+          "key" : [
+            {
+              "match_type" : "lpm",
+              "name" : "hdr.ipv4.dst_addr",
+              "target" : ["ipv4", "dst_addr"],
+              "mask" : null
+            }
+          ],
+          "match_type" : "lpm",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [6, 4, 5, 2, 0],
+          "actions" : ["MyIngress.ac_ipv4_forward", "MyIngress.ac_ipv4_forward_mac", "MyIngress.ac_ipv4_forward_mac_from_dst_ip", "MyIngress.drop", "NoAction"],
+          "base_default_next" : null,
+          "next_tables" : {
+            "MyIngress.ac_ipv4_forward" : null,
+            "MyIngress.ac_ipv4_forward_mac" : null,
+            "MyIngress.ac_ipv4_forward_mac_from_dst_ip" : null,
+            "MyIngress.drop" : null,
+            "NoAction" : null
+          },
+          "default_entry" : {
+            "action_id" : 0,
             "action_const" : false,
             "action_data" : [],
             "action_entry_const" : false
@@ -1930,16 +1930,16 @@
               }
             }
           },
-          "true_next" : "MyIngress.tb_ipv4_lpm",
-          "false_next" : "node_8"
+          "false_next" : null,
+          "true_next" : "node_7"
         },
         {
-          "name" : "node_8",
+          "name" : "node_7",
           "id" : 2,
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 400,
-            "column" : 12,
+            "line" : 396,
+            "column" : 16,
             "source_fragment" : "hdr.rtps_header.isValid()"
           },
           "expression" : {
@@ -1953,16 +1953,16 @@
               }
             }
           },
-          "false_next" : null,
-          "true_next" : "tbl_extract_domain_info"
+          "true_next" : "tbl_extract_domain_info",
+          "false_next" : "MyIngress.tb_ipv4_lpm"
         },
         {
-          "name" : "node_10",
+          "name" : "node_9",
           "id" : 3,
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 404,
-            "column" : 16,
+            "line" : 400,
+            "column" : 20,
             "source_fragment" : "meta.is_discovery_traffic == 1"
           },
           "expression" : {
@@ -1980,15 +1980,15 @@
             }
           },
           "true_next" : "MyIngress.dds_discovery_handling",
-          "false_next" : "node_12"
+          "false_next" : "node_11"
         },
         {
-          "name" : "node_12",
+          "name" : "node_11",
           "id" : 4,
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 408,
-            "column" : 21,
+            "line" : 404,
+            "column" : 25,
             "source_fragment" : "meta.is_user_traffic == 1 && hdr.ros_meta.isValid()"
           },
           "expression" : {
@@ -2032,7 +2032,7 @@
       "id" : 1,
       "source_info" : {
         "filename" : "./ap2.p4",
-        "line" : 417,
+        "line" : 414,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
@@ -2043,7 +2043,7 @@
           "id" : 8,
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 428,
+            "line" : 425,
             "column" : 12,
             "source_fragment" : "update_rtps_timestamp()"
           },
@@ -2068,11 +2068,11 @@
           }
         },
         {
-          "name" : "tbl_ap2l435",
+          "name" : "tbl_ap2l432",
           "id" : 9,
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 435,
+            "line" : 432,
             "column" : 20,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           },
@@ -2084,10 +2084,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [19],
-          "actions" : ["ap2l435"],
+          "actions" : ["ap2l432"],
           "base_default_next" : null,
           "next_tables" : {
-            "ap2l435" : null
+            "ap2l432" : null
           },
           "default_entry" : {
             "action_id" : 19,
@@ -2104,7 +2104,7 @@
           "id" : 5,
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 427,
+            "line" : 424,
             "column" : 12,
             "source_fragment" : "hdr.ros_meta.isValid()"
           },
@@ -2127,7 +2127,7 @@
           "id" : 6,
           "source_info" : {
             "filename" : "./ap2.p4",
-            "line" : 432,
+            "line" : 429,
             "column" : 12,
             "source_fragment" : "standard_metadata.ingress_port == standard_metadata.egress_port && ..."
           },
@@ -2166,7 +2166,7 @@
             }
           },
           "false_next" : null,
-          "true_next" : "tbl_ap2l435"
+          "true_next" : "tbl_ap2l432"
         }
       ]
     }
@@ -2177,7 +2177,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "./ap2.p4",
-        "line" : 443,
+        "line" : 440,
         "column" : 8,
         "source_fragment" : "update_checksum( ..."
       },

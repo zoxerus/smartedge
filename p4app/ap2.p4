@@ -393,22 +393,19 @@ control MyIngress(inout headers_t hdr,
         }
 
         if (hdr.ipv4.isValid()) {
-            tb_ipv4_lpm.apply();
-        }
-
-
-        if (hdr.rtps_header.isValid()) {
-            extract_domain_info();
+            if (hdr.rtps_header.isValid()) {
+                extract_domain_info();
             
-            // Handle discovery traffic (HEARTBEAT, ACKNACK, etc.)
-            if (meta.is_discovery_traffic == 1) {
-                dds_discovery_handling.apply();
-            }
-            // Handle user data traffic
-            else if (meta.is_user_traffic == 1 && hdr.ros_meta.isValid()) {
-                ros_qos_policy.apply();
-                ros_topic_forwarding.apply();
-            }
+                // Handle discovery traffic (HEARTBEAT, ACKNACK, etc.)
+                if (meta.is_discovery_traffic == 1) {
+                    dds_discovery_handling.apply();
+                }
+                // Handle user data traffic
+                else if (meta.is_user_traffic == 1 && hdr.ros_meta.isValid()) {
+                    ros_qos_policy.apply();
+                    ros_topic_forwarding.apply();
+                }
+            }  else tb_ipv4_lpm.apply();
         }
     }
 }
