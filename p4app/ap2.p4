@@ -63,46 +63,19 @@ header udp_t {
     bit<16> checksum;
 }
 
-// RTPS Message Header based on DDSI-RTPS specification
-header rtps_header_t {
-    bit<32> protocol;        // "RTPS" identifier
-    bit<8>  major_version;   // Protocol major version
-    bit<8>  minor_version;   // Protocol minor version
-    bit<16> vendor_id;       // Vendor identifier
-    bit<96> guid_prefix;     // 12-byte GUID prefix
+header rtps_t {
+    bit<32> magic;
+    bit<8>  version;
+    bit<8>  vendorId;
+    bit<16> guidPrefix;
 }
 
-// RTPS Submessage Header
-header rtps_submessage_header_t {
-    bit<8>  submessage_id;
-    bit<8>  flags;
-    bit<16> submessage_length;
+struct metadata {
+    bit<9>  ros2_qos;
+    bit<1>  is_discovery;
 }
 
-// Common RTPS submessage types based on specification
-header rtps_data_submessage_t {
-    bit<16> extra_flags;
-    bit<16> octets_to_inline_qos;
-    bit<32> reader_id;
-    bit<32> writer_id;
-    bit<64> sequence_number;
-}
 
-header rtps_heartbeat_submessage_t {
-    bit<32> reader_id;
-    bit<32> writer_id;
-    bit<64> first_sn;
-    bit<64> last_sn;
-    bit<32> count;
-}
-
-// ROS message metadata
-header ros_metadata_t {
-    bit<8>  message_type;    // Custom field to identify ROS message types
-    bit<8>  qos_class;       // Quality of Service classification
-    bit<16> topic_id;        // Topic identifier
-    bit<32> timestamp;       // Message timestamp
-}
 
 // Header stack for multiple RTPS submessages
 struct headers_t {
@@ -164,44 +137,21 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.udp);
         // Check if this is a DDS/RTPS port range (7400-9999 typical range)
         transition select(hdr.udp.dst_port) {
-            7400 &&& 0xE000: parse_rtps;  // Match ports 7400-9999
+            7400: parse_rtps_discovery;
+            7410: parse_rtps_data;  // Example data port
             default: accept;
         }
     }
 
-    state parse_rtps {
-        packet.extract(hdr.rtps_header);
-        // Verify RTPS protocol identifier
-        transition select(hdr.rtps_header.protocol) {
-            RTPS_PROTOCOL_ID: parse_rtps_submessage;
-            default: accept;
-        }
-    }
-
-    state parse_rtps_submessage {
-        packet.extract(hdr.rtps_submsg_hdr);
-        transition select(hdr.rtps_submsg_hdr.submessage_id) {
-            0x15: parse_rtps_data;      // DATA submessage
-            0x07: parse_rtps_heartbeat; // HEARTBEAT submessage
-            0x09: parse_ros_metadata;   // INFO_TS or custom ROS metadata
-            default: accept;
-        }
-    }
-
-    state parse_rtps_data {
-        packet.extract(hdr.rtps_data);
-        meta.is_user_traffic = 1;
-        transition parse_ros_metadata;
-    }
-
-    state parse_rtps_heartbeat {
-        packet.extract(hdr.rtps_heartbeat);
-        meta.is_discovery_traffic = 1;
+    state parse_rtps_discovery {
+        packet.extract(hdr.rtps);
+        meta.is_discovery = 1;
         transition accept;
     }
-
-    state parse_ros_metadata {
-        packet.extract(hdr.ros_meta);
+    
+    state parse_rtps_data {
+        packet.extract(hdr.rtps);
+        meta.ros2_qos = hdr.ipv4.diffserv;
         transition accept;
     }
 }
@@ -290,71 +240,64 @@ control MyIngress(inout headers_t hdr,
         counters = mcast_counter;
     }
 
-    // Actions for ROS/DDS traffic handling
-    action set_ros_priority(bit<8> priority) {
-        meta.ros_message_priority = priority;
-    }
 
-    action forward_to_subscriber(bit<9> egress_port) {
-        standard_metadata.egress_spec = egress_port;
-        meta.egress_port = egress_port;
-    }
 
-    action multicast_to_domain(bit<16> mcast_group) {
-        standard_metadata.mcast_grp = mcast_group;
-    }
 
-    action extract_domain_info() {
-        // Extract domain ID from UDP port using DDS port mapping formula
-        // Port = 7400 + (250 * Domain) + offset
-        meta.dds_domain_id = (hdr.udp.dst_port - 7400);
-    }
 
-    action drop_packet() {
-        mark_to_drop(standard_metadata);
-    }
 
-    // Table for ROS topic-based forwarding
-    table ros_topic_forwarding {
+    action set_mcast_group(bit<16> group_id) {
+        std_meta.mcast_grp = group_id;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+    
+    action unicast_forward(bit<9> port) {
+        std_meta.egress_spec = port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+    
+    table ros2_discovery {
         key = {
-            hdr.ros_meta.topic_id: exact;
-            meta.dds_domain_id: exact;
+            hdr.udp.dstPort: exact;
         }
         actions = {
-            forward_to_subscriber;
-            multicast_to_domain;
-            drop_packet;
+            unicast_forward;
+            set_mcast_group;
         }
-        default_action = drop_packet();
         size = 1024;
+        default_action = unicast_forward(1);  // Default to control plane
     }
-
-    // Table for QoS-based priority handling
-    table ros_qos_policy {
+    
+    table ros2_multicast_routing {
         key = {
-            hdr.ros_meta.qos_class: exact;
-            hdr.ros_meta.message_type: exact;
+            hdr.ipv4.dstAddr: lpm;
         }
         actions = {
-            set_ros_priority;
+            set_mcast_group;
+            drop;
         }
-        default_action = set_ros_priority(0);
-        size = 256;
+        size = 4096;
+        default_action = drop;
     }
-
-    // Table for DDS discovery traffic handling
-    table dds_discovery_handling {
+    
+    table inter_switch_routing {
         key = {
-            hdr.rtps_submsg_hdr.submessage_id: exact;
-            meta.dds_domain_id: exact;
+            hdr.ipv4.dstAddr: lpm;
         }
         actions = {
-            multicast_to_domain;
-            forward_to_subscriber;
+            unicast_forward;
+            drop;
         }
-        default_action = multicast_to_domain(1);
-        size = 128;
+        size = 512;
+        default_action = drop;
     }
+    
+
+
+
+
+
+
+
 
 action ac_default_response_to_arp() {
         //update operation code from request to reply
@@ -426,19 +369,15 @@ action ac_default_response_to_arp() {
         }
 
         if (hdr.ipv4.isValid()) {
-            if (hdr.rtps_header.isValid()) {
-                extract_domain_info();
-            
-                // Handle discovery traffic (HEARTBEAT, ACKNACK, etc.)
-                if (meta.is_discovery_traffic == 1) {
-                    dds_discovery_handling.apply();
-                }
-                // Handle user data traffic
-                else if (meta.is_user_traffic == 1 && hdr.ros_meta.isValid()) {
-                    ros_qos_policy.apply();
-                    ros_topic_forwarding.apply();
-                }
-            }  else tb_ipv4_lpm.apply();
+            if (meta.is_discovery) {
+                ros2_discovery.apply();
+            }
+            else if (hdr.ipv4.dstAddr[31:28] == 0xE0) {  // Multicast range
+                ros2_multicast_routing.apply();
+            } else {
+                inter_switch_routing.apply();
+            }
+                // else tb_ipv4_lpm.apply();
         }
     }
 }
