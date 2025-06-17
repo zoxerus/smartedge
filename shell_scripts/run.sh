@@ -140,21 +140,21 @@ case $ROLE in
 # Access Point: 
     ap)
     echo "Role is set as Access Point"
-    # Detect architecture
-    ARCH=$(uname -m)
+    # # Detect architecture
+    # ARCH=$(uname -m)
 
-    case $ARCH in
-        x86_64|i386|i686)
-            sudo simple_switch ./p4app/ap.json &
-            ;;
-        arm*|aarch64|armv7l|arm64)
-            /bin/bash ./shell_scripts/run_bmv2_docker.sh
-            ;;
-        *)
-            echo "Unsupported architecture: $ARCH" >&2
-            exit 1
-            ;;
-    esac
+    # case $ARCH in
+    #     x86_64|i386|i686)
+    #         sudo simple_switch ./p4app/ap.json &
+    #         ;;
+    #     arm*|aarch64|armv7l|arm64)
+    #         /bin/bash ./shell_scripts/run_bmv2_docker.sh
+    #         ;;
+    #     *)
+    #         echo "Unsupported architecture: $ARCH" >&2
+    #         exit 1
+    #         ;;
+    # esac
 
     # Genereate the MAC and IP address for the AP
     BACKBONE_IP=$(nextip $BACKBONE_SUBNET $octet4)

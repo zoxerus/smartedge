@@ -422,7 +422,7 @@ action ac_default_response_to_arp() {
         } 
 
         if (tb_l2_forward.apply().hit){
-            exit;
+            // exit;
         }
 
         if (hdr.ipv4.isValid()) {
