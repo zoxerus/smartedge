@@ -7,6 +7,8 @@ const bit<8>  IPPROTO_UDP = 0x11;
 const bit<32> RTPS_PROTOCOL_ID = 0x52545053; // "RTPS"
 const bit<16> TYPE_ARP  = 0x0806;
 
+const bit<16> TYPE_IPV4 = 0x0800;
+
 // ARP RELATED CONST VARS
 const bit<16> ARP_HTYPE = 0x0001; //Ethernet Hardware type is 1
 const bit<16> ARP_PTYPE = TYPE_IPV4; //Protocol used for ARP is IPV4
@@ -14,6 +16,10 @@ const bit<8>  ARP_HLEN  = 6; //Ethernet address size is 6 bytes
 const bit<8>  ARP_PLEN  = 4; //IP address size is 4 bytes
 const bit<16> ARP_REQ = 1; //Operation 1 is request
 const bit<16> ARP_REPLY = 2; //Operation 2 is reply
+
+typedef bit<9>  egressSpec_t;
+typedef bit<48> macAddr_t;
+typedef bit<32> ip4Addr_t;
 
 // Header definitions
 header ethernet_t {
@@ -214,30 +220,37 @@ control MyIngress(inout headers_t hdr,
     counter(32w1, CounterType.packets) unicast_counter;
 
 
-    
+    action drop() {
+        mark_to_drop(standard_metadata);
+        exit;
+    }
+
     action ac_ipv4_forward_mac(egressSpec_t port, macAddr_t dMac) {
+        unicast_counter.count(0);
         standard_metadata.egress_spec = port;
         // hdr.ethernet.srcMac = hdr.ethernet.dstMac;
-        hdr.ethernet.dstMac = dMac;
+        hdr.ethernet.dst_addr = dMac;
         // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     action ac_ipv4_forward_mac_from_dst_ip(egressSpec_t port) {
+        unicast_counter.count(0);
         standard_metadata.egress_spec = port;
         // hdr.ethernet.srcMac = hdr.ethernet.dstMac;
-        hdr.ethernet.dstMac = (bit<48>) hdr.ipv4.dstIP;
+        hdr.ethernet.dst_addr = (bit<48>) hdr.ipv4.dst_addr;
         // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     /* Experimental; forward WTHOUT setting MAC address */
     action ac_ipv4_forward(egressSpec_t port) {
+        unicast_counter.count(0);
         standard_metadata.egress_spec = port;
         // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     table tb_ipv4_lpm {
         key = {            
-            hdr.ipv4.dstIP: lpm;
+            hdr.ipv4.dst_addr: lpm;
             // hdr.udp.dst_port: ternary;
         }
         actions = {
@@ -265,7 +278,7 @@ control MyIngress(inout headers_t hdr,
 
     table tb_l2_forward {
         key = {
-            hdr.ethernet.dstMac             :   ternary;
+            hdr.ethernet.dst_addr             :   ternary;
         } 
         actions = {
             ac_l2_forward;
@@ -301,7 +314,7 @@ control MyIngress(inout headers_t hdr,
     action extract_domain_info() {
         // Extract domain ID from UDP port using DDS port mapping formula
         // Port = 7400 + (250 * Domain) + offset
-        meta.dds_domain_id = (hdr.udp.dst_port - 7400) / 250;
+        meta.dds_domain_id = (hdr.udp.dst_port - 7400);
     }
 
     action drop_packet() {
@@ -375,6 +388,13 @@ control MyIngress(inout headers_t hdr,
             exit;
         } 
 
+        if (tb_l2_forward.apply().hit){
+            exit;
+        }
+
+        if (hdr.ipv4.isValid()) {
+            tb_ipv4_lpm.apply();
+        }
 
 
         if (hdr.rtps_header.isValid()) {
@@ -418,29 +438,25 @@ control MyEgress(inout headers_t hdr,
     }
 }
 
-// Checksum computation
 control MyComputeChecksum(inout headers_t hdr, inout metadata_t meta) {
-    apply {
+     apply {
         update_checksum(
+            hdr.ipv4.isValid(),
+            { hdr.ipv4.version,
+              hdr.ipv4.ihl,
+              hdr.ipv4.diffserv,
+              hdr.ipv4.total_len,
+              hdr.ipv4.identification,
+              hdr.ipv4.flags,
+              hdr.ipv4.frag_offset,
+              hdr.ipv4.ttl,
+              hdr.ipv4.protocol,
+              hdr.ipv4.src_addr,
+              hdr.ipv4.dst_addr },
             hdr.ipv4.hdr_checksum,
-            {
-                hdr.ipv4.version,
-                hdr.ipv4.ihl,
-                hdr.ipv4.diffserv,
-                hdr.ipv4.total_len,
-                hdr.ipv4.identification,
-                hdr.ipv4.flags,
-                hdr.ipv4.frag_offset,
-                hdr.ipv4.ttl,
-                hdr.ipv4.protocol,
-                hdr.ipv4.src_addr,
-                hdr.ipv4.dst_addr
-            },
-            HashAlgorithm.csum16
-        );
+            HashAlgorithm.csum16);
     }
 }
-
 // Deparser
 control MyDeparser(packet_out packet, in headers_t hdr) {
     apply {
