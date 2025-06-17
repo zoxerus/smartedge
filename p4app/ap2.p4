@@ -49,10 +49,10 @@ header arp_t {
   bit<8>    h_len;
   bit<8>    p_len;
   bit<16>   op_code;
-  macAddr_t src_mac;
-  ip4Addr_t src_ip;
-  macAddr_t dst_mac;
-  ip4Addr_t dst_ip;
+  bit<48> src_mac;
+  bit<32> src_ip;
+  bit<48> dst_mac;
+  bit<32> dst_ip;
   }
 
 
@@ -218,6 +218,7 @@ control MyIngress(inout headers_t hdr,
 
     counter (1, CounterType.packets) mcast_counter;
     counter(32w1, CounterType.packets) unicast_counter;
+    counter(32w1, CounterType.packets) arp_req_counter;
 
 
     action drop() {
@@ -291,12 +292,6 @@ control MyIngress(inout headers_t hdr,
         counters = mcast_counter;
     }
 
-
-
-
-
-
-
     // Actions for ROS/DDS traffic handling
     action set_ros_priority(bit<8> priority) {
         meta.ros_message_priority = priority;
@@ -363,28 +358,68 @@ control MyIngress(inout headers_t hdr,
         size = 128;
     }
 
+action ac_default_response_to_arp() {
+    arp_req_counter.count(0);
+        //update operation code from request to reply
+        hdr.arp.op_code = ARP_REPLY;
+        
+        //reply's dst_mac is the request's src mac
+        hdr.arp.dst_mac = hdr.arp.src_mac;
+        
+        //reply's dst_ip is the request's src ip
+        hdr.arp.src_mac = (bit<48>) hdr.arp.dst_ip;
+
+        //reply's src ip is the request's dst ip
+        hdr.arp.src_ip = hdr.arp.dst_ip;
+
+        //update ethernet header
+        hdr.ethernet.dst_addr = hdr.ethernet.src_addr;
+        hdr.ethernet.src_addr = (bit<48>) hdr.arp.dst_ip;
+
+        //send it back to the same port
+        standard_metadata.egress_spec = standard_metadata.ingress_port;
+    }
+
+    action ac_respond_to_arp(bit<48> requested_mac) {
+        arp_req_counter.count(0);
+        //update operation code from request to reply
+        hdr.arp.op_code = ARP_REPLY;
+        
+        //reply's dst_mac is the request's src mac
+        hdr.arp.dst_mac = hdr.arp.src_mac;
+        
+        //reply's dst_ip is the request's src ip
+        hdr.arp.src_mac = requested_mac;
+
+        //reply's src ip is the request's dst ip
+        hdr.arp.src_ip = hdr.arp.dst_ip;
+
+        //update ethernet header
+        hdr.ethernet.dst_addr = hdr.ethernet.src_addr;
+        hdr.ethernet.src_addr = (bit<48>) hdr.arp.dst_ip;
+
+        //send it back to the same port
+        standard_metadata.egress_spec = standard_metadata.ingress_port;
+    }
+
+
+    table tb_arp {
+        key = {
+            hdr.arp.dst_ip: exact;
+        }
+        actions = {
+            ac_respond_to_arp;
+            ac_default_response_to_arp;
+        }
+        size = 1024;
+        default_action = ac_default_response_to_arp();
+    }
+
     // Main processing logic
     apply {
 
         if (hdr.ethernet.ether_type == TYPE_ARP && hdr.arp.op_code == ARP_REQ ) {
-            //update operation code from request to reply
-            hdr.arp.op_code = ARP_REPLY;
-            
-            //reply's dst_mac is the request's src mac
-            hdr.arp.dst_mac = hdr.arp.src_mac;
-            
-            //reply's dst_ip is the request's src ip
-            hdr.arp.src_mac = (bit<48>) hdr.arp.dst_ip;
-
-            //reply's src ip is the request's dst ip
-            hdr.arp.src_ip = hdr.arp.dst_ip;
-
-            //update ethernet header
-            hdr.ethernet.dst_addr = hdr.ethernet.src_addr;
-            hdr.ethernet.src_addr = (bit<48>) hdr.arp.dst_ip;
-
-            //send it back to the same port
-            standard_metadata.egress_spec = standard_metadata.ingress_port;
+            tb_arp.apply();
             exit;
         } 
 
