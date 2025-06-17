@@ -17,6 +17,11 @@ const bit<8>  ARP_PLEN  = 4; //IP address size is 4 bytes
 const bit<16> ARP_REQ = 1; //Operation 1 is request
 const bit<16> ARP_REPLY = 2; //Operation 2 is reply
 
+
+// ROS2 Discovery constants
+const bit<32> ROS2_DISCOVERY_MULTICAST = 0xEFFF0001; // 239.255.0.1
+const bit<16> ROS2_DISCOVERY_PORT = 7400;
+
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
@@ -63,16 +68,11 @@ header udp_t {
     bit<16> checksum;
 }
 
-header rtps_t {
-    bit<32> magic;
-    bit<8>  version;
-    bit<8>  vendorId;
-    bit<16> guidPrefix;
-}
-
-struct metadata {
-    bit<9>  ros2_qos;
-    bit<1>  is_discovery;
+struct metadata_t {
+    bit<16> mcast_grp;
+    bit<1>  is_multicast;
+    bit<1>  is_ros2_discovery;
+    bit<9>  inter_switch_port;
 }
 
 
@@ -83,23 +83,9 @@ struct headers_t {
     arp_t                   arp;
     ipv4_t                  ipv4;
     udp_t                   udp;
-    rtps_header_t           rtps_header;
-    rtps_submessage_header_t rtps_submsg_hdr;
-    rtps_data_submessage_t  rtps_data;
-    rtps_heartbeat_submessage_t rtps_heartbeat;
-    ros_metadata_t          ros_meta;
+    rtps_t           rtps;
 }
 
-struct metadata_t {
-    bit<9>  ingress_port;
-    bit<9>  egress_port;
-    bit<16> dds_domain_id;
-    bit<32> participant_id;
-    bit<8>  submessage_count;
-    bit<8>  ros_message_priority;
-    bit<1>  is_discovery_traffic;
-    bit<1>  is_user_traffic;
-}
 
 // Parser implementation
 parser MyParser(packet_in packet,
@@ -143,17 +129,6 @@ parser MyParser(packet_in packet,
         }
     }
 
-    state parse_rtps_discovery {
-        packet.extract(hdr.rtps);
-        meta.is_discovery = 1;
-        transition accept;
-    }
-    
-    state parse_rtps_data {
-        packet.extract(hdr.rtps);
-        meta.ros2_qos = hdr.ipv4.diffserv;
-        transition accept;
-    }
 }
 
 // Checksum verification (simplified for demo)
@@ -246,18 +221,18 @@ control MyIngress(inout headers_t hdr,
 
 
     action set_mcast_group(bit<16> group_id) {
-        std_meta.mcast_grp = group_id;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        standard_metadata.mcast_grp = group_id;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
     
     action unicast_forward(bit<9> port) {
-        std_meta.egress_spec = port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        standard_metadata.egress_spec = port;
+        // hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
     
     table ros2_discovery {
         key = {
-            hdr.udp.dstPort: exact;
+            hdr.udp.dst_port: exact;
         }
         actions = {
             unicast_forward;
@@ -269,7 +244,7 @@ control MyIngress(inout headers_t hdr,
     
     table ros2_multicast_routing {
         key = {
-            hdr.ipv4.dstAddr: lpm;
+            hdr.ipv4.dst_addr: lpm;
         }
         actions = {
             set_mcast_group;
@@ -279,25 +254,6 @@ control MyIngress(inout headers_t hdr,
         default_action = drop;
     }
     
-    table inter_switch_routing {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            unicast_forward;
-            drop;
-        }
-        size = 512;
-        default_action = drop;
-    }
-    
-
-
-
-
-
-
-
 
 action ac_default_response_to_arp() {
         //update operation code from request to reply
@@ -369,13 +325,14 @@ action ac_default_response_to_arp() {
         }
 
         if (hdr.ipv4.isValid()) {
-            if (meta.is_discovery) {
+            if (meta.is_discovery == 1) {
                 ros2_discovery.apply();
             }
-            else if (hdr.ipv4.dstAddr[31:28] == 0xE0) {  // Multicast range
+            else if (hdr.ipv4.dst_addr[31:28] == 0xE0) {  // Multicast range
                 ros2_multicast_routing.apply();
             } else {
-                inter_switch_routing.apply();
+                tb_ipv4_lpm.apply();
+                // inter_switch_routing.apply();
             }
                 // else tb_ipv4_lpm.apply();
         }
@@ -387,16 +344,7 @@ control MyEgress(inout headers_t hdr,
                  inout metadata_t meta,
                  inout standard_metadata_t standard_metadata) {
 
-    action update_rtps_timestamp() {
-        // Update RTPS timestamp for outgoing messages
-        hdr.ros_meta.timestamp = (bit<32>)standard_metadata.egress_global_timestamp;
-    }
-
     apply {
-        if (hdr.ros_meta.isValid()) {
-            update_rtps_timestamp();
-        }
-
 
         if (standard_metadata.ingress_port == standard_metadata.egress_port && 
                 hdr.ethernet.ether_type != TYPE_ARP) {
@@ -433,11 +381,7 @@ control MyDeparser(packet_out packet, in headers_t hdr) {
         packet.emit(hdr.arp);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.udp);
-        packet.emit(hdr.rtps_header);
-        packet.emit(hdr.rtps_submsg_hdr);
-        packet.emit(hdr.rtps_data);
-        packet.emit(hdr.rtps_heartbeat);
-        packet.emit(hdr.ros_meta);
+        packet.emit(hdr.rtps);
     }
 }
 
