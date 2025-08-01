@@ -3,4 +3,8 @@ tests
 __pycache__
 .venv
 video_demo
+<<<<<<< HEAD
 final_local.txt
+=======
+main.txt
+>>>>>>> main

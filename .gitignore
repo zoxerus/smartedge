@@ -7,3 +7,4 @@ logs
 *.tar
 *.tar.gz
 final_local.txt
+main.txt
