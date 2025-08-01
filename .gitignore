@@ -6,3 +6,4 @@ logs
 *.p4i
 *.tar
 *.tar.gz
+main.txt
