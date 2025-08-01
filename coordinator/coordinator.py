@@ -139,16 +139,6 @@ SE_NODE = se_net.Node(node_type=NODE_TYPE, node_uuid=THIS_NODE_UUID,
                       node_sebackbone_ip=se_bb_ip, group_id=cfg.group_id)
 
 
-# a function to parse a string and extract integers
-# needed for interactiosn with bmv2
-
-def get_ap_ip_from_ap_id(ap_id):
-    try:
-        return cfg.ap_list[ap_id][0]
-    except:
-        return None
-    
-    
 
 class Swarm_Node_Handler:
     def __init__(self, message, node_socket: socket.socket):
@@ -197,14 +187,6 @@ async def offboard_node(host_id, uuid, ap_id, node_vip, ap_port, available_nodes
     SN_UUID = uuid
     logger.debug(f'Kicking Node {SN_UUID} ip {node_vip} from Swarm')
     
-    # first we get the ip of the access point from the ap list
-    ap_ip = get_ap_ip_from_ap_id(ap_id)
-    # instance = SE_NODE.known_aps[ap_id]['cli_instance']
-    
-    if (ap_ip == None):
-        logger.error(f'Error: could not find IP of access point {ap_id}')
-        return
-
     swarmNode_config = {
         STRs.TYPE.name: 'go_away'
     }
